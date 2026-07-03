@@ -1181,6 +1181,13 @@ class OidcPkce(unittest.TestCase):
         self.assertEqual(token, "new")
         self.assertEqual(m.call_args[0][0]["grant_type"], "refresh_token")
 
+    def test_login_errors_when_fixed_callback_port_unavailable(self):
+        with unittest.mock.patch.object(cig.http.server, "HTTPServer",
+                                        side_effect=OSError("in use")):
+            with self.assertRaises(SystemExit) as cm:
+                cig._oidc_login_interactive()
+        self.assertIn("127.0.0.1:45898", str(cm.exception))
+
 
 class StylePublish(unittest.TestCase):
     def _setup_local(self):

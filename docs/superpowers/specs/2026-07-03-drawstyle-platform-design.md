@@ -259,7 +259,8 @@ never touch the network for styles.
   whose `origin` already points at the caller's own platform style errors with
   a hint to edit on the web (`/submit?edit=slug`) — CLI-side editing is out of
   scope for v1. Auth: OIDC authorization-code + PKCE against `account.leeguoo.com`
-  as a public client (`drawstyle-cli`), with a loopback `http://127.0.0.1:<port>`
+  as a public client (`drawstyle-cli`), with the registered loopback
+  `http://127.0.0.1:45898/cb`
   redirect — the CLI opens the browser, catches the code, exchanges it, and
   caches the refresh token in `~/.config/chatgpt-imagegen/drawstyle-auth.json`
   (0600). `--from-last` works as an `--example` source, mirroring `style add`.
@@ -310,7 +311,7 @@ when the user asks for a look that isn't in `style list`, and to suggest
    in-repo) + R2 `drawstyle-assets`.
 2. Register OIDC clients on account.leeguoo.com: `drawstyle-web`
    (confidential or public + PKCE, redirect `https://drawstyle.leeguoo.com/auth/callback`)
-   and `drawstyle-cli` (public + PKCE, loopback redirects).
+   and `drawstyle-cli` (public + PKCE, redirect `http://127.0.0.1:45898/cb`).
 3. DNS: `drawstyle.leeguoo.com` → Worker route.
 4. Set `ADMIN_EMAILS` (and session-cookie signing secret) as Worker secrets.
 5. Seed the three built-ins (doodle/xiaohei/snoopy) as the admin account's first

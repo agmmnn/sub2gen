@@ -2229,6 +2229,7 @@ DRAWSTYLE_API_DEFAULT = "https://drawstyle.leeguoo.com"
 PLATFORM_TIMEOUT = 15  # seconds
 OIDC_ISSUER = "https://account.leeguoo.com"
 OIDC_CLIENT_ID = "drawstyle-cli"
+OIDC_LOOPBACK_PORT = 45898
 _PLATFORM_CATEGORIES = (
     "report", "slides", "tech-explainer", "social-cover",
     "avatar-ip", "cute", "retro-comic", "photo-real",
@@ -2389,10 +2390,17 @@ def _oidc_login_interactive() -> dict:
         def log_message(self, fmt, *args):  # noqa: A003
             return
 
-    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    try:
+        server = http.server.HTTPServer(
+            ("127.0.0.1", OIDC_LOOPBACK_PORT), Handler)
+    except OSError as e:
+        raise SystemExit(
+            "error: drawstyle login callback port "
+            f"127.0.0.1:{OIDC_LOOPBACK_PORT} is unavailable ({e}). "
+            "Close the process using that port and retry.") from None
     server.timeout = 180
     try:
-        redirect_uri = f"http://127.0.0.1:{server.server_port}/cb"
+        redirect_uri = f"http://127.0.0.1:{OIDC_LOOPBACK_PORT}/cb"
         query = urllib.parse.urlencode({
             "response_type": "code",
             "client_id": OIDC_CLIENT_ID,

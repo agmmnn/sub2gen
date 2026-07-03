@@ -578,7 +578,7 @@ def _oidc_token_request(form: dict) -> dict:
 
 def _oidc_login_interactive() -> dict:
     """Open the browser to /authorize (code + PKCE + state), catch the code on
-    a one-shot http.server bound to 127.0.0.1:<random port>, exchange it."""
+    a one-shot http.server bound to 127.0.0.1:45898, exchange it."""
 
 def _platform_access_token(*, interactive: bool = True) -> str:
     """Cached access token; refresh via refresh_token when expired; fall back
@@ -586,7 +586,7 @@ def _platform_access_token(*, interactive: bool = True) -> str:
 ```
 
 Implementation notes for the executor:
-- `_oidc_login_interactive`: bind `http.server.HTTPServer(("127.0.0.1", 0), Handler)` to get a random free port; redirect_uri = `http://127.0.0.1:{port}/cb`; verify `state`; `webbrowser.open(url)` and print the URL to stderr as fallback; `handle_request()` once with a 180 s socket timeout; respond with a tiny "you can close this tab" HTML page.
+- `_oidc_login_interactive`: bind `http.server.HTTPServer(("127.0.0.1", 45898), Handler)` because account.leeguoo.com matches redirect URIs exactly; redirect_uri = `http://127.0.0.1:45898/cb`; verify `state`; `webbrowser.open(url)` and print the URL to stderr as fallback; `handle_request()` once with a 180 s socket timeout; respond with a tiny "you can close this tab" HTML page.
 - Token exchange form: `grant_type=authorization_code, code, redirect_uri, client_id, code_verifier`. Store `expires_at = time.time() + expires_in - 60`.
 - New imports needed: `base64`, `secrets`, `hashlib`, `webbrowser`, `http.server` (check which already exist at the top of the file; add missing ones).
 
