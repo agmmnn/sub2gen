@@ -40,6 +40,7 @@ import hashlib
 import http.server
 import json
 import os
+import atexit
 import re
 import secrets
 import shutil
@@ -2370,22 +2371,50 @@ def _oidc_token_request(form: dict) -> dict:
     return data
 
 
+def _oidc_callback_match(path: str, expected_state: str) -> tuple[bool, str]:
+    """Decide whether one loopback request is the OIDC callback we're waiting for.
+
+    Returns ``(accept, code)``. ``accept`` is True only for a request to the
+    ``/cb`` path whose ``state`` matches ``expected_state`` and that carries a
+    non-empty ``code``. Non-``/cb`` paths (favicon probes, speculative fetches,
+    another process poking the port) and state mismatches return ``(False, "")``
+    so the caller keeps waiting instead of burning the single handshake. Pure;
+    no I/O.
+    """
+    parsed = urllib.parse.urlparse(path)
+    if parsed.path != "/cb":
+        return (False, "")
+    params = urllib.parse.parse_qs(parsed.query)
+    state = (params.get("state") or [""])[0]
+    code = (params.get("code") or [""])[0]
+    if not code or state != expected_state:
+        return (False, "")
+    return (True, code)
+
+
 def _oidc_login_interactive() -> dict:
     verifier, challenge = _pkce_pair()
     state = secrets.token_urlsafe(24)
-    result: dict[str, str] = {}
+    accepted: dict[str, str] = {"code": ""}
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 - stdlib callback name
-            parsed = urllib.parse.urlparse(self.path)
-            params = urllib.parse.parse_qs(parsed.query)
-            result["state"] = (params.get("state") or [""])[0]
-            result["code"] = (params.get("code") or [""])[0]
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(
-                b"<html><body>You can close this tab.</body></html>")
+            ok, code = _oidc_callback_match(self.path, state)
+            if ok:
+                accepted["code"] = code
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(
+                    b"<html><body>You can close this tab.</body></html>")
+            else:
+                # Ignore stray requests (favicon, speculative prefetch, another
+                # process): answer 404 and keep the server alive for the real
+                # callback instead of consuming the one handshake.
+                self.send_response(404)
+                self.send_header("Content-Type", "text/plain; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(b"waiting for drawstyle login callback")
 
         def log_message(self, fmt, *args):  # noqa: A003
             return
@@ -2398,7 +2427,6 @@ def _oidc_login_interactive() -> dict:
             "error: drawstyle login callback port "
             f"127.0.0.1:{OIDC_LOOPBACK_PORT} is unavailable ({e}). "
             "Close the process using that port and retry.") from None
-    server.timeout = 180
     try:
         redirect_uri = f"http://127.0.0.1:{OIDC_LOOPBACK_PORT}/cb"
         query = urllib.parse.urlencode({
@@ -2415,14 +2443,23 @@ def _oidc_login_interactive() -> dict:
             print(f"Open this URL to log in: {url}", file=sys.stderr)
         else:
             print(f"Opened browser for drawstyle login: {url}", file=sys.stderr)
-        server.handle_request()
+        # Loop past stray requests until the matching callback arrives or the
+        # overall deadline fires; each handle_request() waits up to the time
+        # remaining.
+        deadline = time.time() + 180
+        while not accepted["code"]:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
+            server.timeout = remaining
+            server.handle_request()
     finally:
         server.server_close()
-    if result.get("state") != state or not result.get("code"):
+    if not accepted["code"]:
         raise SystemExit("error: drawstyle login failed or timed out")
     tokens = _oidc_token_request({
         "grant_type": "authorization_code",
-        "code": result["code"],
+        "code": accepted["code"],
         "redirect_uri": redirect_uri,
         "client_id": OIDC_CLIENT_ID,
         "code_verifier": verifier,
@@ -2442,16 +2479,25 @@ def _platform_access_token(*, interactive: bool = True) -> str:
 
     refresh = tokens.get("refresh_token")
     if isinstance(refresh, str):
-        refreshed = _oidc_token_request({
-            "grant_type": "refresh_token",
-            "refresh_token": refresh,
-            "client_id": OIDC_CLIENT_ID,
-        })
-        merged = _tokens_with_expiry(refreshed, fallback_refresh=refresh)
-        _save_platform_auth(merged)
-        token = merged.get("access_token")
-        if isinstance(token, str):
-            return token
+        try:
+            refreshed = _oidc_token_request({
+                "grant_type": "refresh_token",
+                "refresh_token": refresh,
+                "client_id": OIDC_CLIENT_ID,
+            })
+        except SystemExit:
+            # A revoked/expired refresh token must not permanently brick
+            # `style publish`. In an interactive context we fall through to a
+            # fresh browser login; a non-interactive caller (tests/automation)
+            # keeps the fail-fast contract and gets the SystemExit.
+            if not interactive:
+                raise
+        else:
+            merged = _tokens_with_expiry(refreshed, fallback_refresh=refresh)
+            _save_platform_auth(merged)
+            token = merged.get("access_token")
+            if isinstance(token, str):
+                return token
 
     if not interactive:
         raise SystemExit("error: drawstyle login required")
@@ -2550,10 +2596,17 @@ def _pull_refs_to_tmp(refs: list[dict], tmp: Path) -> list[str]:
 def _apply_package(doc: dict, name: str, pkg: dict) -> list[str]:
     """Apply one platform package to a local style entry.
 
-    Refs are downloaded before touching the real asset dir. The caller decides
-    when to save ``doc``, which lets `style update` persist multiple refreshed
-    entries in one atomic styles.json write.
+    Refs are downloaded before touching the real asset dir, so a single entry
+    is applied per-entry atomically. The caller decides when to save ``doc``;
+    `style update` saves after each entry so a mid-list failure leaves a
+    consistent partial state rather than on-disk refs out of sync with the doc.
+
+    A malformed package payload (missing kind/slug/version) exits cleanly rather
+    than raising a KeyError traceback.
     """
+    if not isinstance(pkg, dict) or not all(
+            k in pkg for k in ("kind", "slug", "version")):
+        raise SystemExit("error: platform: malformed package response")
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td)
         stored = _pull_refs_to_tmp(pkg.get("refs") or [], tmp)
@@ -2570,6 +2623,37 @@ def _apply_package(doc: dict, name: str, pkg: dict) -> list[str]:
                                       "slug": pkg["slug"],
                                       "version": pkg["version"]}}
     return stored
+
+
+def _resolve_online_styles(slugs: list[str]) -> tuple[list[str], list[dict]]:
+    """Fetch platform styles for ONE-SHOT use during a generation — no local
+    persist. Returns (snippets, ref_records) where each ref_record is the
+    ``{ref, group, label}`` shape `_collect_refs` produces. Reference images are
+    downloaded to temp dirs cleaned up at process exit.
+
+    This is what `--style-online SLUG` uses: an agent can generate with a gallery
+    style immediately, without `style pull` writing anything to the library.
+    """
+    snippets: list[str] = []
+    refs: list[dict] = []
+    for slug in slugs:
+        if not _valid_style_name(slug):
+            raise SystemExit(f"error: invalid style slug {slug!r}")
+        pkg = _platform_request("GET", f"/api/styles/{slug}/package")
+        if not isinstance(pkg, dict) or "kind" not in pkg:
+            raise SystemExit("error: platform: malformed package response")
+        snip = pkg.get("snippet") or ""
+        if snip:
+            snippets.append(snip)
+        group = "character" if pkg.get("kind") == "character" else "style"
+        pkg_refs = pkg.get("refs") or []
+        if pkg_refs:
+            tmp = Path(tempfile.mkdtemp(prefix="cig-online-"))
+            atexit.register(shutil.rmtree, str(tmp), ignore_errors=True)
+            for fn in _pull_refs_to_tmp(pkg_refs, tmp):
+                refs.append({"ref": str(tmp / fn), "group": group,
+                             "label": f"online:{slug}/{fn}"})
+    return snippets, refs
 
 
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:
@@ -3037,12 +3121,21 @@ def _style_command(argv: list[str]) -> int:
         if a.category not in _PLATFORM_CATEGORIES:
             cats = ", ".join(_PLATFORM_CATEGORIES)
             raise SystemExit(
-                f"error: --category is required and must be one of: {cats}")
+                f"error: --category is required and must be one of: {cats}\n"
+                f"  e.g. chatgpt-imagegen style publish {a.name} "
+                f"--category {_PLATFORM_CATEGORIES[0]} --from-last")
         examples = list(a.example or [])
         if a.from_last:
             examples.append(_resolve_from_last())
         if not examples:
-            raise SystemExit("error: --example IMG is required")
+            raise SystemExit(
+                "error: a submission needs at least one example image.\n"
+                "  • use the image you just generated:  "
+                f"chatgpt-imagegen style publish {a.name} "
+                f"--category {a.category} --from-last\n"
+                "  • or pass one explicitly:            "
+                f"chatgpt-imagegen style publish {a.name} "
+                f"--category {a.category} --example path/to.png")
         if len(examples) > 3:
             raise SystemExit("error: at most 3 --example images are allowed")
 
@@ -3064,17 +3157,39 @@ def _style_command(argv: list[str]) -> int:
             files.append(("ref[]", *_read_publish_image(
                 str(asset_dir / ref), "reference")))
 
+        # Show what's about to be submitted before the (login-gated) upload.
+        n_ex = len(examples)
+        n_ref = sum(1 for f in files if f[0] == "ref[]")
+        tag_str = ", ".join(a.tag) if a.tag else "(none)"
+        print(
+            f"publishing {a.name!r} → {_platform_base()}\n"
+            f"  category: {a.category}   tags: {tag_str}\n"
+            f"  examples: {n_ex}   references: {n_ref}",
+            file=sys.stderr)
         body, boundary = _multipart_form(fields, files)
         token = _platform_access_token()
-        _platform_request(
+        resp = _platform_request(
             "POST", "/api/styles", data=body,
             headers={"Authorization": f"Bearer {token}",
                      "Content-Type": f"multipart/form-data; boundary={boundary}"},
         )
-        print(f"submitted {a.name!r} for review", file=sys.stderr)
+        # Record the platform origin so a second `publish` hits the friendly
+        # already-published guard above rather than the server's generic
+        # "slug taken". Prefer the server's canonical slug when it returns one.
+        slug = a.name
+        if isinstance(resp, dict) and isinstance(resp.get("slug"), str) and resp["slug"]:
+            slug = resp["slug"]
+        entry["origin"] = {"platform": "drawstyle", "slug": slug, "version": 1}
+        _save_styles(doc)
+        print(
+            f"submitted {a.name!r} for review 🎉\n"
+            f"  track approval: {_platform_base()}/zh/me",
+            file=sys.stderr)
         return 0
 
     if a.verb == "pull":
+        if not _valid_style_name(a.slug):
+            raise SystemExit(f"error: invalid slug {a.slug!r}")
         name = a.local_name or a.slug
         if not _valid_style_name(name):
             raise SystemExit(f"error: invalid local name {name!r}")
@@ -3110,7 +3225,6 @@ def _style_command(argv: list[str]) -> int:
             print("no pulled styles")
             return 0
 
-        changed = False
         for name, origin in candidates:
             slug = origin["slug"]
             current = int(origin.get("version") or 0)
@@ -3121,11 +3235,12 @@ def _style_command(argv: list[str]) -> int:
                 continue
             pkg = _platform_request("GET", f"/api/styles/{slug}/package")
             stored = _apply_package(doc, name, pkg)
-            changed = True
+            # Save after each entry so a later network failure leaves a
+            # consistent partial state (earlier entries' on-disk refs match the
+            # saved doc) instead of unsaved edits diverging from disk.
+            _save_styles(doc)
             print(f"{name}: updated v{current} -> v{pkg['version']} "
                   f"({len(stored)} ref{'s' if len(stored) != 1 else ''})")
-        if changed:
-            _save_styles(doc)
         return 0
 
     if a.verb == "list":
@@ -3436,6 +3551,13 @@ def main() -> int:
         help="Skip all assets (text + refs) for this run even if a default set "
              "is configured.",
     )
+    parser.add_argument(
+        "--style-online", action="append", default=None, metavar="SLUG",
+        help="Apply a drawstyle.leeguoo.com style by slug for THIS generation "
+             "only, without saving it to the local library (fetched on the fly). "
+             "Repeatable; stacks with --style. Great for one-off use of a "
+             "gallery style: `chatgpt-imagegen \"a cat\" --style-online xiaohei`.",
+    )
     parser.add_argument("-o", "--out", help="Output file path (default: assets/generated/<slug>.<ext>)")
     parser.add_argument(
         "--size",
@@ -3555,13 +3677,21 @@ def main() -> int:
     # character/style groups in deterministic order.
     _active = _resolve_active_styles(
         _styles_doc, style_args=args.style, no_style=args.no_style)
+    # One-shot online styles (fetched, not persisted) stack on top of local ones.
+    _online_snippets, _online_refs = _resolve_online_styles(args.style_online or [])
     _gen_prompt = args.prompt
     for _name in _active:
         _gen_prompt = _compose_prompt(
             _gen_prompt, _styles_doc["styles"][_name].get("snippet"))
+    for _snip in _online_snippets:
+        _gen_prompt = _compose_prompt(_gen_prompt, _snip)
     args.gen_prompt = _gen_prompt
 
     _ordered_refs = _collect_refs(_styles_doc, _active, args.ref)
+    if _online_refs:
+        # Keep the character-first grouping stable after merging online refs.
+        _ordered_refs = sorted(_ordered_refs + _online_refs,
+                               key=lambda r: 0 if r["group"] == "character" else 1)
     _kept_refs, _dropped_refs = _cap_refs(_ordered_refs, REF_ATTACH_CAP)
     args.resolved_refs = [r["ref"] for r in _kept_refs]
     args.n_character_refs = sum(1 for r in _kept_refs if r["group"] == "character")
@@ -3594,8 +3724,9 @@ def main() -> int:
                         f"format={args.format} timeout={args.timeout}s)")
         print(_fmt_progress(0.0, f"requesting image  {meta_bit}"), file=sys.stderr)
         print(_dim(f"           prompt: {prompt_preview}"), file=sys.stderr)
-        if _active:
-            print(_dim(f"           styles: {', '.join(_active)}"), file=sys.stderr)
+        _shown = list(_active) + [f"{s} (online)" for s in (args.style_online or [])]
+        if _shown:
+            print(_dim(f"           styles: {', '.join(_shown)}"), file=sys.stderr)
 
     image_bytes, meta = _dispatch(args, progress, stall_timeout, start)
 

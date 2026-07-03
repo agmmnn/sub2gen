@@ -155,14 +155,26 @@ When the user wants a look that is not already in `chatgpt-imagegen style list`,
 
 ```bash
 chatgpt-imagegen style search "watercolor mascot" --category avatar-ip
+# fastest: generate with a gallery style directly, nothing saved locally
+chatgpt-imagegen "Pip ordering coffee" --style-online pip
+# or pull it into the local library to reuse offline later
 chatgpt-imagegen style pull pip
 chatgpt-imagegen "Pip ordering coffee" --style pip
 ```
 
 - `style search <keywords> [--category X] [--tag Y]` discovers styles on `drawstyle.leeguoo.com`.
-- `style pull <slug> [--as NAME]` downloads the style and pinned refs into the local library; generation stays offline afterward.
+- **`--style-online <slug>` (on a normal generation) is the quickest path**: it fetches that gallery style on the fly and applies its snippet + reference images to this one generation, saving nothing locally. Repeatable and stacks with `--style`. Use it when the user points at a gallery style and just wants an image now.
+- `style pull <slug> [--as NAME]` downloads the style and pinned refs into the local library; generation stays offline afterward (best when you'll reuse a style repeatedly).
 - `style update [NAME]` checks pulled styles for newer platform versions.
 - `style publish NAME --category X --example IMG [--tag Y]...` submits a local style that turned out well. It opens account.leeguoo.com login when needed and sends the style for review.
+
+**Proactively offer to publish a good style.** When you have crafted a reusable style that works well — or the user says a generated look is great and wants it again later — suggest sharing it to the gallery so others (and the user's future self) can `style pull` it in one command. Publishing is one line (the most-recent generation becomes the example image):
+
+```bash
+chatgpt-imagegen style publish mystyle --category cute --from-last
+```
+
+It prints a summary before uploading and a link to track approval. Note: **publishing needs a one-time browser login** (it opens automatically and caches the token); `style search` and `style pull` do **not** need login. Don't publish without the user's go-ahead — offer, then let them confirm.
 
 Legacy `styles.json` files (text-only entries from older versions) keep working and upgrade automatically on the next change.
 
