@@ -2424,8 +2424,11 @@ def _normalize_entry(value: Any) -> dict:
         out = {"kind": kind, "snippet": snippet, "refs": refs}
         origin = value.get("origin")
         if (isinstance(origin, dict) and isinstance(origin.get("slug"), str)
-                and isinstance(origin.get("version"), int)):
-            out["origin"] = {"platform": str(origin.get("platform") or "drawstyle"),
+                and isinstance(origin.get("version"), int)
+                and not isinstance(origin.get("version"), bool)):
+            p = origin.get("platform")
+            platform = p if isinstance(p, str) and p else "drawstyle"
+            out["origin"] = {"platform": platform,
                              "slug": origin["slug"], "version": origin["version"]}
         return out
     return {"kind": "style", "snippet": "", "refs": []}

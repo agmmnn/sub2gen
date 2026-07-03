@@ -907,8 +907,15 @@ class OriginRoundTrip(unittest.TestCase):
         self.assertEqual(e["origin"],
                          {"platform": "drawstyle", "slug": "pip", "version": 3})
 
+    def test_platform_defaults_when_missing(self):
+        e = cig._normalize_entry({
+            "kind": "style", "snippet": "s", "refs": [],
+            "origin": {"slug": "pip", "version": 1}})
+        self.assertEqual(e["origin"]["platform"], "drawstyle")
+
     def test_bad_origin_dropped(self):
-        for bad in ("str", 7, ["x"], {"platform": "drawstyle"}):  # missing slug/version
+        for bad in ("str", 7, ["x"], {"platform": "drawstyle"},  # missing slug/version
+                    {"slug": "x", "version": True}):  # bool is not a version
             e = cig._normalize_entry({"kind": "style", "snippet": "s",
                                       "refs": [], "origin": bad})
             self.assertNotIn("origin", e)
