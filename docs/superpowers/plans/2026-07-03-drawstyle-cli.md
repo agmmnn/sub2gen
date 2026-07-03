@@ -460,7 +460,9 @@ class StyleUpdate(unittest.TestCase):
         self.assertEqual(cig._load_styles()["styles"]["pip"]["origin"]["version"], 4)
 
     def test_up_to_date_skips_package(self):
+        calls = []
         def fake_request(method, path, **kw):
+            calls.append(path)
             if path.endswith("/package"):
                 return _PKG
             return {"slug": "pip", "version": 3}             # same version
@@ -474,6 +476,9 @@ class StyleUpdate(unittest.TestCase):
                     rc = cig._style_command(["update"])       # no-arg sweep
         self.assertEqual(rc, 0)
         self.assertIn("up to date", buf.getvalue())
+        # the only /package hit is the initial pull — update must not re-pull
+        self.assertEqual([p for p in calls if p.endswith("/package")],
+                         ["/api/styles/pip/package"])
 
     def test_entry_without_origin_skipped(self):
         with _tmp_xdg():
@@ -493,8 +498,10 @@ Parser: `sp = sub.add_parser("update", help="re-pull platform styles that have a
 Handler sketch — for each candidate entry (one named, or all with `origin`):
 `GET /api/styles/{origin.slug}` → compare `version`; if newer, run the same
 re-pull logic as Task 4 but **replacing in place**: download refs to temp,
-`shutil.rmtree(_asset_dir(name))`, move refs in, overwrite the entry (keep the
-local name, update `origin.version`), single `_save_styles(doc)` at the end.
+`shutil.rmtree(_asset_dir(name), ignore_errors=True)` (the seeded test entry
+has no asset dir — match the `add` verb's pattern), move refs in, overwrite the
+entry (keep the local name, update `origin.version`), single `_save_styles(doc)`
+at the end.
 Refactor the pull body into `_apply_package(doc, name, pkg)` shared by pull and
 update rather than duplicating it — this **replaces Task 4's inline pull body**
 (edit the already-committed `pull` branch to call `_apply_package` too; rerun
@@ -618,6 +625,8 @@ class StylePublish(unittest.TestCase):
             self.assertIn("--example", str(cm.exception))
 
     def test_republish_own_origin_errors(self):
+        # Deliberately seeds the entry raw (no _setup_local) — the origin
+        # field is the point of the test. Don't "fix" this to use the helper.
         with _tmp_xdg():
             doc = cig._load_styles()
             doc["styles"]["mine"] = {"kind": "style", "snippet": "s", "refs": [],
