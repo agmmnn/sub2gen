@@ -2252,8 +2252,10 @@ def _platform_request(method: str, path: str, *, data: bytes | None = None,
     callers never see raw urllib exceptions.
     """
     url = _platform_base() + path
+    req_headers = {"User-Agent": f"chatgpt-imagegen/{__version__}"}
+    req_headers.update(headers or {})
     req = urllib.request.Request(url, data=data, method=method,
-                                 headers=headers or {})
+                                 headers=req_headers)
     try:
         with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
             raw = resp.read().decode("utf-8", errors="ignore")
