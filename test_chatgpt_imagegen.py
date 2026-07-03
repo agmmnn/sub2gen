@@ -11,6 +11,7 @@ Run:  python3 -m unittest test_chatgpt_imagegen -v
 
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 import re
@@ -18,6 +19,7 @@ import tempfile
 import unittest
 import unittest.mock
 from contextlib import contextmanager
+from contextlib import redirect_stdout
 from pathlib import Path
 
 _loader = importlib.machinery.SourceFileLoader(
@@ -980,6 +982,41 @@ class PlatformRequest(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 cig._platform_request("GET", "/api/styles")
             self.assertIn("not JSON", str(cm.exception))
+
+
+_SEARCH_PAYLOAD = {"styles": [
+    {"slug": "pip", "name": "Pip the fox", "kind": "character",
+     "category": "avatar-ip", "likes_count": 12, "pulls_count": 90,
+     "snippet": "a round orange fox named Pip, thick outlines"},
+]}
+
+
+class StyleSearch(unittest.TestCase):
+    def test_renders_rows_and_pull_hint(self):
+        with unittest.mock.patch.object(
+                cig, "_platform_request", return_value=_SEARCH_PAYLOAD) as m:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["search", "fox", "--category",
+                                         "avatar-ip", "--tag", "cute"])
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("pip", out)
+        self.assertIn("character", out)
+        self.assertIn("style pull pip", out)
+        path = m.call_args[0][1]
+        self.assertIn("q=fox", path)
+        self.assertIn("category=avatar-ip", path)
+        self.assertIn("tag=cute", path)
+
+    def test_empty_result(self):
+        with unittest.mock.patch.object(
+                cig, "_platform_request", return_value={"styles": []}):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["search", "nothing"])
+        self.assertEqual(rc, 0)
+        self.assertIn("no styles found", buf.getvalue())
 
 
 if __name__ == "__main__":

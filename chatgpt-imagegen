@@ -2668,11 +2668,36 @@ def _style_command(argv: list[str]) -> int:
     sub.add_parser("clear", help="empty the active default asset set")
     rp = sub.add_parser("reset", help="re-seed built-ins and wipe the asset library")
     rp.add_argument("-y", "--yes", action="store_true", help="skip the confirmation")
+    sp = sub.add_parser("search", help="search the drawstyle platform")
+    sp.add_argument("query", nargs="?", default="")
+    sp.add_argument("--category", default=None)
+    sp.add_argument("--tag", action="append", default=None)
     a = p.parse_args(argv)
 
     if not a.verb:
         p.print_help()
         return 2
+
+    if a.verb == "search":
+        params = {"q": a.query} if a.query else {}
+        if a.category:
+            params["category"] = a.category
+        for tag in (a.tag or []):
+            params.setdefault("tag", []).append(tag)
+        qs = urllib.parse.urlencode(params, doseq=True)
+        data = _platform_request(
+            "GET", "/api/styles" + (f"?{qs}" if qs else ""))
+        rows = data.get("styles") or []
+        if not rows:
+            print("no styles found")
+            return 0
+        for style in rows:
+            preview = " ".join((style.get("snippet") or "").split())[:60]
+            print(f"{style['slug']} [{style['kind']}] ({style['category']}) "
+                  f"♥{style.get('likes_count', 0)} "
+                  f"⇩{style.get('pulls_count', 0)} — {preview}")
+            print(f"    chatgpt-imagegen style pull {style['slug']}")
+        return 0
 
     doc = _load_styles()
     styles = doc["styles"]
