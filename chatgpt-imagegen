@@ -2510,7 +2510,10 @@ def _download_bytes(url: str) -> bytes:
     Kept as a seam so pull/update tests can exercise atomic style storage
     without reaching the network.
     """
-    req = urllib.request.Request(url)
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": f"chatgpt-imagegen/{__version__}"},
+    )
     with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
         return resp.read()
 

@@ -976,6 +976,14 @@ class PlatformRequest(unittest.TestCase):
             self.assertEqual(cig._platform_request("GET", "/api/styles"),
                              {"ok": True})
 
+    def test_reference_download_sends_user_agent(self):
+        fake = self._fake_urlopen(_PNG)
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            self.assertEqual(cig._download_bytes("https://example.test/ref.png"),
+                             _PNG)
+        req = fake.call_args[0][0]
+        self.assertIn("chatgpt-imagegen/", req.get_header("User-agent"))
+
     def test_non_json_200_exits(self):
         fake = self._fake_urlopen(b"<html>")
         with unittest.mock.patch.object(cig, "_urlopen", fake):
