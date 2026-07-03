@@ -2216,6 +2216,48 @@ def _resolve_from_last() -> str:
     return str(p)
 
 
+# ── Platform (drawstyle) integration ────────────────────────────────────────
+# All drawstyle.leeguoo.com I/O funnels through _platform_request so tests can
+# patch one function and offline failures produce one consistent message.
+
+DRAWSTYLE_API_DEFAULT = "https://drawstyle.leeguoo.com"
+PLATFORM_TIMEOUT = 15  # seconds
+
+
+def _platform_base() -> str:
+    return (os.environ.get("DRAWSTYLE_API", "").strip()
+            or DRAWSTYLE_API_DEFAULT).rstrip("/")
+
+
+def _urlopen(req, timeout):  # tiny seam so tests can fake the network
+    return urllib.request.urlopen(req, timeout=timeout)
+
+
+def _platform_request(method: str, path: str, *, data: bytes | None = None,
+                      headers: dict | None = None) -> dict:
+    """One HTTP round-trip to the platform, JSON in/out.
+
+    Raises SystemExit with the server's error.message (or a network hint) —
+    callers never see raw urllib exceptions.
+    """
+    url = _platform_base() + path
+    req = urllib.request.Request(url, data=data, method=method,
+                                 headers=headers or {})
+    try:
+        with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.loads(e.read().decode("utf-8"))["error"]["message"]
+        except Exception:  # noqa: BLE001
+            msg = f"HTTP {e.code}"
+        raise SystemExit(f"error: platform: {msg}")
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise SystemExit(
+            f"error: cannot reach {_platform_base()} ({e}). "
+            "Generation with local styles is unaffected; retry when online.")
+
+
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:
     """Next free `ref-<n>` index, considering both the entry's recorded refs and
     whatever already sits in the asset dir (so copies never collide)."""

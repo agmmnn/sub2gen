@@ -16,6 +16,7 @@ import os
 import re
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -923,6 +924,28 @@ class OriginRoundTrip(unittest.TestCase):
     def test_absent_origin_absent(self):
         e = cig._normalize_entry({"kind": "style", "snippet": "s", "refs": []})
         self.assertNotIn("origin", e)
+
+
+class PlatformRequest(unittest.TestCase):
+    def test_base_default_and_env(self):
+        os.environ.pop("DRAWSTYLE_API", None)
+        self.assertEqual(cig._platform_base(), "https://drawstyle.leeguoo.com")
+        os.environ["DRAWSTYLE_API"] = "http://localhost:8787/"
+        try:
+            self.assertEqual(cig._platform_base(), "http://localhost:8787")
+        finally:
+            os.environ.pop("DRAWSTYLE_API", None)
+
+    def test_error_payload_surfaced(self):
+        import urllib.error
+        body = json.dumps({"error": {"code": "not_found",
+                                     "message": "no such style"}}).encode()
+        err = urllib.error.HTTPError("u", 404, "Not Found", {},
+                                     io.BytesIO(body))
+        with unittest.mock.patch.object(cig, "_urlopen", side_effect=err):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles/nope")
+            self.assertIn("no such style", str(cm.exception))
 
 
 if __name__ == "__main__":
