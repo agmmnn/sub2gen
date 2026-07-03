@@ -29,7 +29,8 @@ This project moves styles onto a public community platform:
 - Submissions from any logged-in user enter a **review queue**; only
   admin-approved styles become public.
 - Each style: text snippet and/or pinned reference images, 1–3 required example
-  images, a use-case category, aesthetic tags, like/fork/pull counters, an
+  images, a use-case category, aesthetic tags, like/pull counters (a fork count,
+  where shown, is derived via `COUNT(forked_from = id)` — no stored column), an
   integer version.
 - CLI: `style search`, `style pull <slug>` (fetch snippet + refs into the local
   library), `style update` (re-check pulled styles), `style publish` (submit a
@@ -154,7 +155,9 @@ likes(user_id, style_id, created_at, PRIMARY KEY(user_id, style_id))
   images and sets `review_note`; the row stays `approved` with its live content
   untouched. Editable fields: name, snippet, category, tags, reference images.
   `slug` and `kind` are immutable after submission. One pending revision at a
-  time per style (a second `PUT` overwrites the blob).
+  time per style (a second `PUT` overwrites the blob). `PUT` on the owner's own
+  `pending` submission edits it in place (no blob — it isn't live yet); `PUT` on
+  a `rejected` one applies the changes and resubmits (status back to `pending`).
 
 ## API contract
 
@@ -181,8 +184,8 @@ protection). Either way the Worker resolves the caller and upserts `users` by
 | `PUT /api/styles/:slug` | owner edits → pending revision (see Edit flow). Consumed by the web edit form (`/submit?edit=slug`, owner-only, pre-filled from live fields). |
 | `POST /api/styles/:slug/like` / `DELETE …/like` | toggle like |
 
-Admin (same Bearer auth + email allow-list from the Worker env var
-`ADMIN_EMAILS`):
+Admin (same auth middleware — cookie from the `/admin` page or Bearer — plus
+email allow-list from the Worker env var `ADMIN_EMAILS`):
 
 | Endpoint | Purpose |
 |---|---|
@@ -210,8 +213,9 @@ the leeguoo.com / blog.leeguoo.com look. Every page embeds the blog's
   Edit button (→ `/submit?edit=slug`).
 - `/submit` — submission form (login-gated): slug, name, kind, category, tags,
   snippet, example uploads (1–3, required), reference uploads (0–4). Also serves
-  fork (`?fork=slug`, pre-filled from source) and owner edit (`?edit=slug`,
-  submits via `PUT`).
+  fork (`?fork=slug` — pre-fills **text fields only**; the forker uploads their
+  own example and reference images) and owner edit (`?edit=slug`, submits via
+  `PUT`).
 - `/me` — my submissions (with status), my likes.
 - `/admin` — review queue: pending cards with full preview, approve/reject (+note)
   buttons. Rendered only for allow-listed emails; usable from a phone.
