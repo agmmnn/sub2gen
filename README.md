@@ -111,11 +111,16 @@ Every image in this README is made by this tool:
 
 A **style** (asset) is a reusable look applied with `--style NAME` — a text snippet **and/or pinned reference images**. Two kinds: `--kind style` (match an aesthetic, don't copy content) and `--kind character` (reproduce a recurring subject — your mascot/persona). Three built-ins ship: `doodle`, `xiaohei` (Ian 小黑 hand-drawn explainer style), and `snoopy` (classic Peanuts newspaper-comic look) — see the [styles gallery](docs/styles/README.md) for examples. Pin your own cartoon character or house style **once** and reuse it without re-passing `--ref`; `--style` is repeatable so a character and a style **stack**. Manage them with the `style` subcommand (`list` / `show` / `add` / `add-ref` / `rm-ref` / `rm` / `use` / `clear` / `reset` / `search` / `pull` / `update` / `publish`); they live in `~/.config/chatgpt-imagegen/styles.json` with images copied under `assets/`.
 
-Community styles live at [drawstyle.leeguoo.com](https://drawstyle.leeguoo.com). Search and pull them without updating the script:
+Community styles live at [drawstyle.leeguoo.com](https://drawstyle.leeguoo.com) — a public gallery you can browse, search, and contribute to without ever updating the script:
 
 ```bash
 chatgpt-imagegen style search "watercolor mascot" --category avatar-ip
+# fastest: generate with a gallery style directly, nothing saved locally
+chatgpt-imagegen "a fox barista" --style-online pip
+# or pull it into the local library to reuse offline
 chatgpt-imagegen style pull pip --as pip2
+# made a good style? share it (one-time browser login):
+chatgpt-imagegen style publish pip --category avatar-ip --from-last
 ```
 
 ```bash
