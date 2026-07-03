@@ -36,7 +36,7 @@ git clone https://github.com/leeguooooo/chatgpt-imagegen
 sudo install chatgpt-imagegen/chatgpt-imagegen /usr/local/bin/chatgpt-imagegen
 ```
 
-You also need **one backend** — `web` (default, drives your logged-in Chrome, spends no Codex-usage) or `codex` (headless fallback). `chatgpt-imagegen doctor` shows what's ready. → **[Backends & troubleshooting](https://drawstyle.leeguoo.com/docs/backends)**
+You also need **one backend** — `web` (default, drives your logged-in Chrome, spends no Codex-usage) or `codex` (headless fallback). `chatgpt-imagegen doctor` shows what's ready. → **[Backends & troubleshooting](https://drawstyle.leeguoo.com/en/docs/backends)**
 
 ## Usage
 
@@ -47,7 +47,7 @@ chatgpt-imagegen "a robot mascot" --style doodle                                
 OUT=$(chatgpt-imagegen "icon" --quiet)                                              # capture the path
 ```
 
-Full options: `chatgpt-imagegen --help`. → **[Generate images](https://drawstyle.leeguoo.com/docs/generate)** · **[Styles](https://drawstyle.leeguoo.com/docs/styles)**
+Full options: `chatgpt-imagegen --help`. → **[Generate images](https://drawstyle.leeguoo.com/en/docs/generate)** · **[Styles](https://drawstyle.leeguoo.com/en/docs/styles)**
 
 ## Community styles
 
@@ -59,11 +59,11 @@ chatgpt-imagegen style search "watercolor mascot"       # search the gallery
 chatgpt-imagegen style publish mystyle --category cute --from-last   # share yours (one-time login)
 ```
 
-→ **[Using gallery styles](https://drawstyle.leeguoo.com/docs/community)** · **[Submitting a style](https://drawstyle.leeguoo.com/docs/submit)**
+→ **[Using gallery styles](https://drawstyle.leeguoo.com/en/docs/community)** · **[Submitting a style](https://drawstyle.leeguoo.com/en/docs/submit)**
 
 ## Learn more
 
-- 📖 **[Full documentation](https://drawstyle.leeguoo.com/docs)** — install, generating, styles, backends, the platform.
+- 📖 **[Full documentation](https://drawstyle.leeguoo.com/en/docs)** — install, generating, styles, backends, the platform.
 - 🎨 **[Style gallery](https://drawstyle.leeguoo.com)** — browse and contribute community art styles.
 - 📝 **[Deep dive (blog)](https://blog.leeguoo.com/en/posts/chatgpt-imagegen/)** — the design and principles behind it.
 - ⚙️ **[How it works](./docs/how-it-works.md)** · **[HTTP API wrapper](https://github.com/leeguooooo/agent-cli-to-api)**

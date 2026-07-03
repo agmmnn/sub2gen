@@ -36,7 +36,7 @@ git clone https://github.com/leeguooooo/chatgpt-imagegen
 sudo install chatgpt-imagegen/chatgpt-imagegen /usr/local/bin/chatgpt-imagegen
 ```
 
-还需要**一个后端**——`web`(默认,驱动你登录着的 Chrome,不花 Codex 用量)或 `codex`(无头兜底)。`chatgpt-imagegen doctor` 看哪个就绪。→ **[后端与排错](https://drawstyle.leeguoo.com/docs/backends)**
+还需要**一个后端**——`web`(默认,驱动你登录着的 Chrome,不花 Codex 用量)或 `codex`(无头兜底)。`chatgpt-imagegen doctor` 看哪个就绪。→ **[后端与排错](https://drawstyle.leeguoo.com/zh/docs/backends)**
 
 ## 用法
 
@@ -47,7 +47,7 @@ chatgpt-imagegen "一个机器人吉祥物" --style doodle                  # �
 OUT=$(chatgpt-imagegen "icon" --quiet)                             # 只拿路径(便于管道)
 ```
 
-完整参数:`chatgpt-imagegen --help`。→ **[生成图片](https://drawstyle.leeguoo.com/docs/generate)** · **[风格系统](https://drawstyle.leeguoo.com/docs/styles)**
+完整参数:`chatgpt-imagegen --help`。→ **[生成图片](https://drawstyle.leeguoo.com/zh/docs/generate)** · **[风格系统](https://drawstyle.leeguoo.com/zh/docs/styles)**
 
 ## 社区风格
 
@@ -59,11 +59,11 @@ chatgpt-imagegen style search "水彩 吉祥物"              # 搜索画廊
 chatgpt-imagegen style publish mystyle --category cute --from-last   # 分享你的(需一次登录)
 ```
 
-→ **[用画廊的风格](https://drawstyle.leeguoo.com/docs/community)** · **[投稿与审核](https://drawstyle.leeguoo.com/docs/submit)**
+→ **[用画廊的风格](https://drawstyle.leeguoo.com/zh/docs/community)** · **[投稿与审核](https://drawstyle.leeguoo.com/zh/docs/submit)**
 
 ## 了解更多
 
-- 📖 **[完整文档](https://drawstyle.leeguoo.com/docs)** —— 安装、生图、风格、后端、平台。
+- 📖 **[完整文档](https://drawstyle.leeguoo.com/zh/docs)** —— 安装、生图、风格、后端、平台。
 - 🎨 **[画风画廊](https://drawstyle.leeguoo.com)** —— 浏览与投稿社区画风。
 - 📝 **[博客深入](https://blog.leeguoo.com/zh/posts/chatgpt-imagegen/)** —— 背后的设计与原理。
 - ⚙️ **[工作原理](./docs/how-it-works.zh-CN.md)** · **[HTTP API 封装](https://github.com/leeguooooo/agent-cli-to-api)**
