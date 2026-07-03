@@ -306,7 +306,7 @@ when the user asks for a look that isn't in `style list`, and to suggest
 
 ## Deployment / ops (one-time)
 
-1. Create repo `drawstyle`; `wrangler` config with D1 `drawstyle_db` (migrations
+1. Create repo `drawstyle`; `wrangler.jsonc` config with D1 `drawstyle_db` (migrations
    in-repo) + R2 `drawstyle-assets`.
 2. Register OIDC clients on account.leeguoo.com: `drawstyle-web`
    (confidential or public + PKCE, redirect `https://drawstyle.leeguoo.com/auth/callback`)

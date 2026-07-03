@@ -18,7 +18,8 @@
 
 - Commit style: Chinese conventional commits (`feat: …` / `fix: …` / `docs: …`), matching the owner's other repos.
 - Every task ends with `npm test` green and a commit. Tests use the Workers vitest pool so they run against real D1/R2 bindings in miniflare — no hand-rolled mocks for storage.
-- All secrets/config via bindings: `ADMIN_EMAILS` (comma-separated), `SESSION_SECRET`, `OIDC_ISSUER` (`https://account.leeguoo.com`), `OIDC_CLIENT_ID` (`drawstyle-web`), `OIDC_CLIENT_SECRET` (empty if registered public+PKCE). Tests get them via `miniflare.bindings` in `vitest.config.ts` (Task 1 Step 3); local `wrangler dev` uses a git-ignored `.dev.vars`.
+- All secrets/config via bindings: `ADMIN_EMAILS` (comma-separated), `SESSION_SECRET`, `OIDC_ISSUER` (`https://account.leeguoo.com`), `OIDC_CLIENT_ID` (`drawstyle-web`), `OIDC_CLIENT_SECRET` (empty if registered public+PKCE). Tests get them via `miniflare.bindings` in `vitest.config.ts` (Task 1 Step 3); local `wrangler-accounts dev` uses a git-ignored `.dev.vars`.
+- Cloudflare commands must run through `wrangler-accounts` (default profile or `--profile <name>`). Do not run bare `wrangler`; it can hit the wrong Cloudflare account.
 - Numbers that must match the spec: uploads ≤5 MB each, 1–3 `example`, 0–4 `reference` images, png/jpeg/webp only (magic-byte sniff), 10 submissions/user/day, slug regex `^[a-z0-9][a-z0-9_-]*$`.
 
 ### File structure
@@ -158,7 +159,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 - [ ] **Step 1: Failing tests** — `GET /auth/login` → 302 to `${OIDC_ISSUER}/authorize` with `response_type=code`, `code_challenge_method=S256`, `state`, and a short-lived signed `oidc_tx` cookie holding `{state, verifier}`; `GET /auth/callback?code&state` (token endpoint stubbed via a `setTokenFetcher` seam) → user upserted, session cookie set (HttpOnly, Secure, SameSite=Lax, 30 d), redirect `/`; mismatched state → 400; `GET /auth/logout` clears the cookie.
 - [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Implement. Redirect URI is `https://drawstyle.leeguoo.com/auth/callback` (from `new URL(c.req.url).origin` so `wrangler dev` works too). Identity comes from the ID token's `sub`/`email`/`name` claims (verified with the same JWKS path as Task 3).
+- [ ] **Step 3:** Implement. Redirect URI is `https://drawstyle.leeguoo.com/auth/callback` (from `new URL(c.req.url).origin` so `wrangler-accounts dev` works too). Identity comes from the ID token's `sub`/`email`/`name` claims (verified with the same JWKS path as Task 3).
 - [ ] **Step 4:** `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: 网页端 OIDC 登录——PKCE 授权码 + 会话 cookie`
 
@@ -169,17 +170,17 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 - [ ] **Step 1: Failing tests** (HTML smoke assertions, not pixel tests): `/` contains gallery cards for approved styles + category nav + the beacon script tag `blog.leeguoo.com/scripts/visitor-beacon.js`; `/s/:slug` shows snippet, `style pull` command block, like button; anonymous `/submit` → redirect to `/auth/login`; `/submit?fork=slug` pre-fills text fields only AND contains a hidden `forked_from_slug` input; `/me` lists own styles with status badges AND the user's liked styles (spec puts both on `/me`); `/admin` 403 for non-admin, shows pending cards + approve/reject forms for admin.
 - [ ] **Step 2:** Run → FAIL.
 - [ ] **Step 3:** Implement with `hono/html` JSX. `layout.tsx`: one shared shell — `<style>` block (CSS custom props on `:root`, dark/light via `prefers-color-scheme`, font stack `-apple-system, …, "PingFang SC", sans-serif`, restrained one-accent palette to match leeguoo.com), beacon script tag, nav with login state. **All state-changing actions go through the inline script, never bare `<form action=…>` posts** — a plain HTML form can't set the `X-Requested-With: drawstyle` header Task 3 requires and can't send `PUT` (edit flow). The shared inline helper (~30 lines) intercepts each form's `submit` event and does `fetch(url, {method, body: new FormData(form)  /* or JSON for like/approve/reject; official-example stays FormData (multipart) */, headers: {"X-Requested-With": "drawstyle"}})`, then redirects/refreshes on success. Same helper drives like buttons, admin approve/reject, and copy-to-clipboard. Submit/edit/fork are ONE form template fed by mode (blank / live fields / source style text). Mode differences: **fork** includes a hidden `forked_from_slug` input (provenance per Task 6's contract); **edit** renders slug/kind as static text or `disabled` inputs (NOT `readonly` — readonly fields still land in FormData and would trip Task 7's immutable-field 400) and its fetch uses `PUT /api/styles/:slug` with only mutable fields in the body.
-- [ ] **Step 4:** `npm test` → PASS. Also eyeball locally: `npx wrangler dev` + open `http://localhost:8787`.
+- [ ] **Step 4:** `npm test` → PASS. Also eyeball locally: `wrangler-accounts dev` + open `http://localhost:8787`.
 - [ ] **Step 5:** Commit — `feat: SSR 页面——画廊/详情/投稿/我的/审核 + 博客统计 beacon`
 
 ### Task 11: deploy + ops
 
 **Files:** create `README.md`, `scripts/seed-builtins.md`.
 
-- [ ] **Step 1:** `npx wrangler d1 create drawstyle_db` → paste real `database_id` into `wrangler.jsonc`; `npx wrangler r2 bucket create drawstyle-assets`; `npx wrangler d1 migrations apply drawstyle_db --remote`.
-- [ ] **Step 2:** Secrets: `npx wrangler secret put SESSION_SECRET`; set `ADMIN_EMAILS` var to the owner's email.
+- [ ] **Step 1:** `wrangler-accounts d1 create drawstyle_db` → paste real `database_id` into `wrangler.jsonc`; `wrangler-accounts r2 bucket create drawstyle-assets`; `wrangler-accounts d1 migrations apply drawstyle_db --remote`.
+- [ ] **Step 2:** Secrets: `wrangler-accounts secret put SESSION_SECRET`; set `ADMIN_EMAILS` var to the owner's email.
 - [ ] **Step 3:** **Owner action (can't be done by the agent):** register OIDC clients on account.leeguoo.com — `drawstyle-web` (redirect `https://drawstyle.leeguoo.com/auth/callback`) and `drawstyle-cli` (public + PKCE, loopback `http://127.0.0.1:*/cb`). Ask the user to do this and confirm before Step 4.
-- [ ] **Step 4:** `npx wrangler deploy`; add DNS route `drawstyle.leeguoo.com` → the worker (owner action in the Cloudflare dashboard, or `routes` in wrangler.jsonc if the zone is on the same account).
+- [ ] **Step 4:** `wrangler-accounts deploy`; add DNS route `drawstyle.leeguoo.com` → the worker (owner action in the Cloudflare dashboard, or `routes` in wrangler.jsonc if the zone is on the same account).
 - [ ] **Step 5:** Seed built-ins: log in as admin, submit doodle/xiaohei/snoopy through `/submit` (snippets from `chatgpt-imagegen` `_BUILTIN_STYLES`, example images from `docs/styles/*.png` in the CLI repo), approve them in `/admin`. Write the exact steps into `scripts/seed-builtins.md`.
 - [ ] **Step 6:** Live smoke: gallery renders; `curl https://drawstyle.leeguoo.com/api/styles | jq` lists 3 styles; `GET /api/styles/doodle/package` returns the snippet; a pull from the real CLI works end-to-end (`chatgpt-imagegen style pull doodle --as doodle2`); beacon events appear in blog.leeguoo.com's admin stats.
 - [ ] **Step 7:** Commit — `docs: 部署手册 + 内置风格种子流程`; push to a new GitHub repo `leeguooooo/drawstyle`.
