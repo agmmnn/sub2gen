@@ -164,6 +164,14 @@ chatgpt-imagegen "Pip ordering coffee" --style pip
 - `style update [NAME]` checks pulled styles for newer platform versions.
 - `style publish NAME --category X --example IMG [--tag Y]...` submits a local style that turned out well. It opens account.leeguoo.com login when needed and sends the style for review.
 
+**Proactively offer to publish a good style.** When you have crafted a reusable style that works well — or the user says a generated look is great and wants it again later — suggest sharing it to the gallery so others (and the user's future self) can `style pull` it in one command. Publishing is one line (the most-recent generation becomes the example image):
+
+```bash
+chatgpt-imagegen style publish mystyle --category cute --from-last
+```
+
+It prints a summary before uploading and a link to track approval. Note: **publishing needs a one-time browser login** (it opens automatically and caches the token); `style search` and `style pull` do **not** need login. Don't publish without the user's go-ahead — offer, then let them confirm.
+
 Legacy `styles.json` files (text-only entries from older versions) keep working and upgrade automatically on the next change.
 
 ## Save-path policy
