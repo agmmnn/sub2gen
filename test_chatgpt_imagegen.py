@@ -1034,6 +1034,33 @@ _PKG = {"slug": "pip", "name": "Pip the fox", "kind": "character",
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
 
 
+class ResolveOnlineStyles(unittest.TestCase):
+    def test_fetches_snippet_and_refs_without_persisting(self):
+        with _tmp_xdg():
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                snippets, refs = cig._resolve_online_styles(["pip"])
+            # snippet folded, one ref downloaded to a temp path, grouped by kind
+            self.assertEqual(snippets, ["a round orange fox"])
+            self.assertEqual(len(refs), 1)
+            self.assertEqual(refs[0]["group"], "character")  # _PKG kind=character
+            self.assertTrue(Path(refs[0]["ref"]).is_file())
+            self.assertIn("online:pip", refs[0]["label"])
+            # nothing was written to the local style library
+            doc = cig._load_styles()
+            self.assertNotIn("pip", doc["styles"])
+
+    def test_invalid_slug_and_malformed_package_exit(self):
+        with self.assertRaises(SystemExit):
+            cig._resolve_online_styles(["../../etc"])
+        with unittest.mock.patch.object(cig, "_platform_request",
+                                        return_value={"no": "kind"}):
+            with self.assertRaises(SystemExit):
+                cig._resolve_online_styles(["pip"])
+
+
 class StylePull(unittest.TestCase):
     def _pull(self, argv, pkg=None, blobs=None):
         def fake_request(method, path, **kw):

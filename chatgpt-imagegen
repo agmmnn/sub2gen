@@ -40,6 +40,7 @@ import hashlib
 import http.server
 import json
 import os
+import atexit
 import re
 import secrets
 import shutil
@@ -2624,6 +2625,37 @@ def _apply_package(doc: dict, name: str, pkg: dict) -> list[str]:
     return stored
 
 
+def _resolve_online_styles(slugs: list[str]) -> tuple[list[str], list[dict]]:
+    """Fetch platform styles for ONE-SHOT use during a generation — no local
+    persist. Returns (snippets, ref_records) where each ref_record is the
+    ``{ref, group, label}`` shape `_collect_refs` produces. Reference images are
+    downloaded to temp dirs cleaned up at process exit.
+
+    This is what `--style-online SLUG` uses: an agent can generate with a gallery
+    style immediately, without `style pull` writing anything to the library.
+    """
+    snippets: list[str] = []
+    refs: list[dict] = []
+    for slug in slugs:
+        if not _valid_style_name(slug):
+            raise SystemExit(f"error: invalid style slug {slug!r}")
+        pkg = _platform_request("GET", f"/api/styles/{slug}/package")
+        if not isinstance(pkg, dict) or "kind" not in pkg:
+            raise SystemExit("error: platform: malformed package response")
+        snip = pkg.get("snippet") or ""
+        if snip:
+            snippets.append(snip)
+        group = "character" if pkg.get("kind") == "character" else "style"
+        pkg_refs = pkg.get("refs") or []
+        if pkg_refs:
+            tmp = Path(tempfile.mkdtemp(prefix="cig-online-"))
+            atexit.register(shutil.rmtree, str(tmp), ignore_errors=True)
+            for fn in _pull_refs_to_tmp(pkg_refs, tmp):
+                refs.append({"ref": str(tmp / fn), "group": group,
+                             "label": f"online:{slug}/{fn}"})
+    return snippets, refs
+
+
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:
     """Next free `ref-<n>` index, considering both the entry's recorded refs and
     whatever already sits in the asset dir (so copies never collide)."""
@@ -3519,6 +3551,13 @@ def main() -> int:
         help="Skip all assets (text + refs) for this run even if a default set "
              "is configured.",
     )
+    parser.add_argument(
+        "--style-online", action="append", default=None, metavar="SLUG",
+        help="Apply a drawstyle.leeguoo.com style by slug for THIS generation "
+             "only, without saving it to the local library (fetched on the fly). "
+             "Repeatable; stacks with --style. Great for one-off use of a "
+             "gallery style: `chatgpt-imagegen \"a cat\" --style-online xiaohei`.",
+    )
     parser.add_argument("-o", "--out", help="Output file path (default: assets/generated/<slug>.<ext>)")
     parser.add_argument(
         "--size",
@@ -3638,13 +3677,21 @@ def main() -> int:
     # character/style groups in deterministic order.
     _active = _resolve_active_styles(
         _styles_doc, style_args=args.style, no_style=args.no_style)
+    # One-shot online styles (fetched, not persisted) stack on top of local ones.
+    _online_snippets, _online_refs = _resolve_online_styles(args.style_online or [])
     _gen_prompt = args.prompt
     for _name in _active:
         _gen_prompt = _compose_prompt(
             _gen_prompt, _styles_doc["styles"][_name].get("snippet"))
+    for _snip in _online_snippets:
+        _gen_prompt = _compose_prompt(_gen_prompt, _snip)
     args.gen_prompt = _gen_prompt
 
     _ordered_refs = _collect_refs(_styles_doc, _active, args.ref)
+    if _online_refs:
+        # Keep the character-first grouping stable after merging online refs.
+        _ordered_refs = sorted(_ordered_refs + _online_refs,
+                               key=lambda r: 0 if r["group"] == "character" else 1)
     _kept_refs, _dropped_refs = _cap_refs(_ordered_refs, REF_ATTACH_CAP)
     args.resolved_refs = [r["ref"] for r in _kept_refs]
     args.n_character_refs = sum(1 for r in _kept_refs if r["group"] == "character")
@@ -3677,8 +3724,9 @@ def main() -> int:
                         f"format={args.format} timeout={args.timeout}s)")
         print(_fmt_progress(0.0, f"requesting image  {meta_bit}"), file=sys.stderr)
         print(_dim(f"           prompt: {prompt_preview}"), file=sys.stderr)
-        if _active:
-            print(_dim(f"           styles: {', '.join(_active)}"), file=sys.stderr)
+        _shown = list(_active) + [f"{s} (online)" for s in (args.style_online or [])]
+        if _shown:
+            print(_dim(f"           styles: {', '.join(_shown)}"), file=sys.stderr)
 
     image_bytes, meta = _dispatch(args, progress, stall_timeout, start)
 
