@@ -2245,17 +2245,23 @@ def _platform_request(method: str, path: str, *, data: bytes | None = None,
                                  headers=headers or {})
     try:
         with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            raw = resp.read().decode("utf-8", errors="ignore")
     except urllib.error.HTTPError as e:
         try:
             msg = json.loads(e.read().decode("utf-8"))["error"]["message"]
         except Exception:  # noqa: BLE001
             msg = f"HTTP {e.code}"
-        raise SystemExit(f"error: platform: {msg}")
+        raise SystemExit(f"error: platform: {msg}") from None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise SystemExit(
             f"error: cannot reach {_platform_base()} ({e}). "
-            "Generation with local styles is unaffected; retry when online.")
+            "Generation with local styles is unaffected; "
+            "retry when online.") from None
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        raise SystemExit(
+            "error: platform: unexpected response (not JSON)") from None
 
 
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:

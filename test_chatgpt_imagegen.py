@@ -928,13 +928,17 @@ class OriginRoundTrip(unittest.TestCase):
 
 class PlatformRequest(unittest.TestCase):
     def test_base_default_and_env(self):
-        os.environ.pop("DRAWSTYLE_API", None)
-        self.assertEqual(cig._platform_base(), "https://drawstyle.leeguoo.com")
-        os.environ["DRAWSTYLE_API"] = "http://localhost:8787/"
+        prev = os.environ.pop("DRAWSTYLE_API", None)
         try:
+            self.assertEqual(cig._platform_base(),
+                             "https://drawstyle.leeguoo.com")
+            os.environ["DRAWSTYLE_API"] = "http://localhost:8787/"
             self.assertEqual(cig._platform_base(), "http://localhost:8787")
         finally:
-            os.environ.pop("DRAWSTYLE_API", None)
+            if prev is None:
+                os.environ.pop("DRAWSTYLE_API", None)
+            else:
+                os.environ["DRAWSTYLE_API"] = prev
 
     def test_error_payload_surfaced(self):
         import urllib.error
@@ -946,6 +950,36 @@ class PlatformRequest(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 cig._platform_request("GET", "/api/styles/nope")
             self.assertIn("no such style", str(cm.exception))
+
+    def test_offline_hint(self):
+        import urllib.error
+        with unittest.mock.patch.object(
+                cig, "_urlopen", side_effect=urllib.error.URLError("down")):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles")
+            self.assertIn("unaffected", str(cm.exception))
+            self.assertIn("retry when online", str(cm.exception))
+
+    @staticmethod
+    def _fake_urlopen(body: bytes):
+        resp = unittest.mock.MagicMock()
+        resp.read.return_value = body
+        resp.__enter__.return_value = resp
+        resp.__exit__.return_value = False
+        return unittest.mock.Mock(return_value=resp)
+
+    def test_happy_path_json(self):
+        fake = self._fake_urlopen(b'{"ok": true}')
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            self.assertEqual(cig._platform_request("GET", "/api/styles"),
+                             {"ok": True})
+
+    def test_non_json_200_exits(self):
+        fake = self._fake_urlopen(b"<html>")
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles")
+            self.assertIn("not JSON", str(cm.exception))
 
 
 if __name__ == "__main__":
