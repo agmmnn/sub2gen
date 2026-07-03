@@ -68,7 +68,7 @@ Two repositories, one API contract:
 │   • gallery frontend (/, /s/:slug, /submit, /me, /admin) — SSR'd HTML       │
 │   • JSON API under /api/*                                                   │
 │   • /img/:key — R2 proxy with cache headers (single-domain assets)          │
-│ D1: drawstyle_db          R2: drawstyle-assets                              │
+│ D1: public-db (shared; drawstyle_* tables) R2: drawstyle-assets             │
 │ OIDC RP of account.leeguoo.com (client: drawstyle-web)                      │
 │ <script src="https://blog.leeguoo.com/scripts/visitor-beacon.js" defer>     │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -80,15 +80,17 @@ Two repositories, one API contract:
 ```
 
 Naming is prefixed with the project everywhere it shares an account-level
-namespace: D1 database `drawstyle_db`, R2 bucket `drawstyle-assets`, OIDC client
-`drawstyle-web`, Worker name `drawstyle`.
+namespace: D1 uses the shared database `public-db` because the Cloudflare account
+is limited to 10 D1 databases, so every table and index is prefixed with
+`drawstyle_`; R2 bucket `drawstyle-assets`, OIDC client `drawstyle-web`, Worker
+name `drawstyle`.
 
 ---
 
 ## Data model (D1)
 
 ```sql
-users(
+drawstyle_users(
   id INTEGER PRIMARY KEY,
   oidc_sub TEXT UNIQUE NOT NULL,      -- subject from account.leeguoo.com
   email TEXT NOT NULL,
@@ -96,11 +98,11 @@ users(
   created_at TEXT NOT NULL
 )
 
-styles(
+drawstyle_styles(
   id INTEGER PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,          -- ^[a-z0-9][a-z0-9_-]*$, same rule as the CLI
   name TEXT NOT NULL,                 -- human display title (spaces/CJK fine); slug is the machine id
-  owner_user_id INTEGER NOT NULL REFERENCES users(id),
+  owner_user_id INTEGER NOT NULL REFERENCES drawstyle_users(id),
   kind TEXT NOT NULL CHECK (kind IN ('character','style')),
   snippet TEXT NOT NULL DEFAULT '',   -- may be '' when the style is refs-only
   category TEXT NOT NULL,             -- use-case category key (see below)
@@ -108,18 +110,18 @@ styles(
   version INTEGER NOT NULL DEFAULT 1, -- bumped on approval of an edit
   review_note TEXT,                   -- admin note on the most recent reject
   pending_revision TEXT,              -- JSON blob of an owner edit awaiting review (see Edit flow)
-  forked_from INTEGER REFERENCES styles(id),
+  forked_from INTEGER REFERENCES drawstyle_styles(id),
   likes_count INTEGER NOT NULL DEFAULT 0,
   pulls_count INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 )
 
-style_tags(style_id, tag TEXT, PRIMARY KEY(style_id, tag))
+drawstyle_style_tags(style_id, tag TEXT, PRIMARY KEY(style_id, tag))
 
-style_images(
+drawstyle_style_images(
   id INTEGER PRIMARY KEY,
-  style_id INTEGER NOT NULL REFERENCES styles(id),
+  style_id INTEGER NOT NULL REFERENCES drawstyle_styles(id),
   r2_key TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('example','reference','official_example')),
   content_type TEXT NOT NULL,         -- png/jpeg/webp only, server-sniffed
@@ -127,7 +129,7 @@ style_images(
   sort INTEGER NOT NULL DEFAULT 0
 )
 
-likes(user_id, style_id, created_at, PRIMARY KEY(user_id, style_id))
+drawstyle_likes(user_id, style_id, created_at, PRIMARY KEY(user_id, style_id))
 ```
 
 - **Image roles:** `example` = submitter's showcase output (1–3 required, drives
@@ -147,7 +149,7 @@ likes(user_id, style_id, created_at, PRIMARY KEY(user_id, style_id))
   and detail pages. On pull, the CLI's local entry key defaults to the slug.
 - **Edit flow:** editing an approved style stores the proposed changes as a JSON
   blob in `pending_revision` — `{name, snippet, category, tags, ref_image_ids}` —
-  with newly staged images written as `style_images` rows flagged `pending=1`.
+  with newly staged images written as `drawstyle_style_images` rows flagged `pending=1`.
   The approved version stays live (gallery and `/package` keep serving the live
   fields) until the admin **approves** the edit: the blob is applied to the live
   columns, staged images flip `pending=0` (replaced refs are deleted), `version`
@@ -175,7 +177,7 @@ the **CLI** sends `Authorization: Bearer <access_token>` from account.leeguoo.co
 (validated via JWKS with issuer/audience checks); the **web frontend** sends the
 signed HttpOnly session cookie minted at login (SameSite=Lax; state-changing
 requests additionally require a custom `X-Requested-With` header as CSRF
-protection). Either way the Worker resolves the caller and upserts `users` by
+protection). Either way the Worker resolves the caller and upserts `drawstyle_users` by
 `oidc_sub`:
 
 | Endpoint | Purpose |
@@ -306,7 +308,7 @@ when the user asks for a look that isn't in `style list`, and to suggest
 
 ## Deployment / ops (one-time)
 
-1. Create repo `drawstyle`; `wrangler.jsonc` config with D1 `drawstyle_db` (migrations
+1. Create repo `drawstyle`; `wrangler.jsonc` config with shared D1 `public-db` (migrations
    in-repo) + R2 `drawstyle-assets`.
 2. Register OIDC clients on account.leeguoo.com: `drawstyle-web`
    (confidential or public + PKCE, redirect `https://drawstyle.leeguoo.com/auth/callback`)

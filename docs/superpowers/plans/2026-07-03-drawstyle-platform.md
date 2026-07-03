@@ -4,7 +4,7 @@
 
 **Goal:** Build and deploy `drawstyle.leeguoo.com` — a community platform for image-generation style presets: public gallery, login via account.leeguoo.com, submission → admin review queue, likes/forks, and a read API consumed by the `chatgpt-imagegen` CLI.
 
-**Architecture:** One Cloudflare Worker (Hono, TypeScript) serves the JSON API, the server-rendered HTML pages, and an R2 image proxy. D1 (`drawstyle_db`) holds users/styles/tags/images/likes; R2 (`drawstyle-assets`) holds image bytes. Auth is one middleware accepting either an account.leeguoo.com Bearer token (CLI) or a signed session cookie (web). Traffic stats = one `visitor-beacon.js` script tag per page.
+**Architecture:** One Cloudflare Worker (Hono, TypeScript) serves the JSON API, the server-rendered HTML pages, and an R2 image proxy. D1 uses the shared `public-db` database (Cloudflare accounts are limited to 10 D1 databases, so this is intentional) with project-prefixed tables/indexes (`drawstyle_users`, `drawstyle_styles`, `drawstyle_style_tags`, `drawstyle_style_images`, `drawstyle_likes`); R2 (`drawstyle-assets`) holds image bytes. Auth is one middleware accepting either an account.leeguoo.com Bearer token (CLI) or a signed session cookie (web). Traffic stats = one `visitor-beacon.js` script tag per page.
 
 **Tech Stack:** Hono, TypeScript, Wrangler, D1, R2, vitest + `@cloudflare/vitest-pool-workers`, Web Crypto (JWT verify + cookie signing). No frontend framework — `hono/html` SSR.
 
@@ -56,7 +56,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 - [ ] **Step 1:** `mkdir -p /Users/leo/github.com/drawstyle && cd $_ && git init`
 - [ ] **Step 2:** `npm init -y && npm i hono && npm i -D wrangler typescript vitest @cloudflare/vitest-pool-workers @cloudflare/workers-types`
-- [ ] **Step 3:** `wrangler.jsonc` — worker name `drawstyle`; `d1_databases: [{binding: "DB", database_name: "drawstyle_db", database_id: "TBD-at-deploy", migrations_dir: "migrations"}]`; `r2_buckets: [{binding: "ASSETS", bucket_name: "drawstyle-assets"}]`; `vars: {OIDC_ISSUER: "https://account.leeguoo.com", OIDC_CLIENT_ID: "drawstyle-web", ADMIN_EMAILS: ""}`; `compatibility_date` = today. `vitest.config.ts` uses `defineWorkersConfig` with `wrangler: {configPath: "./wrangler.jsonc"}` and `miniflare: {bindings: {SESSION_SECRET: "test-secret", ADMIN_EMAILS: "admin@test.dev"}}` — do NOT re-declare `d1Databases`/`r2Buckets` there; they come from `wrangler.jsonc` via `configPath`.
+- [ ] **Step 3:** `wrangler.jsonc` — worker name `drawstyle`; `d1_databases: [{binding: "DB", database_name: "public-db", database_id: "TBD-at-deploy", migrations_dir: "migrations"}]`; add a JSONC comment explaining that Cloudflare accounts are limited to 10 D1 databases, so drawstyle intentionally shares `public-db` and isolates with `drawstyle_*` table/index prefixes; `r2_buckets: [{binding: "ASSETS", bucket_name: "drawstyle-assets"}]`; `vars: {OIDC_ISSUER: "https://account.leeguoo.com", OIDC_CLIENT_ID: "drawstyle-web", ADMIN_EMAILS: ""}`; `compatibility_date` = today. `vitest.config.ts` uses `defineWorkersConfig` with `wrangler: {configPath: "./wrangler.jsonc"}` and `miniflare: {bindings: {SESSION_SECRET: "test-secret", ADMIN_EMAILS: "admin@test.dev"}}` — do NOT re-declare `d1Databases`/`r2Buckets` there; they come from `wrangler.jsonc` via `configPath`.
 - [ ] **Step 3b: D1 migrations in tests.** The vitest workers pool does **not** auto-apply `migrations/`. Wire the documented pattern now so Task 2's tests find their tables: in `vitest.config.ts`, `const migrations = await readD1Migrations("./migrations")` (import from `@cloudflare/vitest-pool-workers/config`) and pass them via `miniflare.bindings.TEST_MIGRATIONS`; add `test/apply-migrations.ts` — `import {applyD1Migrations, env} from "cloudflare:test"; await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);` — and register it in `poolOptions.workers.setupFiles`. (An empty `migrations/` dir is fine at this point.)
 - [ ] **Step 4:** `src/index.ts` — Hono app with `GET /healthz` → `{ok: true}`. `test/smoke.test.ts` asserts 200. Run: `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: 脚手架——Hono Worker + D1/R2 绑定 + vitest workers 池`
@@ -65,11 +65,11 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 **Files:** create `migrations/0001_init.sql`, `src/db.ts`, `test/db.test.ts`, `test/helpers.ts` (app fixture + `makeUser`/`makeStyle`/`loginAs` seeding utilities — grown by later tasks).
 
-- [ ] **Step 1:** Write `0001_init.sql` — the five tables **exactly as in the spec's Data model section** (`users`, `styles` incl. `name`, `pending_revision`, `review_note`, `forked_from`; `style_tags`; `style_images` incl. `pending`; `likes`) plus indexes: `styles(status)`, `styles(category)`, `styles(owner_user_id)`, `style_images(style_id)`, `style_tags(tag)`.
+- [ ] **Step 1:** Write `0001_init.sql` — the five tables **exactly as in the spec's Data model section, but with the required `drawstyle_` prefix** (`drawstyle_users`, `drawstyle_styles` incl. `name`, `pending_revision`, `review_note`, `forked_from`; `drawstyle_style_tags`; `drawstyle_style_images` incl. `pending`; `drawstyle_likes`) plus prefixed indexes: `idx_drawstyle_styles_status`, `idx_drawstyle_styles_category`, `idx_drawstyle_styles_owner`, `idx_drawstyle_style_images_style`, `idx_drawstyle_style_tags_tag`. Include a migration comment explaining shared `public-db` exists because of the 10-D1 limit.
 - [ ] **Step 2:** Failing test: migrations are applied by the `test/apply-migrations.ts` setup file wired in Task 1 Step 3b (if a test fails with "no such table", that wiring is what to check). Insert a user + style + image row through `db.ts` helpers `createUser`, `createStyle`, `addImage`, read back via `getStyleBySlug`. Also assert the `status` CHECK rejects `'bogus'` and slug UNIQUE fires.
 - [ ] **Step 3:** Implement `db.ts` helpers with typed row interfaces (`UserRow`, `StyleRow`, `ImageRow`). Every later task adds its queries HERE, never inline SQL in handlers.
 - [ ] **Step 4:** `npm test` → PASS.
-- [ ] **Step 5:** Commit — `feat: D1 schema——styles/users/tags/images/likes + 索引`
+- [ ] **Step 5:** Commit — `feat: D1 schema——drawstyle 前缀表/users/styles/images/likes + 索引`
 
 ### Task 3: auth middleware (Bearer + cookie, admin gate)
 
@@ -88,7 +88,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 - [ ] **Step 1: Failing tests** — sniff png/jpeg/webp magic bytes correctly, reject others; reject >5 MB; `putImage` stores under a content-hash key (`sha256 hex + ext`) in R2; `GET /img/:key` streams with the stored content-type + `Cache-Control: public, max-age=31536000, immutable`; unknown key → 404.
 - [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3: Implement** — same magic-byte prefixes as the CLI (`\x89PNG\r\n\x1a\n`, `\xff\xd8\xff`, `RIFF….WEBP`). Content-addressed keys make replays/dedup free and keys unguessable-by-construction irrelevant (everything served is approved or proxied to its owner/admin only — enforce: `/img/:key` looks up `style_images` and refuses images belonging to non-approved styles unless the requester is owner/admin).
+- [ ] **Step 3: Implement** — same magic-byte prefixes as the CLI (`\x89PNG\r\n\x1a\n`, `\xff\xd8\xff`, `RIFF….WEBP`). Content-addressed keys make replays/dedup free and keys unguessable-by-construction irrelevant (everything served is approved or proxied to its owner/admin only — enforce: `/img/:key` looks up `drawstyle_style_images` and refuses images belonging to non-approved styles unless the requester is owner/admin).
 - [ ] **Step 4:** `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: 图片管线——魔数嗅探/5MB 上限/内容寻址 R2 + /img 代理`
 
@@ -118,7 +118,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
   - 11th submission by the same user in one day (UTC) → 429.
   - snippet-less but ref-having submission is valid (spec: snippet may be '').
 - [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Implement — parse `multipart/form-data` via `c.req.parseBody({all: true})` (repeated `tag` and `example[]`/`ref[]` arrive as arrays with `all: true`); sniff + size-check every file through `images.ts`; single D1 batch insert. Rate limit = `SELECT COUNT(*) FROM styles WHERE owner_user_id=? AND created_at >= date('now')`.
+- [ ] **Step 3:** Implement — parse `multipart/form-data` via `c.req.parseBody({all: true})` (repeated `tag` and `example[]`/`ref[]` arrive as arrays with `all: true`); sniff + size-check every file through `images.ts`; single D1 batch insert. Rate limit = `SELECT COUNT(*) FROM drawstyle_styles WHERE owner_user_id=? AND created_at >= date('now')`.
 - [ ] **Step 4:** `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: 投稿 API——multipart 校验/限流/fork 溯源,一律进待审`
 
@@ -133,7 +133,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
   - `slug`/`kind` in the payload → 400 (immutable).
   - `POST /:slug/like` → likes_count 1, duplicate like idempotent; `DELETE` → 0. Like on non-approved → 404.
 - [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Implement per spec; `likes_count` maintained by the same statement batch as the `likes` row (D1 batch = atomic).
+- [ ] **Step 3:** Implement per spec; `likes_count` maintained by the same statement batch as the `drawstyle_likes` row (D1 batch = atomic).
 - [ ] **Step 4:** `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: owner 编辑(pending_revision 状态机) + 点赞`
 
@@ -177,7 +177,7 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 **Files:** create `README.md`, `scripts/seed-builtins.md`.
 
-- [ ] **Step 1:** `wrangler-accounts d1 create drawstyle_db` → paste real `database_id` into `wrangler.jsonc`; `wrangler-accounts r2 bucket create drawstyle-assets`; `wrangler-accounts d1 migrations apply drawstyle_db --remote`.
+- [ ] **Step 1:** Use the shared D1 database `public-db` (do not create a per-project database unless the owner explicitly changes this; the account has a 10-D1 limit). If it does not exist, run `wrangler-accounts d1 create public-db` → paste real `database_id` into `wrangler.jsonc`; `wrangler-accounts r2 bucket create drawstyle-assets`; `wrangler-accounts d1 migrations apply public-db --remote`.
 - [ ] **Step 2:** Secrets: `wrangler-accounts secret put SESSION_SECRET`; set `ADMIN_EMAILS` var to the owner's email.
 - [ ] **Step 3:** **Owner action (can't be done by the agent):** register OIDC clients on account.leeguoo.com — `drawstyle-web` (redirect `https://drawstyle.leeguoo.com/auth/callback`) and `drawstyle-cli` (public + PKCE, loopback `http://127.0.0.1:*/cb`). Ask the user to do this and confirm before Step 4.
 - [ ] **Step 4:** `wrangler-accounts deploy`; add DNS route `drawstyle.leeguoo.com` → the worker (owner action in the Cloudflare dashboard, or `routes` in wrangler.jsonc if the zone is on the same account).
