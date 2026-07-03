@@ -11,12 +11,15 @@ Run:  python3 -m unittest test_chatgpt_imagegen -v
 
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 import re
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import contextmanager
+from contextlib import redirect_stdout
 from pathlib import Path
 
 _loader = importlib.machinery.SourceFileLoader(
@@ -897,6 +900,391 @@ class StylesAlias(unittest.TestCase):
             cig._style_command(["add", "b", "y"])
             cig._style_command(["use", "a", "b"])
             self.assertEqual(cig._load_styles()["default"], ["a", "b"])
+
+
+class OriginRoundTrip(unittest.TestCase):
+    def test_origin_preserved(self):
+        e = cig._normalize_entry({
+            "kind": "style", "snippet": "s", "refs": ["a.png"],
+            "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}})
+        self.assertEqual(e["origin"],
+                         {"platform": "drawstyle", "slug": "pip", "version": 3})
+
+    def test_platform_defaults_when_missing(self):
+        e = cig._normalize_entry({
+            "kind": "style", "snippet": "s", "refs": [],
+            "origin": {"slug": "pip", "version": 1}})
+        self.assertEqual(e["origin"]["platform"], "drawstyle")
+
+    def test_bad_origin_dropped(self):
+        for bad in ("str", 7, ["x"], {"platform": "drawstyle"},  # missing slug/version
+                    {"slug": "x", "version": True}):  # bool is not a version
+            e = cig._normalize_entry({"kind": "style", "snippet": "s",
+                                      "refs": [], "origin": bad})
+            self.assertNotIn("origin", e)
+
+    def test_absent_origin_absent(self):
+        e = cig._normalize_entry({"kind": "style", "snippet": "s", "refs": []})
+        self.assertNotIn("origin", e)
+
+
+class PlatformRequest(unittest.TestCase):
+    def test_base_default_and_env(self):
+        prev = os.environ.pop("DRAWSTYLE_API", None)
+        try:
+            self.assertEqual(cig._platform_base(),
+                             "https://drawstyle.leeguoo.com")
+            os.environ["DRAWSTYLE_API"] = "http://localhost:8787/"
+            self.assertEqual(cig._platform_base(), "http://localhost:8787")
+        finally:
+            if prev is None:
+                os.environ.pop("DRAWSTYLE_API", None)
+            else:
+                os.environ["DRAWSTYLE_API"] = prev
+
+    def test_error_payload_surfaced(self):
+        import urllib.error
+        body = json.dumps({"error": {"code": "not_found",
+                                     "message": "no such style"}}).encode()
+        err = urllib.error.HTTPError("u", 404, "Not Found", {},
+                                     io.BytesIO(body))
+        with unittest.mock.patch.object(cig, "_urlopen", side_effect=err):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles/nope")
+            self.assertIn("no such style", str(cm.exception))
+
+    def test_offline_hint(self):
+        import urllib.error
+        with unittest.mock.patch.object(
+                cig, "_urlopen", side_effect=urllib.error.URLError("down")):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles")
+            self.assertIn("unaffected", str(cm.exception))
+            self.assertIn("retry when online", str(cm.exception))
+
+    @staticmethod
+    def _fake_urlopen(body: bytes):
+        resp = unittest.mock.MagicMock()
+        resp.read.return_value = body
+        resp.__enter__.return_value = resp
+        resp.__exit__.return_value = False
+        return unittest.mock.Mock(return_value=resp)
+
+    def test_happy_path_json(self):
+        fake = self._fake_urlopen(b'{"ok": true}')
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            self.assertEqual(cig._platform_request("GET", "/api/styles"),
+                             {"ok": True})
+
+    def test_reference_download_sends_user_agent(self):
+        fake = self._fake_urlopen(_PNG)
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            self.assertEqual(cig._download_bytes("https://example.test/ref.png"),
+                             _PNG)
+        req = fake.call_args[0][0]
+        self.assertIn("chatgpt-imagegen/", req.get_header("User-agent"))
+
+    def test_non_json_200_exits(self):
+        fake = self._fake_urlopen(b"<html>")
+        with unittest.mock.patch.object(cig, "_urlopen", fake):
+            with self.assertRaises(SystemExit) as cm:
+                cig._platform_request("GET", "/api/styles")
+            self.assertIn("not JSON", str(cm.exception))
+
+
+_SEARCH_PAYLOAD = {"styles": [
+    {"slug": "pip", "name": "Pip the fox", "kind": "character",
+     "category": "avatar-ip", "likes_count": 12, "pulls_count": 90,
+     "snippet": "a round orange fox named Pip, thick outlines"},
+]}
+
+
+class StyleSearch(unittest.TestCase):
+    def test_renders_rows_and_pull_hint(self):
+        with unittest.mock.patch.object(
+                cig, "_platform_request", return_value=_SEARCH_PAYLOAD) as m:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["search", "fox", "--category",
+                                         "avatar-ip", "--tag", "cute"])
+        self.assertEqual(rc, 0)
+        out = buf.getvalue()
+        self.assertIn("pip", out)
+        self.assertIn("character", out)
+        self.assertIn("style pull pip", out)
+        path = m.call_args[0][1]
+        self.assertIn("q=fox", path)
+        self.assertIn("category=avatar-ip", path)
+        self.assertIn("tag=cute", path)
+
+    def test_empty_result(self):
+        with unittest.mock.patch.object(
+                cig, "_platform_request", return_value={"styles": []}):
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["search", "nothing"])
+        self.assertEqual(rc, 0)
+        self.assertIn("no styles found", buf.getvalue())
+
+
+_PKG = {"slug": "pip", "name": "Pip the fox", "kind": "character",
+        "snippet": "a round orange fox", "version": 3,
+        "refs": [{"url": "https://drawstyle.leeguoo.com/img/abc",
+                  "content_type": "image/png"}]}
+_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+
+class StylePull(unittest.TestCase):
+    def _pull(self, argv, pkg=None, blobs=None):
+        def fake_request(method, path, **kw):
+            return pkg or _PKG
+
+        def fake_download(url):
+            if blobs is not None and url in blobs:
+                raise OSError("boom")
+            return _PNG
+
+        with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+             unittest.mock.patch.object(cig, "_download_bytes", fake_download):
+            return cig._style_command(argv)
+
+    def test_happy_path_writes_entry_refs_and_origin(self):
+        with _tmp_xdg():
+            rc = self._pull(["pull", "pip"])
+            self.assertEqual(rc, 0)
+            doc = cig._load_styles()
+            e = doc["styles"]["pip"]
+            self.assertEqual(e["kind"], "character")
+            self.assertEqual(e["origin"],
+                             {"platform": "drawstyle", "slug": "pip", "version": 3})
+            self.assertEqual(len(e["refs"]), 1)
+            self.assertTrue((cig._asset_dir("pip") / e["refs"][0]).exists())
+
+    def test_collision_aborts_with_as_hint(self):
+        with _tmp_xdg():
+            self._pull(["pull", "pip"])
+            with self.assertRaises(SystemExit) as cm:
+                self._pull(["pull", "pip"])
+            self.assertIn("--as", str(cm.exception))
+
+    def test_as_renames_locally_keeps_origin_slug(self):
+        with _tmp_xdg():
+            self._pull(["pull", "pip", "--as", "fox2"])
+            doc = cig._load_styles()
+            self.assertIn("fox2", doc["styles"])
+            self.assertEqual(doc["styles"]["fox2"]["origin"]["slug"], "pip")
+
+    def test_failed_ref_download_leaves_no_entry(self):
+        with _tmp_xdg():
+            with self.assertRaises(SystemExit):
+                self._pull(["pull", "pip"],
+                           blobs={"https://drawstyle.leeguoo.com/img/abc"})
+            doc = cig._load_styles()
+            self.assertNotIn("pip", doc["styles"])
+            self.assertFalse(cig._asset_dir("pip").exists())
+
+    def test_non_image_payload_refused(self):
+        with _tmp_xdg():
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=b"<html>nope</html>"):
+                with self.assertRaises(SystemExit) as cm:
+                    cig._style_command(["pull", "pip"])
+            self.assertIn("not an image", str(cm.exception))
+
+
+class StyleUpdate(unittest.TestCase):
+    def test_version_check_uses_detail_not_package(self):
+        calls = []
+
+        def fake_request(method, path, **kw):
+            calls.append(path)
+            if path.endswith("/package"):
+                return dict(_PKG, version=4)
+            return {"slug": "pip", "version": 4}
+
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["pip"] = {
+                "kind": "character", "snippet": "old", "refs": [],
+                "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}}
+            cig._save_styles(doc)
+            with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                rc = cig._style_command(["update", "pip"])
+            updated_version = (
+                cig._load_styles()["styles"]["pip"]["origin"]["version"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0], "/api/styles/pip")
+        self.assertIn("/api/styles/pip/package", calls[1])
+        self.assertEqual(updated_version, 4)
+
+    def test_up_to_date_skips_package(self):
+        calls = []
+
+        def fake_request(method, path, **kw):
+            calls.append(path)
+            if path.endswith("/package"):
+                return _PKG
+            return {"slug": "pip", "version": 3}
+
+        with _tmp_xdg():
+            with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                cig._style_command(["pull", "pip"])
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    rc = cig._style_command(["update"])
+        self.assertEqual(rc, 0)
+        self.assertIn("up to date", buf.getvalue())
+        self.assertEqual([p for p in calls if p.endswith("/package")],
+                         ["/api/styles/pip/package"])
+
+    def test_entry_without_origin_skipped(self):
+        with _tmp_xdg():
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["update"])
+        self.assertEqual(rc, 0)
+        self.assertIn("no pulled styles", buf.getvalue())
+
+    def test_named_entry_without_origin_errors(self):
+        with _tmp_xdg():
+            cig._style_command(["add", "local", "local only"])
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["update", "local"])
+        self.assertIn("has no platform origin", str(cm.exception))
+
+
+class OidcPkce(unittest.TestCase):
+    def test_challenge_is_s256_of_verifier(self):
+        import base64
+        import hashlib
+        verifier, challenge = cig._pkce_pair()
+        want = base64.urlsafe_b64encode(
+            hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+        self.assertEqual(challenge, want)
+        self.assertGreaterEqual(len(verifier), 43)
+
+    def test_token_cache_roundtrip_and_mode(self):
+        with _tmp_xdg():
+            cig._save_platform_auth({"access_token": "at", "refresh_token": "rt",
+                                     "expires_at": 9999999999})
+            p = cig._platform_auth_path()
+            self.assertEqual(p.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(cig._load_platform_auth()["access_token"], "at")
+
+    def test_expired_token_triggers_refresh(self):
+        with _tmp_xdg():
+            cig._save_platform_auth({"access_token": "old", "refresh_token": "rt",
+                                     "expires_at": 1})
+            with unittest.mock.patch.object(
+                    cig, "_oidc_token_request",
+                    return_value={"access_token": "new", "refresh_token": "rt2",
+                                  "expires_in": 3600}) as m:
+                token = cig._platform_access_token(interactive=False)
+        self.assertEqual(token, "new")
+        self.assertEqual(m.call_args[0][0]["grant_type"], "refresh_token")
+
+    def test_login_errors_when_fixed_callback_port_unavailable(self):
+        with unittest.mock.patch.object(cig.http.server, "HTTPServer",
+                                        side_effect=OSError("in use")):
+            with self.assertRaises(SystemExit) as cm:
+                cig._oidc_login_interactive()
+        self.assertIn("127.0.0.1:45898", str(cm.exception))
+
+
+class StylePublish(unittest.TestCase):
+    def _setup_local(self):
+        cig._style_command(["add", "mylook", "soft watercolor"])
+
+    def test_category_required(self):
+        with _tmp_xdg():
+            self._setup_local()
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--example", "x.png"])
+            self.assertIn("--category", str(cm.exception))
+            self.assertIn("report", str(cm.exception))
+
+    def test_example_required(self):
+        with _tmp_xdg():
+            self._setup_local()
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--category", "cute"])
+            self.assertIn("--example", str(cm.exception))
+
+    def test_republish_own_origin_errors(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["mine"] = {"kind": "style", "snippet": "s", "refs": [],
+                                     "origin": {"platform": "drawstyle",
+                                                "slug": "mine", "version": 1}}
+            cig._save_styles(doc)
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mine", "--category", "cute",
+                                    "--example", "x.png"])
+            self.assertIn("edit", str(cm.exception))
+
+    def test_happy_path_posts_multipart(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}) as m:
+                rc = cig._style_command(["publish", "mylook", "--category",
+                                         "cute", "--example", str(ex)])
+        self.assertEqual(rc, 0)
+        method, path = m.call_args[0][0], m.call_args[0][1]
+        self.assertEqual((method, path), ("POST", "/api/styles"))
+        hdrs = m.call_args[1]["headers"]
+        self.assertEqual(hdrs["Authorization"], "Bearer tok")
+        self.assertIn("multipart/form-data", hdrs["Content-Type"])
+        body = m.call_args[1]["data"]
+        self.assertIn(b'name="category"', body)
+        self.assertIn(b"cute", body)
+        self.assertIn(_PNG, body)
+
+    def test_too_many_examples_errors_before_auth(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            paths = []
+            for n in range(4):
+                p = Path(root) / f"ex{n}.png"
+                p.write_bytes(_PNG)
+                paths.extend(["--example", str(p)])
+            with unittest.mock.patch.object(cig, "_platform_access_token") as auth:
+                with self.assertRaises(SystemExit) as cm:
+                    cig._style_command(["publish", "mylook", "--category",
+                                        "cute", *paths])
+        self.assertIn("at most 3", str(cm.exception))
+        auth.assert_not_called()
+
+    def test_pinned_refs_are_uploaded_as_ref_parts(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ref = Path(root) / "ref.png"
+            ref.write_bytes(_PNG)
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            cig._style_command(["add-ref", "mylook", str(ref)])
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}) as m:
+                rc = cig._style_command(["publish", "mylook", "--category",
+                                         "cute", "--example", str(ex)])
+        self.assertEqual(rc, 0)
+        body = m.call_args[1]["data"]
+        self.assertIn(b'name="example[]"', body)
+        self.assertIn(b'name="ref[]"', body)
 
 
 if __name__ == "__main__":

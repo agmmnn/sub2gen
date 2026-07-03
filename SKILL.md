@@ -149,6 +149,21 @@ This is what lets a user **pin their own cartoon character or house style once a
 
 **Behavior:** `--ref` images passed at generation time are treated as the subject and stack on top of the active assets. At most **4** reference images attach per run; if more resolve, the first 4 (character-first) are used and the dropped ones are logged to stderr (never silent). Resolution order: `--no-style` > `--style NAME…` > active default set > none. Three built-in styles ship: `doodle` (the deliberately-crude MS-Paint look), `xiaohei` (Ian 小黑 hand-drawn explainer — white background, thin wobbly black ink, a black-blob 小黑 character operating an absurd contraption, sparse red/orange/blue Chinese annotations; great for Chinese-article concept figures), and `snoopy` (classic Peanuts newspaper-comic look — simple wobbly pen-ink lines, round-headed minimalist characters, flat muted retro colors, sparse backgrounds). See `docs/styles/README.md` for rendered examples of each. An unknown `--style` fails fast, listing the available names.
 
+### Platform styles (drawstyle)
+
+When the user wants a look that is not already in `chatgpt-imagegen style list`, search the community platform instead of inventing a long prompt from scratch:
+
+```bash
+chatgpt-imagegen style search "watercolor mascot" --category avatar-ip
+chatgpt-imagegen style pull pip
+chatgpt-imagegen "Pip ordering coffee" --style pip
+```
+
+- `style search <keywords> [--category X] [--tag Y]` discovers styles on `drawstyle.leeguoo.com`.
+- `style pull <slug> [--as NAME]` downloads the style and pinned refs into the local library; generation stays offline afterward.
+- `style update [NAME]` checks pulled styles for newer platform versions.
+- `style publish NAME --category X --example IMG [--tag Y]...` submits a local style that turned out well. It opens account.leeguoo.com login when needed and sends the style for review.
+
 Legacy `styles.json` files (text-only entries from older versions) keep working and upgrade automatically on the next change.
 
 ## Save-path policy
