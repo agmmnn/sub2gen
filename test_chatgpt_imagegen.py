@@ -1182,5 +1182,95 @@ class OidcPkce(unittest.TestCase):
         self.assertEqual(m.call_args[0][0]["grant_type"], "refresh_token")
 
 
+class StylePublish(unittest.TestCase):
+    def _setup_local(self):
+        cig._style_command(["add", "mylook", "soft watercolor"])
+
+    def test_category_required(self):
+        with _tmp_xdg():
+            self._setup_local()
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--example", "x.png"])
+            self.assertIn("--category", str(cm.exception))
+            self.assertIn("report", str(cm.exception))
+
+    def test_example_required(self):
+        with _tmp_xdg():
+            self._setup_local()
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--category", "cute"])
+            self.assertIn("--example", str(cm.exception))
+
+    def test_republish_own_origin_errors(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["mine"] = {"kind": "style", "snippet": "s", "refs": [],
+                                     "origin": {"platform": "drawstyle",
+                                                "slug": "mine", "version": 1}}
+            cig._save_styles(doc)
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mine", "--category", "cute",
+                                    "--example", "x.png"])
+            self.assertIn("edit", str(cm.exception))
+
+    def test_happy_path_posts_multipart(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}) as m:
+                rc = cig._style_command(["publish", "mylook", "--category",
+                                         "cute", "--example", str(ex)])
+        self.assertEqual(rc, 0)
+        method, path = m.call_args[0][0], m.call_args[0][1]
+        self.assertEqual((method, path), ("POST", "/api/styles"))
+        hdrs = m.call_args[1]["headers"]
+        self.assertEqual(hdrs["Authorization"], "Bearer tok")
+        self.assertIn("multipart/form-data", hdrs["Content-Type"])
+        body = m.call_args[1]["data"]
+        self.assertIn(b'name="category"', body)
+        self.assertIn(b"cute", body)
+        self.assertIn(_PNG, body)
+
+    def test_too_many_examples_errors_before_auth(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            paths = []
+            for n in range(4):
+                p = Path(root) / f"ex{n}.png"
+                p.write_bytes(_PNG)
+                paths.extend(["--example", str(p)])
+            with unittest.mock.patch.object(cig, "_platform_access_token") as auth:
+                with self.assertRaises(SystemExit) as cm:
+                    cig._style_command(["publish", "mylook", "--category",
+                                        "cute", *paths])
+        self.assertIn("at most 3", str(cm.exception))
+        auth.assert_not_called()
+
+    def test_pinned_refs_are_uploaded_as_ref_parts(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ref = Path(root) / "ref.png"
+            ref.write_bytes(_PNG)
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            cig._style_command(["add-ref", "mylook", str(ref)])
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}) as m:
+                rc = cig._style_command(["publish", "mylook", "--category",
+                                         "cute", "--example", str(ex)])
+        self.assertEqual(rc, 0)
+        body = m.call_args[1]["data"]
+        self.assertIn(b'name="example[]"', body)
+        self.assertIn(b'name="ref[]"', body)
+
+
 if __name__ == "__main__":
     unittest.main()

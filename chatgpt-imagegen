@@ -2228,6 +2228,10 @@ DRAWSTYLE_API_DEFAULT = "https://drawstyle.leeguoo.com"
 PLATFORM_TIMEOUT = 15  # seconds
 OIDC_ISSUER = "https://account.leeguoo.com"
 OIDC_CLIENT_ID = "drawstyle-cli"
+_PLATFORM_CATEGORIES = (
+    "report", "slides", "tech-explainer", "social-cover",
+    "avatar-ip", "cute", "retro-comic", "photo-real",
+)
 
 
 def _platform_base() -> str:
@@ -2446,6 +2450,47 @@ def _platform_access_token(*, interactive: bool = True) -> str:
     if not isinstance(token, str):
         raise SystemExit("error: drawstyle login missing access_token")
     return token
+
+
+def _multipart_escape(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _multipart_form(fields: list[tuple[str, str]],
+                    files: list[tuple[str, Path, str, bytes]]) -> tuple[bytes, str]:
+    """Build a small multipart/form-data body using stdlib only."""
+    boundary = "----chatgpt-imagegen-" + secrets.token_hex(16)
+    chunks: list[bytes] = []
+    for name, value in fields:
+        chunks.append(f"--{boundary}\r\n".encode())
+        chunks.append(
+            f'Content-Disposition: form-data; name="{_multipart_escape(name)}"'
+            "\r\n\r\n".encode())
+        chunks.append(str(value).encode("utf-8"))
+        chunks.append(b"\r\n")
+    for name, path, content_type, data in files:
+        filename = _multipart_escape(path.name)
+        chunks.append(f"--{boundary}\r\n".encode())
+        chunks.append(
+            f'Content-Disposition: form-data; name="{_multipart_escape(name)}"; '
+            f'filename="{filename}"\r\n'.encode())
+        chunks.append(f"Content-Type: {content_type}\r\n\r\n".encode())
+        chunks.append(data)
+        chunks.append(b"\r\n")
+    chunks.append(f"--{boundary}--\r\n".encode())
+    return b"".join(chunks), boundary
+
+
+def _read_publish_image(path: str, label: str) -> tuple[Path, str, bytes]:
+    p = Path(path).expanduser()
+    if not p.is_file():
+        raise SystemExit(f"error: {label} image not found: {path}")
+    data = p.read_bytes()
+    mime = _sniff_mime(data)
+    if not mime:
+        raise SystemExit(f"error: {label} {path!r} is not an image "
+                         "(need PNG, JPEG, or WEBP)")
+    return p, mime, data
 
 
 def _download_bytes(url: str) -> bytes:
@@ -2928,6 +2973,13 @@ def _style_command(argv: list[str]) -> int:
     sp = sub.add_parser("update",
                         help="re-pull platform styles that have a newer version")
     sp.add_argument("name", nargs="?", default=None)
+    sp = sub.add_parser("publish", help="submit a local style to the platform")
+    sp.add_argument("name")
+    sp.add_argument("--category", default=None)
+    sp.add_argument("--tag", action="append", default=None)
+    sp.add_argument("--example", action="append", default=None, metavar="IMG")
+    sp.add_argument("--from-last", action="store_true",
+                    help="use the most recently generated image as an example")
     a = p.parse_args(argv)
 
     if not a.verb:
@@ -2957,6 +3009,56 @@ def _style_command(argv: list[str]) -> int:
 
     doc = _load_styles()
     styles = doc["styles"]
+
+    if a.verb == "publish":
+        if a.name not in styles:
+            _die_unknown_style(a.name, styles)
+        entry = styles[a.name]
+        origin = entry.get("origin")
+        if isinstance(origin, dict) and origin.get("slug"):
+            slug = origin["slug"]
+            raise SystemExit(
+                f"error: {a.name!r} already published as {slug!r} — "
+                f"edit it on the web: {_platform_base()}/submit?edit={slug}")
+        if a.category not in _PLATFORM_CATEGORIES:
+            cats = ", ".join(_PLATFORM_CATEGORIES)
+            raise SystemExit(
+                f"error: --category is required and must be one of: {cats}")
+        examples = list(a.example or [])
+        if a.from_last:
+            examples.append(_resolve_from_last())
+        if not examples:
+            raise SystemExit("error: --example IMG is required")
+        if len(examples) > 3:
+            raise SystemExit("error: at most 3 --example images are allowed")
+
+        fields = [
+            ("slug", a.name),
+            ("name", a.name),
+            ("kind", entry.get("kind", "style")),
+            ("snippet", entry.get("snippet") or ""),
+            ("category", a.category),
+        ]
+        for tag in (a.tag or []):
+            fields.append(("tag", tag))
+
+        files: list[tuple[str, Path, str, bytes]] = []
+        for path in examples:
+            files.append(("example[]", *_read_publish_image(path, "example")))
+        asset_dir = _asset_dir(a.name)
+        for ref in (entry.get("refs") or []):
+            files.append(("ref[]", *_read_publish_image(
+                str(asset_dir / ref), "reference")))
+
+        body, boundary = _multipart_form(fields, files)
+        token = _platform_access_token()
+        _platform_request(
+            "POST", "/api/styles", data=body,
+            headers={"Authorization": f"Bearer {token}",
+                     "Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        print(f"submitted {a.name!r} for review", file=sys.stderr)
+        return 0
 
     if a.verb == "pull":
         name = a.local_name or a.slug
