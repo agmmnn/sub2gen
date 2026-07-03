@@ -1019,5 +1019,72 @@ class StyleSearch(unittest.TestCase):
         self.assertIn("no styles found", buf.getvalue())
 
 
+_PKG = {"slug": "pip", "name": "Pip the fox", "kind": "character",
+        "snippet": "a round orange fox", "version": 3,
+        "refs": [{"url": "https://drawstyle.leeguoo.com/img/abc",
+                  "content_type": "image/png"}]}
+_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 16
+
+
+class StylePull(unittest.TestCase):
+    def _pull(self, argv, pkg=None, blobs=None):
+        def fake_request(method, path, **kw):
+            return pkg or _PKG
+
+        def fake_download(url):
+            if blobs is not None and url in blobs:
+                raise OSError("boom")
+            return _PNG
+
+        with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+             unittest.mock.patch.object(cig, "_download_bytes", fake_download):
+            return cig._style_command(argv)
+
+    def test_happy_path_writes_entry_refs_and_origin(self):
+        with _tmp_xdg():
+            rc = self._pull(["pull", "pip"])
+            self.assertEqual(rc, 0)
+            doc = cig._load_styles()
+            e = doc["styles"]["pip"]
+            self.assertEqual(e["kind"], "character")
+            self.assertEqual(e["origin"],
+                             {"platform": "drawstyle", "slug": "pip", "version": 3})
+            self.assertEqual(len(e["refs"]), 1)
+            self.assertTrue((cig._asset_dir("pip") / e["refs"][0]).exists())
+
+    def test_collision_aborts_with_as_hint(self):
+        with _tmp_xdg():
+            self._pull(["pull", "pip"])
+            with self.assertRaises(SystemExit) as cm:
+                self._pull(["pull", "pip"])
+            self.assertIn("--as", str(cm.exception))
+
+    def test_as_renames_locally_keeps_origin_slug(self):
+        with _tmp_xdg():
+            self._pull(["pull", "pip", "--as", "fox2"])
+            doc = cig._load_styles()
+            self.assertIn("fox2", doc["styles"])
+            self.assertEqual(doc["styles"]["fox2"]["origin"]["slug"], "pip")
+
+    def test_failed_ref_download_leaves_no_entry(self):
+        with _tmp_xdg():
+            with self.assertRaises(SystemExit):
+                self._pull(["pull", "pip"],
+                           blobs={"https://drawstyle.leeguoo.com/img/abc"})
+            doc = cig._load_styles()
+            self.assertNotIn("pip", doc["styles"])
+            self.assertFalse(cig._asset_dir("pip").exists())
+
+    def test_non_image_payload_refused(self):
+        with _tmp_xdg():
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=b"<html>nope</html>"):
+                with self.assertRaises(SystemExit) as cm:
+                    cig._style_command(["pull", "pip"])
+            self.assertIn("not an image", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

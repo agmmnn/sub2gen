@@ -2264,6 +2264,46 @@ def _platform_request(method: str, path: str, *, data: bytes | None = None,
             "error: platform: unexpected response (not JSON)") from None
 
 
+def _download_bytes(url: str) -> bytes:
+    """Fetch one reference image from the platform.
+
+    Kept as a seam so pull/update tests can exercise atomic style storage
+    without reaching the network.
+    """
+    req = urllib.request.Request(url)
+    with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
+        return resp.read()
+
+
+def _pull_refs_to_tmp(refs: list[dict], tmp: Path) -> list[str]:
+    """Download platform refs into ``tmp`` after MIME sniffing.
+
+    Any failure raises before the caller touches styles.json or the real asset
+    directory, so platform pulls are all-or-nothing from the local library's
+    point of view.
+    """
+    stored: list[str] = []
+    for i, ref in enumerate(refs, 1):
+        url = ref["url"]
+        try:
+            data = _download_bytes(url)
+        except SystemExit:
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise SystemExit(
+                f"error: failed to download ref {url}: {e}") from None
+        mime = _sniff_mime(data)
+        ext = _REF_EXT_BY_MIME.get(mime or "")
+        if not ext:
+            raise SystemExit(
+                f"error: ref {url} is not an image "
+                f"(sniffed {mime or 'unknown'})")
+        fname = f"ref-{i}.{ext}"
+        (tmp / fname).write_bytes(data)
+        stored.append(fname)
+    return stored
+
+
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:
     """Next free `ref-<n>` index, considering both the entry's recorded refs and
     whatever already sits in the asset dir (so copies never collide)."""
@@ -2672,6 +2712,10 @@ def _style_command(argv: list[str]) -> int:
     sp.add_argument("query", nargs="?", default="")
     sp.add_argument("--category", default=None)
     sp.add_argument("--tag", action="append", default=None)
+    sp = sub.add_parser("pull", help="fetch a style from the drawstyle platform")
+    sp.add_argument("slug")
+    sp.add_argument("--as", dest="local_name", default=None, metavar="NAME",
+                    help="store under a different local name")
     a = p.parse_args(argv)
 
     if not a.verb:
@@ -2701,6 +2745,35 @@ def _style_command(argv: list[str]) -> int:
 
     doc = _load_styles()
     styles = doc["styles"]
+
+    if a.verb == "pull":
+        name = a.local_name or a.slug
+        if not _valid_style_name(name):
+            raise SystemExit(f"error: invalid local name {name!r}")
+        if name in styles:
+            raise SystemExit(
+                f"error: local style {name!r} already exists — "
+                f"pass --as OTHERNAME or `style rm {name}` first.")
+        pkg = _platform_request("GET", f"/api/styles/{a.slug}/package")
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            stored = _pull_refs_to_tmp(pkg.get("refs") or [], tmp)
+            asset_dir = _asset_dir(name)
+            if stored:
+                asset_dir.mkdir(parents=True, exist_ok=True)
+                for fname in stored:
+                    shutil.move(str(tmp / fname), asset_dir / fname)
+        styles[name] = {"kind": pkg["kind"],
+                        "snippet": pkg.get("snippet") or "",
+                        "refs": stored,
+                        "origin": {"platform": "drawstyle",
+                                   "slug": pkg["slug"],
+                                   "version": pkg["version"]}}
+        _save_styles(doc)
+        print(f"pulled {a.slug!r} v{pkg['version']} as {name!r} "
+              f"({len(stored)} ref{'s' if len(stored) != 1 else ''})",
+              file=sys.stderr)
+        return 0
 
     if a.verb == "list":
         if not styles:
