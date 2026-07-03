@@ -899,5 +899,24 @@ class StylesAlias(unittest.TestCase):
             self.assertEqual(cig._load_styles()["default"], ["a", "b"])
 
 
+class OriginRoundTrip(unittest.TestCase):
+    def test_origin_preserved(self):
+        e = cig._normalize_entry({
+            "kind": "style", "snippet": "s", "refs": ["a.png"],
+            "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}})
+        self.assertEqual(e["origin"],
+                         {"platform": "drawstyle", "slug": "pip", "version": 3})
+
+    def test_bad_origin_dropped(self):
+        for bad in ("str", 7, ["x"], {"platform": "drawstyle"}):  # missing slug/version
+            e = cig._normalize_entry({"kind": "style", "snippet": "s",
+                                      "refs": [], "origin": bad})
+            self.assertNotIn("origin", e)
+
+    def test_absent_origin_absent(self):
+        e = cig._normalize_entry({"kind": "style", "snippet": "s", "refs": []})
+        self.assertNotIn("origin", e)
+
+
 if __name__ == "__main__":
     unittest.main()

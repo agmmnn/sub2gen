@@ -2407,7 +2407,8 @@ def _normalize_entry(value: Any) -> dict:
 
     A legacy bare string → {kind: "style", snippet: <str>, refs: []}. An object
     is sanitized: kind clamped to the allowed set, snippet to a str, refs to a
-    list of strings.
+    list of strings. An optional `origin` (platform provenance from `style
+    pull`) is preserved when well-formed and dropped otherwise.
     """
     if isinstance(value, str):
         return {"kind": "style", "snippet": value, "refs": []}
@@ -2420,7 +2421,13 @@ def _normalize_entry(value: Any) -> dict:
             snippet = ""
         refs = value.get("refs")
         refs = [r for r in refs if isinstance(r, str)] if isinstance(refs, list) else []
-        return {"kind": kind, "snippet": snippet, "refs": refs}
+        out = {"kind": kind, "snippet": snippet, "refs": refs}
+        origin = value.get("origin")
+        if (isinstance(origin, dict) and isinstance(origin.get("slug"), str)
+                and isinstance(origin.get("version"), int)):
+            out["origin"] = {"platform": str(origin.get("platform") or "drawstyle"),
+                             "slug": origin["slug"], "version": origin["version"]}
+        return out
     return {"kind": "style", "snippet": "", "refs": []}
 
 
