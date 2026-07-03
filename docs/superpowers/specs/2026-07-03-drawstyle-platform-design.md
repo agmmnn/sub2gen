@@ -98,13 +98,15 @@ users(
 styles(
   id INTEGER PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,          -- ^[a-z0-9][a-z0-9_-]*$, same rule as the CLI
+  name TEXT NOT NULL,                 -- human display title (spaces/CJK fine); slug is the machine id
   owner_user_id INTEGER NOT NULL REFERENCES users(id),
   kind TEXT NOT NULL CHECK (kind IN ('character','style')),
   snippet TEXT NOT NULL DEFAULT '',   -- may be '' when the style is refs-only
   category TEXT NOT NULL,             -- use-case category key (see below)
   status TEXT NOT NULL CHECK (status IN ('pending','approved','rejected','delisted')),
   version INTEGER NOT NULL DEFAULT 1, -- bumped on approval of an edit
-  review_note TEXT,                   -- admin note on reject
+  review_note TEXT,                   -- admin note on the most recent reject
+  pending_revision TEXT,              -- JSON blob of an owner edit awaiting review (see Edit flow)
   forked_from INTEGER REFERENCES styles(id),
   likes_count INTEGER NOT NULL DEFAULT 0,
   pulls_count INTEGER NOT NULL DEFAULT 0,
@@ -120,6 +122,7 @@ style_images(
   r2_key TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('example','reference','official_example')),
   content_type TEXT NOT NULL,         -- png/jpeg/webp only, server-sniffed
+  pending INTEGER NOT NULL DEFAULT 0, -- 1 = staged by a pending revision, not yet live
   sort INTEGER NOT NULL DEFAULT 0
 )
 
@@ -137,13 +140,21 @@ likes(user_id, style_id, created_at, PRIMARY KEY(user_id, style_id))
   acceptable, categories are curated by design.
 - **Aesthetic tags** are free-form lowercase slugs (手绘/watercolor/pixel/3d/…),
   normalized by the admin during review.
-- **Slug** is globally unique, first-come-first-served; the admin gate resolves
-  squatting/quality disputes since nothing is public without approval.
-- **Edit flow:** editing an approved style creates a *pending revision* (stored as
-  the row's draft columns `draft_snippet`, `draft_category`, plus staged images
-  flagged `pending`) so the approved version stays live until the admin approves
-  the edit, which copies the draft over the live fields and bumps `version`.
-  (Simplification accepted: only one pending revision at a time per style.)
+- **Slug vs name:** `slug` is the globally-unique machine id (first-come-first-served;
+  the admin gate resolves squatting/quality disputes since nothing is public without
+  approval) and is what the CLI pulls by; `name` is a display title shown on cards
+  and detail pages. On pull, the CLI's local entry key defaults to the slug.
+- **Edit flow:** editing an approved style stores the proposed changes as a JSON
+  blob in `pending_revision` — `{name, snippet, category, tags, ref_image_ids}` —
+  with newly staged images written as `style_images` rows flagged `pending=1`.
+  The approved version stays live (gallery and `/package` keep serving the live
+  fields) until the admin **approves** the edit: the blob is applied to the live
+  columns, staged images flip `pending=0` (replaced refs are deleted), `version`
+  bumps, and the blob is cleared. **Rejecting an edit** clears the blob and staged
+  images and sets `review_note`; the row stays `approved` with its live content
+  untouched. Editable fields: name, snippet, category, tags, reference images.
+  `slug` and `kind` are immutable after submission. One pending revision at a
+  time per style (a second `PUT` overwrites the blob).
 
 ## API contract
 
@@ -153,18 +164,22 @@ Public, no auth:
 |---|---|
 | `GET /api/styles?category=&tag=&q=&sort=likes\|new\|pulls&page=` | list approved styles |
 | `GET /api/styles/:slug` | full detail: snippet, images, tags, counters, version |
-| `GET /api/styles/:slug/package` | pull payload: `{slug, name, kind, snippet, version, refs:[{url, content_type}]}` (reference-role images only); increments `pulls_count` |
+| `GET /api/styles/:slug/package` | pull payload: `{slug, name, kind, snippet, version, refs:[{url, content_type}]}` (live reference-role images only); increments `pulls_count`. `style update` checks versions via the cheap `GET /api/styles/:slug` and hits `/package` only when actually re-pulling — the resulting counter inflation on real re-pulls is accepted. |
 | `GET /api/meta` | categories + curated tag list |
 
-Authenticated (`Authorization: Bearer <access_token>` from account.leeguoo.com;
-the Worker validates via JWKS, then upserts `users` by `oidc_sub`):
+Authenticated. Two interchangeable credentials, one auth middleware:
+the **CLI** sends `Authorization: Bearer <access_token>` from account.leeguoo.com
+(validated via JWKS with issuer/audience checks); the **web frontend** sends the
+signed HttpOnly session cookie minted at login (SameSite=Lax; state-changing
+requests additionally require a custom `X-Requested-With` header as CSRF
+protection). Either way the Worker resolves the caller and upserts `users` by
+`oidc_sub`:
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /api/styles` | submit: JSON metadata + images as multipart; status=pending |
-| `PUT /api/styles/:slug` | owner edits → pending revision |
+| `POST /api/styles` | submit: JSON metadata + images as multipart; status=pending. Optional `forked_from_slug` records fork provenance — **fork is just a pre-filled submission**: the detail page's Fork button opens `/submit` pre-populated from the source style, and the new style enters the review queue like any other. No separate fork endpoint. |
+| `PUT /api/styles/:slug` | owner edits → pending revision (see Edit flow). Consumed by the web edit form (`/submit?edit=slug`, owner-only, pre-filled from live fields). |
 | `POST /api/styles/:slug/like` / `DELETE …/like` | toggle like |
-| `POST /api/styles/:slug/fork` | copy into caller's account (new slug required), `forked_from` set, status=pending after edits are submitted |
 
 Admin (same Bearer auth + email allow-list from the Worker env var
 `ADMIN_EMAILS`):
@@ -173,7 +188,7 @@ Admin (same Bearer auth + email allow-list from the Worker env var
 |---|---|
 | `GET /api/admin/pending` | review queue (new + edit revisions) |
 | `POST /api/admin/styles/:id/approve` | publish / apply revision, bump version |
-| `POST /api/admin/styles/:id/reject` | reject with `review_note` |
+| `POST /api/admin/styles/:id/reject` | reject with `review_note` — a new submission becomes `rejected`; an edit revision is discarded and the row stays `approved` (see Edit flow) |
 | `POST /api/admin/styles/:id/official-example` | attach admin comparison image |
 | `POST /api/admin/styles/:id/delist` | pull an approved style from public view |
 
@@ -191,9 +206,12 @@ the leeguoo.com / blog.leeguoo.com look. Every page embeds the blog's
   shows the primary example image, name, author, kind badge, likes/pulls, and a
   copy-button for `chatgpt-imagegen style pull <slug>`.
 - `/s/:slug` — detail: example carousel, snippet (copyable), reference-image
-  count, like/fork buttons, version, author, copy-command block.
-- `/submit` — submission form (login-gated): slug, kind, category, tags, snippet,
-  example uploads (1–3, required), reference uploads (0–4).
+  count, like/fork buttons, version, author, copy-command block. Owner sees an
+  Edit button (→ `/submit?edit=slug`).
+- `/submit` — submission form (login-gated): slug, name, kind, category, tags,
+  snippet, example uploads (1–3, required), reference uploads (0–4). Also serves
+  fork (`?fork=slug`, pre-filled from source) and owner edit (`?edit=slug`,
+  submits via `PUT`).
 - `/me` — my submissions (with status), my likes.
 - `/admin` — review queue: pending cards with full preview, approve/reject (+note)
   buttons. Rendered only for allow-listed emails; usable from a phone.
@@ -220,16 +238,23 @@ never touch the network for styles.
            "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}}
   ```
 
-  `origin` is a new optional field; `_normalize_entry` preserves it when present
-  and older CLI versions simply ignore it (forward/backward compatible). A local
-  name collision aborts with a hint to use `--as`; `--as` renames locally while
-  `origin.slug` keeps pointing at the platform entry.
+  `origin` is a new optional field; the new `_normalize_entry` preserves it.
+  **Accepted limitation:** an *older* CLI version's mutating commands rebuild
+  entries as exactly `{kind, snippet, refs}` and will silently strip `origin`
+  (the entry keeps working; only `style update` tracking is lost — re-pull to
+  restore). A local name collision aborts with a hint to use `--as`; `--as`
+  renames locally while `origin.slug` keeps pointing at the platform entry.
 - **`style update [NAME]`** — for entries with `origin`, compares the remote
-  `version`; newer → re-pulls snippet + refs in place (old refs for that entry are
-  replaced). No args → checks all pulled entries and reports a summary.
-- **`style publish <NAME> --example IMG [--example IMG]… [--category X] [--tag Y]…`**
+  `version` via `GET /api/styles/:slug`; newer → re-pulls snippet + refs in place
+  via `/package` (old refs for that entry are replaced). No args → checks all
+  pulled entries and reports a summary.
+- **`style publish <NAME> --category X --example IMG [--example IMG]… [--tag Y]…`**
   — submits the local entry (snippet + its pinned refs + the required example
-  images). Auth: OIDC authorization-code + PKCE against `account.leeguoo.com`
+  images). `--category` is required; omitting it errors listing the valid
+  category keys (no interactive prompt — agent-friendly). Publishing an entry
+  whose `origin` already points at the caller's own platform style errors with
+  a hint to edit on the web (`/submit?edit=slug`) — CLI-side editing is out of
+  scope for v1. Auth: OIDC authorization-code + PKCE against `account.leeguoo.com`
   as a public client (`drawstyle-cli`), with a loopback `http://127.0.0.1:<port>`
   redirect — the CLI opens the browser, catches the code, exchanges it, and
   caches the refresh token in `~/.config/chatgpt-imagegen/drawstyle-auth.json`
