@@ -578,7 +578,7 @@ def _oidc_token_request(form: dict) -> dict:
 
 def _oidc_login_interactive() -> dict:
     """Open the browser to /authorize (code + PKCE + state), catch the code on
-    a one-shot http.server bound to 127.0.0.1:<random port>, exchange it."""
+    a one-shot http.server bound to 127.0.0.1:45898, exchange it."""
 
 def _platform_access_token(*, interactive: bool = True) -> str:
     """Cached access token; refresh via refresh_token when expired; fall back
@@ -707,4 +707,4 @@ Multipart encoder (stdlib, ~15 lines): random boundary via `secrets.token_hex(16
 
 - [ ] `python3 -m pytest test_chatgpt_imagegen.py -v` — all green.
 - [ ] `python3 -m py_compile chatgpt-imagegen` — compiles.
-- [ ] Manual smoke (requires the platform from the companion plan, or `DRAWSTYLE_API=http://localhost:8787` against `wrangler dev`): `style search doodle`, `style pull <slug>`, generate with `--style <slug>`, `style update`.
+- [ ] Manual smoke (requires the platform from the companion plan, or `DRAWSTYLE_API=http://localhost:8787` against `wrangler-accounts dev`): `style search doodle`, `style pull <slug>`, generate with `--style <slug>`, `style update`.
