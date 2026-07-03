@@ -39,7 +39,7 @@ drawstyle/
 │   ├── api/styles-write.ts      # POST submit, PUT edit, like endpoints
 │   ├── api/admin.ts             # pending/approve/reject/delist/official-example
 │   └── pages/                   # SSR: layout.tsx, gallery.tsx, detail.tsx, submit.tsx, me.tsx, admin.tsx
-├── scripts/seed-builtins.md     # how the admin seeds doodle/xiaohei/snoopy via the live site
+├── scripts/seed-builtins.html   # how the admin seeds doodle/xiaohei/snoopy via the live site
 └── test/
     ├── helpers.ts               # app fixture, makeUser/makeStyle/loginAs utilities
     ├── styles-read.test.ts  styles-write.test.ts  admin.test.ts
@@ -175,13 +175,13 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 
 ### Task 11: deploy + ops
 
-**Files:** create `README.md`, `scripts/seed-builtins.md`.
+**Files:** create `README.md`, `scripts/seed-builtins.html`.
 
 - [ ] **Step 1:** Use the shared D1 database `public-db` (do not create a per-project database unless the owner explicitly changes this; the account has a 10-D1 limit). If it does not exist, run `wrangler-accounts d1 create public-db` → paste real `database_id` into `wrangler.jsonc`; `wrangler-accounts r2 bucket create drawstyle-assets`; `wrangler-accounts d1 migrations apply public-db --remote`.
 - [ ] **Step 2:** Secrets: `wrangler-accounts secret put SESSION_SECRET`; set `ADMIN_EMAILS` var to the owner's email.
 - [ ] **Step 3:** **Owner action (can't be done by the agent):** register OIDC clients on account.leeguoo.com — `drawstyle-web` (redirect `https://drawstyle.leeguoo.com/auth/callback`) and `drawstyle-cli` (public + PKCE, loopback `http://127.0.0.1:*/cb`). Ask the user to do this and confirm before Step 4.
 - [ ] **Step 4:** `wrangler-accounts deploy`; add DNS route `drawstyle.leeguoo.com` → the worker (owner action in the Cloudflare dashboard, or `routes` in wrangler.jsonc if the zone is on the same account).
-- [ ] **Step 5:** Seed built-ins: log in as admin, submit doodle/xiaohei/snoopy through `/submit` (snippets from `chatgpt-imagegen` `_BUILTIN_STYLES`, example images from `docs/styles/*.png` in the CLI repo), approve them in `/admin`. Write the exact steps into `scripts/seed-builtins.md`.
+- [ ] **Step 5:** Seed built-ins: log in as admin, submit doodle/xiaohei/snoopy through `/submit` (snippets from `chatgpt-imagegen` `_BUILTIN_STYLES`, example images from `docs/styles/*.png` in the CLI repo), approve them in `/admin`. Write the exact steps into `scripts/seed-builtins.html`.
 - [ ] **Step 6:** Live smoke: gallery renders; `curl https://drawstyle.leeguoo.com/api/styles | jq` lists 3 styles; `GET /api/styles/doodle/package` returns the snippet; a pull from the real CLI works end-to-end (`chatgpt-imagegen style pull doodle --as doodle2`); beacon events appear in blog.leeguoo.com's admin stats.
 - [ ] **Step 7:** Commit — `docs: 部署手册 + 内置风格种子流程`; push to a new GitHub repo `leeguooooo/drawstyle`.
 
