@@ -19,7 +19,7 @@ chatgpt-imagegen "a watercolor cat sitting on a windowsill" -o cat.png
 
 ## Install
 
-Needs Python 3.10+ and a ChatGPT subscription (free tier works). Set up at least one backend — `auto` uses whichever is ready.
+Needs Python 3.10+ and a ChatGPT subscription (free tier works).
 
 **For AI agents (recommended)** — drops the skill into Claude Code, Codex, Cursor, etc.:
 
@@ -29,146 +29,44 @@ npx skills add leeguooooo/chatgpt-imagegen -g
 
 Then just ask: *"画一张 …"* / *"generate a hero banner for the README"*.
 
-> Note: `skills add` copies only `SKILL.md`, not the `chatgpt-imagegen` script. That's fine — the
-> skill **self-heals**: on first use the agent fetches the one-file CLI next to `SKILL.md` with a
-> single `curl` (it's pure-stdlib Python, no deps). You only need `python3` ≥ 3.10 on `PATH`. To
-> pre-seed it yourself: `curl -fsSL https://raw.githubusercontent.com/leeguooooo/chatgpt-imagegen/main/chatgpt-imagegen -o ~/.agents/skills/chatgpt-imagegen/chatgpt-imagegen && chmod +x $_`.
-
-**Standalone CLI** — no `pip`, no virtualenv, no daemon:
+**Standalone CLI** — no `pip`, no virtualenv:
 
 ```bash
 git clone https://github.com/leeguooooo/chatgpt-imagegen
 sudo install chatgpt-imagegen/chatgpt-imagegen /usr/local/bin/chatgpt-imagegen
 ```
 
-**Updating** — `skills` has no auto-update, so the CLI reminds you: once a day it checks `main` and, if a newer version exists, prints a short notice **listing what changed** since your version. Run `skills update chatgpt-imagegen` (or re-run the self-heal `curl`) to update; `chatgpt-imagegen doctor` shows your version vs. latest with the same change list. Silence it with `CHATGPT_IMAGEGEN_NO_UPDATE_CHECK=1`.
-
-**Backends** (need one):
-
-- **`web`** (default, spends no Codex-usage) — drives your logged-in Chrome via [`chrome-use`](https://github.com/leeguooooo/chrome-use):
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/leeguooooo/chrome-use/main/install.sh | sh
-  chrome-use extension install   # then load the extension, restart Chrome, sign in to chatgpt.com
-  ```
-- **`codex`** (fallback, bills Codex-usage) — `npm i -g @openai/codex && codex login`.
-
-No `chrome-use`? `auto` falls back to `codex` on its own and tells you.
-
-## Backends
-
-The same subscription meters two buckets; which you spend depends on *where* the image is made:
-
-| Backend | How it generates | Bucket | Needs |
-| --- | --- | --- | --- |
-| **`web`** (default) | Drives your logged-in ChatGPT browser — a normal chat, deleted afterwards. | ChatGPT chat — **no Codex-usage** | A signed-in Chrome + `chrome-use` |
-| **`codex`** | Headless POST to the Codex responses endpoint. | **Codex-usage** (metered) | `codex login` |
-
-`auto` prefers `web` (to spare Codex-usage) and falls back to `codex` when no logged-in browser is reachable — so a laptop with Chrome open uses `web`, a headless server uses `codex`, automatically. `web` generates under whatever account that browser is signed into. Force one with `--backend web` / `--backend codex` (or `CHATGPT_IMAGEGEN_BACKEND`).
+You also need **one backend** — `web` (default, drives your logged-in Chrome, spends no Codex-usage) or `codex` (headless fallback). `chatgpt-imagegen doctor` shows what's ready. → **[Backends & troubleshooting](https://drawstyle.leeguoo.com/docs/backends)**
 
 ## Usage
 
 ```bash
-chatgpt-imagegen "<prompt>" [options]
-```
-
-Common options — full list with `chatgpt-imagegen --help`:
-
-| Flag | Default | Notes |
-| --- | --- | --- |
-| `--backend` | `auto` | `auto` \| `web` \| `codex` |
-| `-o`, `--out PATH` | `assets/generated/<slug>.<ext>` | output file; parent dirs created |
-| `--size` | `auto` | `auto` or `WIDTHxHEIGHT` (e.g. `1024x1024`, `1536x1024`) |
-| `--format` | `png` | `png` \| `jpeg` \| `webp` |
-| `-i`, `--ref PATH_OR_URL` | — | [image-to-image](#image-to-image): edit a reference (repeatable) |
-| `--style NAME` | — | apply a saved [style/asset](#styles) (text + pinned refs); repeatable to stack |
-| `--profile` | `auto` | *(web)* which Chrome profile to drive (`auto` / `relay` / a name) |
-| `--open` | off | open the saved image in your default viewer |
-| `--quiet` | off | print **only** the saved path (for pipelines) |
-
-Subcommands: `chatgpt-imagegen doctor` (check which backend is ready) · `chatgpt-imagegen style <verb>` (manage [style](#styles) presets).
-
-```bash
-chatgpt-imagegen "logo for a coffee shop, vector style" -o brand/logo.png --size 1024x1024
 chatgpt-imagegen "moody mountain sunset" -o web/hero.png --size 1536x1024
-OUT=$(chatgpt-imagegen "icon" --quiet)      # capture the path in a shell pipeline
+chatgpt-imagegen "make it a warm golden-hour photo, cinematic 35mm" -i photo.jpg   # edit a reference
+chatgpt-imagegen "a robot mascot" --style doodle                                    # apply a saved style
+OUT=$(chatgpt-imagegen "icon" --quiet)                                              # capture the path
 ```
 
-## Image-to-image
+Full options: `chatgpt-imagegen --help`. → **[Generate images](https://drawstyle.leeguoo.com/docs/generate)** · **[Styles](https://drawstyle.leeguoo.com/docs/styles)**
 
-Pass a reference with `-i`/`--ref` to **edit it** instead of generating from text — the same as dragging an image into the ChatGPT composer and asking for a restyle. Works on both backends (`auto` picks); references are local paths or `http(s)` URLs (PNG/JPEG/WEBP), repeat `-i` for several.
+## Community styles
+
+Browse and reuse art styles other people tuned — a public gallery at **[drawstyle.leeguoo.com](https://drawstyle.leeguoo.com)**. No script update needed:
 
 ```bash
-chatgpt-imagegen "make it a warm golden-hour photo, cinematic 35mm" -i photo.jpg -o out.png
+chatgpt-imagegen "a fox barista" --style-online pip     # generate with a gallery style, nothing saved
+chatgpt-imagegen style search "watercolor mascot"       # search the gallery
+chatgpt-imagegen style publish mystyle --category cute --from-last   # share yours (one-time login)
 ```
 
-Every image in this README is made by this tool:
+→ **[Using gallery styles](https://drawstyle.leeguoo.com/docs/community)** · **[Submitting a style](https://drawstyle.leeguoo.com/docs/submit)**
 
-| `watercolor cat` | `coffee shop logo` | `moody mountain sunset` (1536×1024) |
-| --- | --- | --- |
-| <img src="./docs/gallery/watercolor-cat.png" width="240" alt="watercolor cat"> | <img src="./docs/gallery/coffee-logo.png" width="240" alt="coffee shop logo"> | <img src="./docs/gallery/mountain-sunset.png" width="240" alt="mountain sunset"> |
+## Learn more
 
-## Styles
-
-A **style** (asset) is a reusable look applied with `--style NAME` — a text snippet **and/or pinned reference images**. Two kinds: `--kind style` (match an aesthetic, don't copy content) and `--kind character` (reproduce a recurring subject — your mascot/persona). Three built-ins ship: `doodle`, `xiaohei` (Ian 小黑 hand-drawn explainer style), and `snoopy` (classic Peanuts newspaper-comic look) — see the [styles gallery](docs/styles/README.md) for examples. Pin your own cartoon character or house style **once** and reuse it without re-passing `--ref`; `--style` is repeatable so a character and a style **stack**. Manage them with the `style` subcommand (`list` / `show` / `add` / `add-ref` / `rm-ref` / `rm` / `use` / `clear` / `reset` / `search` / `pull` / `update` / `publish`); they live in `~/.config/chatgpt-imagegen/styles.json` with images copied under `assets/`.
-
-Community styles live at [drawstyle.leeguoo.com](https://drawstyle.leeguoo.com) — a public gallery you can browse, search, and contribute to without ever updating the script:
-
-```bash
-chatgpt-imagegen style search "watercolor mascot" --category avatar-ip
-# fastest: generate with a gallery style directly, nothing saved locally
-chatgpt-imagegen "a fox barista" --style-online pip
-# or pull it into the local library to reuse offline
-chatgpt-imagegen style pull pip --as pip2
-# made a good style? share it (one-time browser login):
-chatgpt-imagegen style publish pip --category avatar-ip --from-last
-```
-
-```bash
-chatgpt-imagegen "a robot mascot" --style doodle           # text style, one run
-chatgpt-imagegen style add brand "flat vector, bold shapes, teal accent, white background"
-chatgpt-imagegen style add pip "a round orange fox" --kind character --ref pip-a.png --ref pip-b.png
-chatgpt-imagegen "Pip ordering coffee" --style pip --style brand   # same fox, brand style (stacked)
-chatgpt-imagegen style add pip --from-last --kind character        # pin the image you just liked
-chatgpt-imagegen "a photorealistic forest" --no-style      # skip all active assets once
-```
-
-## Troubleshooting
-
-**`no logged-in ChatGPT browser available` — but I *am* signed in** ([#15](https://github.com/leeguooooo/chatgpt-imagegen/issues/15))
-
-The `web` backend reaches a browser two ways, and both can miss even when you're logged in:
-
-- **relay** (your *already-open* Chrome) needs the **ab-connect browser extension** connected — a normally-launched Chrome has no debug port, so without it `chrome-use` can't see your tab.
-- **profile launch** copies a logged-in profile and starts its own window — which can fail on its own (profile copy, Chrome not found, a rate-limit).
-
-Run **`chatgpt-imagegen doctor`** first — it reports which backend is ready (codex token, chrome-use version, relay, logged-in profiles) and which one `auto` would pick. From v0.11.1 the error itself also prints the *actual* `chrome-use` reason per attempt and whether the relay is connected. Fix any one:
-
-1. **Connect the relay** (best — drives your open tab, no Codex-usage): `chrome-use extension install`, load the ab-connect extension (`chrome://extensions` → Developer mode → Load unpacked), restart Chrome. Verify with `chrome-use daemon status --json` → `"relay": true`.
-2. **Fully quit Chrome, then rerun** — `chrome-use` then launches the logged-in profile itself.
-3. **`--backend codex`** — headless fallback (bills Codex-usage).
-
-Pick a specific profile with `--profile "Profile 1"`, or force the open-Chrome path with `--profile relay`.
-
-## Concurrency
-
-`web` runs **serialized** (1 at a time — it drives the one shared Chrome, and the page surface rate-limits hard); `codex` runs up to **4** in parallel. Firing more is safe — excess runs queue on a lock pool, and the `--timeout` budget only starts once a slot frees. Override via `CHATGPT_IMAGEGEN_WEB_CONCURRENCY` / `CHATGPT_IMAGEGEN_CODEX_CONCURRENCY` (`0` = unlimited).
-
-Subscription quota is shared with the ChatGPT app — don't sustain >10 images/min. For bulk batches, use the official `/v1/images/generations` API with an `OPENAI_API_KEY`.
-
-## When NOT to use this
-
-Use the official `/v1/images/generations` API (with `OPENAI_API_KEY`) instead if you need any of:
-
-- true **`quality=high`** or native **transparent backgrounds** (subscription exposes neither);
-- a **public-facing service** — powering one with a personal ChatGPT subscription violates OpenAI's ToS;
-- **deterministic per-call billing** you can pass to customers;
-- sustained **>10 images/min** (subscription limits are tighter than the API).
-
-## More
-
-- **How it works (technical):** [docs/how-it-works.md](./docs/how-it-works.md) — the web/codex flows, the Cloudflare Turnstile gate, OAuth/SSE.
-- **Need an HTTP API?** [agent-cli-to-api](https://github.com/leeguooooo/agent-cli-to-api) exposes the same tool as an OpenAI-compatible `/v1/chat/completions` server.
-- **Deep dive (blog):** [the design and principles behind chatgpt-imagegen](https://blog.leeguoo.com/en/posts/chatgpt-imagegen/).
+- 📖 **[Full documentation](https://drawstyle.leeguoo.com/docs)** — install, generating, styles, backends, the platform.
+- 🎨 **[Style gallery](https://drawstyle.leeguoo.com)** — browse and contribute community art styles.
+- 📝 **[Deep dive (blog)](https://blog.leeguoo.com/en/posts/chatgpt-imagegen/)** — the design and principles behind it.
+- ⚙️ **[How it works](./docs/how-it-works.md)** · **[HTTP API wrapper](https://github.com/leeguooooo/agent-cli-to-api)**
 
 ## License
 
