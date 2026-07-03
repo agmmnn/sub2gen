@@ -36,9 +36,12 @@ from __future__ import annotations
 import argparse
 import base64
 import fcntl
+import hashlib
+import http.server
 import json
 import os
 import re
+import secrets
 import shutil
 import subprocess
 import sys
@@ -48,6 +51,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+import webbrowser
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
@@ -2222,6 +2226,8 @@ def _resolve_from_last() -> str:
 
 DRAWSTYLE_API_DEFAULT = "https://drawstyle.leeguoo.com"
 PLATFORM_TIMEOUT = 15  # seconds
+OIDC_ISSUER = "https://account.leeguoo.com"
+OIDC_CLIENT_ID = "drawstyle-cli"
 
 
 def _platform_base() -> str:
@@ -2262,6 +2268,184 @@ def _platform_request(method: str, path: str, *, data: bytes | None = None,
     except json.JSONDecodeError:
         raise SystemExit(
             "error: platform: unexpected response (not JSON)") from None
+
+
+def _pkce_pair() -> tuple[str, str]:
+    verifier = base64.urlsafe_b64encode(
+        secrets.token_bytes(48)).rstrip(b"=").decode()
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    return verifier, challenge
+
+
+def _platform_auth_path() -> Path:
+    return _styles_path().parent / "drawstyle-auth.json"
+
+
+def _tokens_with_expiry(tokens: dict,
+                        fallback_refresh: str | None = None) -> dict:
+    out = dict(tokens)
+    if fallback_refresh and not isinstance(out.get("refresh_token"), str):
+        out["refresh_token"] = fallback_refresh
+    try:
+        expires_in = int(out.get("expires_in") or 0)
+    except (TypeError, ValueError):
+        expires_in = 0
+    if expires_in > 0:
+        out["expires_at"] = time.time() + expires_in - 60
+    return out
+
+
+def _save_platform_auth(tokens: dict) -> None:
+    path = _platform_auth_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(tokens, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+        os.chmod(path, 0o600)
+    except Exception:
+        try:
+            tmp.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def _load_platform_auth() -> dict | None:
+    path = _platform_auth_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _oidc_token_request(form: dict) -> dict:
+    """POST a token form to account.leeguoo.com.
+
+    Kept as a seam so tests can exercise refresh behavior without network.
+    """
+    body = urllib.parse.urlencode(form).encode("utf-8")
+    req = urllib.request.Request(
+        OIDC_ISSUER.rstrip("/") + "/token",
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded",
+                 "Accept": "application/json"},
+    )
+    try:
+        with _urlopen(req, timeout=PLATFORM_TIMEOUT) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
+    except urllib.error.HTTPError as e:
+        raise SystemExit(f"error: drawstyle login token exchange failed "
+                         f"(HTTP {e.code})") from None
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise SystemExit(
+            f"error: cannot reach {OIDC_ISSUER} for login ({e})") from None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        raise SystemExit(
+            "error: drawstyle login token exchange returned non-JSON") from None
+    if not isinstance(data, dict) or not isinstance(data.get("access_token"), str):
+        raise SystemExit(
+            "error: drawstyle login token exchange missing access_token")
+    return data
+
+
+def _oidc_login_interactive() -> dict:
+    verifier, challenge = _pkce_pair()
+    state = secrets.token_urlsafe(24)
+    result: dict[str, str] = {}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802 - stdlib callback name
+            parsed = urllib.parse.urlparse(self.path)
+            params = urllib.parse.parse_qs(parsed.query)
+            result["state"] = (params.get("state") or [""])[0]
+            result["code"] = (params.get("code") or [""])[0]
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(
+                b"<html><body>You can close this tab.</body></html>")
+
+        def log_message(self, fmt, *args):  # noqa: A003
+            return
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    server.timeout = 180
+    try:
+        redirect_uri = f"http://127.0.0.1:{server.server_port}/cb"
+        query = urllib.parse.urlencode({
+            "response_type": "code",
+            "client_id": OIDC_CLIENT_ID,
+            "redirect_uri": redirect_uri,
+            "scope": "openid email profile",
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        })
+        url = OIDC_ISSUER.rstrip("/") + "/authorize?" + query
+        if not webbrowser.open(url):
+            print(f"Open this URL to log in: {url}", file=sys.stderr)
+        else:
+            print(f"Opened browser for drawstyle login: {url}", file=sys.stderr)
+        server.handle_request()
+    finally:
+        server.server_close()
+    if result.get("state") != state or not result.get("code"):
+        raise SystemExit("error: drawstyle login failed or timed out")
+    tokens = _oidc_token_request({
+        "grant_type": "authorization_code",
+        "code": result["code"],
+        "redirect_uri": redirect_uri,
+        "client_id": OIDC_CLIENT_ID,
+        "code_verifier": verifier,
+    })
+    return _tokens_with_expiry(tokens)
+
+
+def _platform_access_token(*, interactive: bool = True) -> str:
+    tokens = _load_platform_auth() or {}
+    access = tokens.get("access_token")
+    try:
+        expires_at = float(tokens.get("expires_at") or 0)
+    except (TypeError, ValueError):
+        expires_at = 0
+    if isinstance(access, str) and expires_at > time.time():
+        return access
+
+    refresh = tokens.get("refresh_token")
+    if isinstance(refresh, str):
+        refreshed = _oidc_token_request({
+            "grant_type": "refresh_token",
+            "refresh_token": refresh,
+            "client_id": OIDC_CLIENT_ID,
+        })
+        merged = _tokens_with_expiry(refreshed, fallback_refresh=refresh)
+        _save_platform_auth(merged)
+        token = merged.get("access_token")
+        if isinstance(token, str):
+            return token
+
+    if not interactive:
+        raise SystemExit("error: drawstyle login required")
+    logged_in = _oidc_login_interactive()
+    _save_platform_auth(logged_in)
+    token = logged_in.get("access_token")
+    if not isinstance(token, str):
+        raise SystemExit("error: drawstyle login missing access_token")
+    return token
 
 
 def _download_bytes(url: str) -> bytes:

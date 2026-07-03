@@ -1151,5 +1151,36 @@ class StyleUpdate(unittest.TestCase):
         self.assertIn("has no platform origin", str(cm.exception))
 
 
+class OidcPkce(unittest.TestCase):
+    def test_challenge_is_s256_of_verifier(self):
+        import base64
+        import hashlib
+        verifier, challenge = cig._pkce_pair()
+        want = base64.urlsafe_b64encode(
+            hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+        self.assertEqual(challenge, want)
+        self.assertGreaterEqual(len(verifier), 43)
+
+    def test_token_cache_roundtrip_and_mode(self):
+        with _tmp_xdg():
+            cig._save_platform_auth({"access_token": "at", "refresh_token": "rt",
+                                     "expires_at": 9999999999})
+            p = cig._platform_auth_path()
+            self.assertEqual(p.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(cig._load_platform_auth()["access_token"], "at")
+
+    def test_expired_token_triggers_refresh(self):
+        with _tmp_xdg():
+            cig._save_platform_auth({"access_token": "old", "refresh_token": "rt",
+                                     "expires_at": 1})
+            with unittest.mock.patch.object(
+                    cig, "_oidc_token_request",
+                    return_value={"access_token": "new", "refresh_token": "rt2",
+                                  "expires_in": 3600}) as m:
+                token = cig._platform_access_token(interactive=False)
+        self.assertEqual(token, "new")
+        self.assertEqual(m.call_args[0][0]["grant_type"], "refresh_token")
+
+
 if __name__ == "__main__":
     unittest.main()
