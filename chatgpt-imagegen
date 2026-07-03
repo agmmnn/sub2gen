@@ -56,13 +56,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.16.1"
+__version__ = "0.17.0"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.17.0]: style search/pull/update/publish — drawstyle 平台集成
 # WHATSNEW[0.16.1]: 新内置风格现在会自动补进老配置(不再只对全新安装生效;已删除的内置不会被复活)
 # WHATSNEW[0.16.0]: 新增两个内置风格——xiaohei(Ian 小黑手绘讲解风,适合中文文章配图)和 snoopy(Peanuts 报纸漫画风);--style 即用
 # WHATSNEW[0.15.0]: 可固定角色/画风——style 资产现在能绑参考图(--ref/--from-last),角色与画风可叠加(--style 可重复)
