@@ -2304,6 +2304,31 @@ def _pull_refs_to_tmp(refs: list[dict], tmp: Path) -> list[str]:
     return stored
 
 
+def _apply_package(doc: dict, name: str, pkg: dict) -> list[str]:
+    """Apply one platform package to a local style entry.
+
+    Refs are downloaded before touching the real asset dir. The caller decides
+    when to save ``doc``, which lets `style update` persist multiple refreshed
+    entries in one atomic styles.json write.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        stored = _pull_refs_to_tmp(pkg.get("refs") or [], tmp)
+        asset_dir = _asset_dir(name)
+        shutil.rmtree(asset_dir, ignore_errors=True)
+        if stored:
+            asset_dir.mkdir(parents=True, exist_ok=True)
+            for fname in stored:
+                shutil.move(str(tmp / fname), asset_dir / fname)
+    doc["styles"][name] = {"kind": pkg["kind"],
+                           "snippet": pkg.get("snippet") or "",
+                           "refs": stored,
+                           "origin": {"platform": "drawstyle",
+                                      "slug": pkg["slug"],
+                                      "version": pkg["version"]}}
+    return stored
+
+
 def _next_ref_index(asset_dir: Path, existing: list[str]) -> int:
     """Next free `ref-<n>` index, considering both the entry's recorded refs and
     whatever already sits in the asset dir (so copies never collide)."""
@@ -2716,6 +2741,9 @@ def _style_command(argv: list[str]) -> int:
     sp.add_argument("slug")
     sp.add_argument("--as", dest="local_name", default=None, metavar="NAME",
                     help="store under a different local name")
+    sp = sub.add_parser("update",
+                        help="re-pull platform styles that have a newer version")
+    sp.add_argument("name", nargs="?", default=None)
     a = p.parse_args(argv)
 
     if not a.verb:
@@ -2755,24 +2783,49 @@ def _style_command(argv: list[str]) -> int:
                 f"error: local style {name!r} already exists — "
                 f"pass --as OTHERNAME or `style rm {name}` first.")
         pkg = _platform_request("GET", f"/api/styles/{a.slug}/package")
-        with tempfile.TemporaryDirectory() as td:
-            tmp = Path(td)
-            stored = _pull_refs_to_tmp(pkg.get("refs") or [], tmp)
-            asset_dir = _asset_dir(name)
-            if stored:
-                asset_dir.mkdir(parents=True, exist_ok=True)
-                for fname in stored:
-                    shutil.move(str(tmp / fname), asset_dir / fname)
-        styles[name] = {"kind": pkg["kind"],
-                        "snippet": pkg.get("snippet") or "",
-                        "refs": stored,
-                        "origin": {"platform": "drawstyle",
-                                   "slug": pkg["slug"],
-                                   "version": pkg["version"]}}
+        stored = _apply_package(doc, name, pkg)
         _save_styles(doc)
         print(f"pulled {a.slug!r} v{pkg['version']} as {name!r} "
               f"({len(stored)} ref{'s' if len(stored) != 1 else ''})",
               file=sys.stderr)
+        return 0
+
+    if a.verb == "update":
+        if a.name:
+            if a.name not in styles:
+                _die_unknown_style(a.name, styles)
+            origin = styles[a.name].get("origin")
+            if not isinstance(origin, dict) or not origin.get("slug"):
+                raise SystemExit(
+                    f"error: {a.name!r} has no platform origin")
+            candidates = [(a.name, origin)]
+        else:
+            candidates = [
+                (name, entry["origin"])
+                for name, entry in styles.items()
+                if isinstance(entry.get("origin"), dict)
+                and entry["origin"].get("slug")
+            ]
+        if not candidates:
+            print("no pulled styles")
+            return 0
+
+        changed = False
+        for name, origin in candidates:
+            slug = origin["slug"]
+            current = int(origin.get("version") or 0)
+            detail = _platform_request("GET", f"/api/styles/{slug}")
+            remote = int(detail.get("version") or 0)
+            if remote <= current:
+                print(f"{name}: up to date (v{current})")
+                continue
+            pkg = _platform_request("GET", f"/api/styles/{slug}/package")
+            stored = _apply_package(doc, name, pkg)
+            changed = True
+            print(f"{name}: updated v{current} -> v{pkg['version']} "
+                  f"({len(stored)} ref{'s' if len(stored) != 1 else ''})")
+        if changed:
+            _save_styles(doc)
         return 0
 
     if a.verb == "list":

@@ -1086,5 +1086,70 @@ class StylePull(unittest.TestCase):
             self.assertIn("not an image", str(cm.exception))
 
 
+class StyleUpdate(unittest.TestCase):
+    def test_version_check_uses_detail_not_package(self):
+        calls = []
+
+        def fake_request(method, path, **kw):
+            calls.append(path)
+            if path.endswith("/package"):
+                return dict(_PKG, version=4)
+            return {"slug": "pip", "version": 4}
+
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["pip"] = {
+                "kind": "character", "snippet": "old", "refs": [],
+                "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}}
+            cig._save_styles(doc)
+            with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                rc = cig._style_command(["update", "pip"])
+            updated_version = (
+                cig._load_styles()["styles"]["pip"]["origin"]["version"])
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls[0], "/api/styles/pip")
+        self.assertIn("/api/styles/pip/package", calls[1])
+        self.assertEqual(updated_version, 4)
+
+    def test_up_to_date_skips_package(self):
+        calls = []
+
+        def fake_request(method, path, **kw):
+            calls.append(path)
+            if path.endswith("/package"):
+                return _PKG
+            return {"slug": "pip", "version": 3}
+
+        with _tmp_xdg():
+            with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                cig._style_command(["pull", "pip"])
+                buf = io.StringIO()
+                with redirect_stdout(buf):
+                    rc = cig._style_command(["update"])
+        self.assertEqual(rc, 0)
+        self.assertIn("up to date", buf.getvalue())
+        self.assertEqual([p for p in calls if p.endswith("/package")],
+                         ["/api/styles/pip/package"])
+
+    def test_entry_without_origin_skipped(self):
+        with _tmp_xdg():
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                rc = cig._style_command(["update"])
+        self.assertEqual(rc, 0)
+        self.assertIn("no pulled styles", buf.getvalue())
+
+    def test_named_entry_without_origin_errors(self):
+        with _tmp_xdg():
+            cig._style_command(["add", "local", "local only"])
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["update", "local"])
+        self.assertIn("has no platform origin", str(cm.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
