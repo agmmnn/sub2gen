@@ -1231,6 +1231,36 @@ class StylePublish(unittest.TestCase):
                 cig._style_command(["publish", "mylook", "--category", "cute"])
             self.assertIn("--example", str(cm.exception))
 
+    def test_no_example_hint_suggests_from_last(self):
+        # the friendly error should show the one-liner using --from-last
+        with _tmp_xdg():
+            self._setup_local()
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--category", "cute"])
+            self.assertIn("--from-last", str(cm.exception))
+
+    def test_prints_preupload_summary(self):
+        import io as _io
+        from contextlib import redirect_stderr
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            buf = _io.StringIO()
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}), \
+                 redirect_stderr(buf):
+                cig._style_command(["publish", "mylook", "--category", "cute",
+                                    "--tag", "watercolor", "--example", str(ex)])
+            out = buf.getvalue()
+            self.assertIn("publishing 'mylook'", out)
+            self.assertIn("category: cute", out)
+            self.assertIn("examples: 1", out)
+            self.assertIn("track approval", out)
+
     def test_republish_own_origin_errors(self):
         with _tmp_xdg():
             doc = cig._load_styles()

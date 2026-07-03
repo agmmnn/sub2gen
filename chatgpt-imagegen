@@ -3089,12 +3089,21 @@ def _style_command(argv: list[str]) -> int:
         if a.category not in _PLATFORM_CATEGORIES:
             cats = ", ".join(_PLATFORM_CATEGORIES)
             raise SystemExit(
-                f"error: --category is required and must be one of: {cats}")
+                f"error: --category is required and must be one of: {cats}\n"
+                f"  e.g. chatgpt-imagegen style publish {a.name} "
+                f"--category {_PLATFORM_CATEGORIES[0]} --from-last")
         examples = list(a.example or [])
         if a.from_last:
             examples.append(_resolve_from_last())
         if not examples:
-            raise SystemExit("error: --example IMG is required")
+            raise SystemExit(
+                "error: a submission needs at least one example image.\n"
+                "  • use the image you just generated:  "
+                f"chatgpt-imagegen style publish {a.name} "
+                f"--category {a.category} --from-last\n"
+                "  • or pass one explicitly:            "
+                f"chatgpt-imagegen style publish {a.name} "
+                f"--category {a.category} --example path/to.png")
         if len(examples) > 3:
             raise SystemExit("error: at most 3 --example images are allowed")
 
@@ -3116,6 +3125,15 @@ def _style_command(argv: list[str]) -> int:
             files.append(("ref[]", *_read_publish_image(
                 str(asset_dir / ref), "reference")))
 
+        # Show what's about to be submitted before the (login-gated) upload.
+        n_ex = len(examples)
+        n_ref = sum(1 for f in files if f[0] == "ref[]")
+        tag_str = ", ".join(a.tag) if a.tag else "(none)"
+        print(
+            f"publishing {a.name!r} → {_platform_base()}\n"
+            f"  category: {a.category}   tags: {tag_str}\n"
+            f"  examples: {n_ex}   references: {n_ref}",
+            file=sys.stderr)
         body, boundary = _multipart_form(fields, files)
         token = _platform_access_token()
         resp = _platform_request(
@@ -3131,7 +3149,10 @@ def _style_command(argv: list[str]) -> int:
             slug = resp["slug"]
         entry["origin"] = {"platform": "drawstyle", "slug": slug, "version": 1}
         _save_styles(doc)
-        print(f"submitted {a.name!r} for review", file=sys.stderr)
+        print(
+            f"submitted {a.name!r} for review 🎉\n"
+            f"  track approval: {_platform_base()}/zh/me",
+            file=sys.stderr)
         return 0
 
     if a.verb == "pull":
