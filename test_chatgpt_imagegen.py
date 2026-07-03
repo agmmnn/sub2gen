@@ -1093,6 +1093,21 @@ class StylePull(unittest.TestCase):
                     cig._style_command(["pull", "pip"])
             self.assertIn("not an image", str(cm.exception))
 
+    def test_invalid_slug_exits_without_request(self):
+        with _tmp_xdg():
+            called = []
+
+            def fake_request(method, path, **kw):
+                called.append(path)
+                return _PKG
+
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            fake_request):
+                with self.assertRaises(SystemExit) as cm:
+                    cig._style_command(["pull", "../../etc"])
+            self.assertIn("invalid slug", str(cm.exception))
+            self.assertEqual(called, [])
+
 
 class StyleUpdate(unittest.TestCase):
     def test_version_check_uses_detail_not_package(self):
@@ -1251,6 +1266,29 @@ class StylePublish(unittest.TestCase):
         self.assertIn(b"cute", body)
         self.assertIn(_PNG, body)
 
+    def test_publish_records_origin_and_blocks_second_publish(self):
+        with _tmp_xdg() as root:
+            self._setup_local()
+            ex = Path(root) / "ex.png"
+            ex.write_bytes(_PNG)
+            with unittest.mock.patch.object(cig, "_platform_access_token",
+                                            return_value="tok"), \
+                 unittest.mock.patch.object(
+                     cig, "_platform_request",
+                     return_value={"slug": "mylook", "status": "pending"}):
+                rc = cig._style_command(["publish", "mylook", "--category",
+                                         "cute", "--example", str(ex)])
+            self.assertEqual(rc, 0)
+            entry = cig._load_styles()["styles"]["mylook"]
+            self.assertEqual(
+                entry["origin"],
+                {"platform": "drawstyle", "slug": "mylook", "version": 1})
+            # a second publish now hits the friendly already-published guard
+            with self.assertRaises(SystemExit) as cm:
+                cig._style_command(["publish", "mylook", "--category", "cute",
+                                    "--example", str(ex)])
+            self.assertIn("edit", str(cm.exception))
+
     def test_too_many_examples_errors_before_auth(self):
         with _tmp_xdg() as root:
             self._setup_local()
@@ -1285,6 +1323,82 @@ class StylePublish(unittest.TestCase):
         body = m.call_args[1]["data"]
         self.assertIn(b'name="example[]"', body)
         self.assertIn(b'name="ref[]"', body)
+
+
+class OidcCallbackMatch(unittest.TestCase):
+    def test_matching_cb_with_state_and_code(self):
+        ok, code = cig._oidc_callback_match("/cb?state=S&code=XYZ", "S")
+        self.assertTrue(ok)
+        self.assertEqual(code, "XYZ")
+
+    def test_non_cb_path_ignored(self):
+        # a stray favicon/prefetch must not consume the handshake
+        self.assertEqual(
+            cig._oidc_callback_match("/favicon.ico?state=S&code=XYZ", "S"),
+            (False, ""))
+
+    def test_state_mismatch_ignored(self):
+        self.assertEqual(
+            cig._oidc_callback_match("/cb?state=other&code=XYZ", "S"),
+            (False, ""))
+
+    def test_missing_code_ignored(self):
+        self.assertEqual(cig._oidc_callback_match("/cb?state=S", "S"),
+                         (False, ""))
+
+
+class StyleUpdatePartial(unittest.TestCase):
+    def test_mid_list_failure_saves_earlier_entry(self):
+        def fake_request(method, path, **kw):
+            if path.endswith("/package"):
+                slug = path.split("/")[3]
+                return dict(_PKG, slug=slug, version=4,
+                            refs=[{"url": f"https://drawstyle.leeguoo.com/img/{slug}",
+                                   "content_type": "image/png"}])
+            slug = path.rsplit("/", 1)[-1]
+            return {"slug": slug, "version": 4}
+
+        def fake_download(url):
+            if url.endswith("/bb"):
+                raise OSError("boom")
+            return _PNG
+
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            for slug in ("aa", "bb"):
+                doc["styles"][slug] = {
+                    "kind": "character", "snippet": "old", "refs": [],
+                    "origin": {"platform": "drawstyle", "slug": slug,
+                               "version": 3}}
+            cig._save_styles(doc)
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            fake_request), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            fake_download):
+                with self.assertRaises(SystemExit):
+                    cig._style_command(["update"])
+            reloaded = cig._load_styles()["styles"]
+            # first entry fully updated AND persisted before the failure
+            self.assertEqual(reloaded["aa"]["origin"]["version"], 4)
+            self.assertEqual(len(reloaded["aa"]["refs"]), 1)
+            self.assertTrue(
+                (cig._asset_dir("aa") / reloaded["aa"]["refs"][0]).exists())
+            # second entry untouched (still old version, no refs on disk)
+            self.assertEqual(reloaded["bb"]["origin"]["version"], 3)
+            self.assertEqual(reloaded["bb"]["refs"], [])
+            self.assertFalse(cig._asset_dir("bb").exists())
+
+
+class ApplyPackageMalformed(unittest.TestCase):
+    def test_missing_keys_exits_cleanly(self):
+        with self.assertRaises(SystemExit) as cm:
+            cig._apply_package({"styles": {}}, "x", {"refs": []})
+        self.assertIn("malformed package response", str(cm.exception))
+
+    def test_non_dict_payload_exits_cleanly(self):
+        with self.assertRaises(SystemExit) as cm:
+            cig._apply_package({"styles": {}}, "x", ["not", "a", "dict"])
+        self.assertIn("malformed package response", str(cm.exception))
 
 
 if __name__ == "__main__":
