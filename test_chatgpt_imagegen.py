@@ -1325,6 +1325,39 @@ class StylePublish(unittest.TestCase):
         self.assertIn(b'name="ref[]"', body)
 
 
+class PlatformAccessTokenRefreshFallback(unittest.TestCase):
+    def _expired(self):
+        cig._save_platform_auth({"access_token": "old", "refresh_token": "rt",
+                                 "expires_at": 1})
+
+    @staticmethod
+    def _boom(form):
+        raise SystemExit("error: drawstyle login token exchange failed (HTTP 400)")
+
+    def test_interactive_falls_back_to_login_when_refresh_fails(self):
+        with _tmp_xdg():
+            self._expired()
+            with unittest.mock.patch.object(cig, "_oidc_token_request",
+                                            self._boom), \
+                 unittest.mock.patch.object(
+                     cig, "_oidc_login_interactive",
+                     return_value={"access_token": "fresh"}) as login:
+                token = cig._platform_access_token(interactive=True)
+            self.assertEqual(token, "fresh")
+            login.assert_called_once()
+
+    def test_non_interactive_still_fails_fast_on_refresh_failure(self):
+        with _tmp_xdg():
+            self._expired()
+            with unittest.mock.patch.object(cig, "_oidc_token_request",
+                                            self._boom), \
+                 unittest.mock.patch.object(
+                     cig, "_oidc_login_interactive") as login:
+                with self.assertRaises(SystemExit):
+                    cig._platform_access_token(interactive=False)
+            login.assert_not_called()
+
+
 class OidcCallbackMatch(unittest.TestCase):
     def test_matching_cb_with_state_and_code(self):
         ok, code = cig._oidc_callback_match("/cb?state=S&code=XYZ", "S")

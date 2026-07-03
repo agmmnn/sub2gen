@@ -2478,16 +2478,25 @@ def _platform_access_token(*, interactive: bool = True) -> str:
 
     refresh = tokens.get("refresh_token")
     if isinstance(refresh, str):
-        refreshed = _oidc_token_request({
-            "grant_type": "refresh_token",
-            "refresh_token": refresh,
-            "client_id": OIDC_CLIENT_ID,
-        })
-        merged = _tokens_with_expiry(refreshed, fallback_refresh=refresh)
-        _save_platform_auth(merged)
-        token = merged.get("access_token")
-        if isinstance(token, str):
-            return token
+        try:
+            refreshed = _oidc_token_request({
+                "grant_type": "refresh_token",
+                "refresh_token": refresh,
+                "client_id": OIDC_CLIENT_ID,
+            })
+        except SystemExit:
+            # A revoked/expired refresh token must not permanently brick
+            # `style publish`. In an interactive context we fall through to a
+            # fresh browser login; a non-interactive caller (tests/automation)
+            # keeps the fail-fast contract and gets the SystemExit.
+            if not interactive:
+                raise
+        else:
+            merged = _tokens_with_expiry(refreshed, fallback_refresh=refresh)
+            _save_platform_auth(merged)
+            token = merged.get("access_token")
+            if isinstance(token, str):
+                return token
 
     if not interactive:
         raise SystemExit("error: drawstyle login required")
