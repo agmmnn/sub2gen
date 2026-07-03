@@ -111,13 +111,13 @@ Rationale: routes split by privilege level (read / user-write / admin) so the au
 **Files:** create `src/api/styles-write.ts`, `test/styles-write.test.ts`; modify `src/index.ts`.
 
 - [ ] **Step 1: Failing tests:**
-  - anonymous → 401; authed multipart with `meta` JSON part (`{slug, name, kind, snippet, category, tags, forked_from_slug?}`) + 1 `example[]` file → 201, row `pending`, images stored (`example` role), tags rows written.
+  - anonymous → 401; authed multipart with **plain form fields** `slug`, `name`, `kind`, `snippet`, `category`, repeated `tag`, optional `forked_from_slug` + 1 `example[]` file → 201, row `pending`, images stored (`example` role), tags rows written. (Field names are the cross-repo contract with the CLI plan's `style publish` — no JSON `meta` part.)
   - validation 400s: bad slug, slug taken, unknown category, 0 examples, 4 examples, >4 refs, oversize file, non-image bytes.
   - `forked_from_slug` resolves to the source style id in `forked_from`; unknown source → 400.
   - 11th submission by the same user in one day (UTC) → 429.
   - snippet-less but ref-having submission is valid (spec: snippet may be '').
 - [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Implement — parse `multipart/form-data` via `c.req.parseBody({all: true})`; sniff + size-check every file through `images.ts`; single D1 batch insert. Rate limit = `SELECT COUNT(*) FROM styles WHERE owner_user_id=? AND created_at >= date('now')`.
+- [ ] **Step 3:** Implement — parse `multipart/form-data` via `c.req.parseBody({all: true})` (repeated `tag` and `example[]`/`ref[]` arrive as arrays with `all: true`); sniff + size-check every file through `images.ts`; single D1 batch insert. Rate limit = `SELECT COUNT(*) FROM styles WHERE owner_user_id=? AND created_at >= date('now')`.
 - [ ] **Step 4:** `npm test` → PASS.
 - [ ] **Step 5:** Commit — `feat: 投稿 API——multipart 校验/限流/fork 溯源,一律进待审`
 

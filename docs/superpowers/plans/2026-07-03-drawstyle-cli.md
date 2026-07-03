@@ -365,10 +365,18 @@ def _download_bytes(url: str) -> bytes:
 
 def _pull_refs_to_tmp(refs: list[dict], tmp: Path) -> list[str]:
     """Download every ref into tmp, MIME-sniffed. All-or-nothing: any failure
-    raises before styles.json is touched (pull atomicity per the spec)."""
+    raises SystemExit before styles.json is touched (pull atomicity per the
+    spec). The wrap lives HERE, not in _download_bytes — tests replace
+    _download_bytes wholesale, so a raw OSError from the seam must still
+    surface as a clean SystemExit."""
     stored: list[str] = []
     for i, ref in enumerate(refs, 1):
-        data = _download_bytes(ref["url"])
+        try:
+            data = _download_bytes(ref["url"])
+        except SystemExit:
+            raise
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise SystemExit(f"error: failed to download ref {ref['url']}: {e}")
         mime = _sniff_mime(data)
         ext = _REF_EXT_BY_MIME.get(mime or "")
         if not ext:
@@ -435,11 +443,16 @@ class StyleUpdate(unittest.TestCase):
                 return dict(_PKG, version=4)
             return {"slug": "pip", "version": 4}
         with _tmp_xdg():
+            # Seed a locally-pulled entry at v3 directly — don't pull through the
+            # fake (it serves v4, which would make update a no-op).
+            doc = cig._load_styles()
+            doc["styles"]["pip"] = {
+                "kind": "character", "snippet": "old", "refs": [],
+                "origin": {"platform": "drawstyle", "slug": "pip", "version": 3}}
+            cig._save_styles(doc)
             with unittest.mock.patch.object(cig, "_platform_request", fake_request), \
                  unittest.mock.patch.object(cig, "_download_bytes",
                                             return_value=_PNG):
-                cig._style_command(["pull", "pip"])          # v3 → local
-                calls.clear()
                 rc = cig._style_command(["update", "pip"])
         self.assertEqual(rc, 0)
         self.assertEqual(calls[0], "/api/styles/pip")        # cheap check first
@@ -483,7 +496,9 @@ re-pull logic as Task 4 but **replacing in place**: download refs to temp,
 `shutil.rmtree(_asset_dir(name))`, move refs in, overwrite the entry (keep the
 local name, update `origin.version`), single `_save_styles(doc)` at the end.
 Refactor the pull body into `_apply_package(doc, name, pkg)` shared by pull and
-update rather than duplicating it. Named-but-not-pulled → `SystemExit("error:
+update rather than duplicating it — this **replaces Task 4's inline pull body**
+(edit the already-committed `pull` branch to call `_apply_package` too; rerun
+the StylePull tests to prove the refactor is behavior-neutral). Named-but-not-pulled → `SystemExit("error:
 {name!r} has no platform origin")`. No candidates → print `no pulled styles`.
 Every up-to-date entry prints `{name}: up to date (v{n})`.
 
@@ -655,7 +670,7 @@ Parser:
                     help="use the most recently generated image as an example")
 ```
 
-Handler order: validate entry exists → refuse if `origin.slug` points at own platform style (message: `already published as {slug!r} — edit it on the web: {base}/submit?edit={slug}`) → `--category` in `_PLATFORM_CATEGORIES` else SystemExit listing keys (no interactive prompt) → collect examples (`--example` paths + `--from-last` via `_resolve_from_last()`), 1–3 required, each must exist and sniff as an image → build multipart body (metadata JSON part `meta` = `{slug: name, name, kind, snippet, category, tags}`, image parts `example[]` and `ref[]` from the entry's pinned refs in `_asset_dir(name)`) → `_platform_access_token()` → `_platform_request("POST", "/api/styles", data=body, headers={...})` → print `submitted {name!r} for review` to stderr.
+Handler order: validate entry exists → refuse if the entry has ANY `origin` (message: `already published as {slug!r} — edit it on the web: {base}/submit?edit={slug}`; deliberately broader than "own style only" — a pulled copy of someone else's style shouldn't be re-published from the CLI either, fork on the web instead. Don't "fix" this to check ownership) → `--category` in `_PLATFORM_CATEGORIES` else SystemExit listing keys (no interactive prompt) → collect examples (`--example` paths + `--from-last` via `_resolve_from_last()`), 1–3 required, each must exist and sniff as an image → build multipart body with **plain form fields** — `slug` (=local name), `name` (=local name for CLI submissions), `kind`, `snippet`, `category`, repeated `tag` fields — plus file parts `example[]` and `ref[]` (the entry's pinned refs from `_asset_dir(name)`). **No JSON `meta` part** — this is the cross-repo contract: the platform's `POST /api/styles` parses these exact field names (see companion plan Task 6). → `_platform_access_token()` → `_platform_request("POST", "/api/styles", data=body, headers={...})` → print `submitted {name!r} for review` to stderr.
 
 Multipart encoder (stdlib, ~15 lines): random boundary via `secrets.token_hex(16)`; each part `--{b}\r\nContent-Disposition: form-data; name="…"[; filename="…"]\r\n[Content-Type: …]\r\n\r\n{payload}\r\n`; terminator `--{b}--\r\n`.
 
