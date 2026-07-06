@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.17.0"
+__version__ = "0.18.0"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.18.0]: 移除内置风格——风格全部来自画廊;`--style NAME` 本地没有时自动从画廊拉取并持久化(离线后仍可用)
 # WHATSNEW[0.17.0]: style search/pull/update/publish — drawstyle 平台集成
 # WHATSNEW[0.16.1]: 新内置风格现在会自动补进老配置(不再只对全新安装生效;已删除的内置不会被复活)
 # WHATSNEW[0.16.0]: 新增两个内置风格——xiaohei(Ian 小黑手绘讲解风,适合中文文章配图)和 snoopy(Peanuts 报纸漫画风);--style 即用
@@ -2082,48 +2083,10 @@ def _dispatch(
 
 # ── Style presets ──────────────────────────────────────────────────────────
 # Named, reusable prompt snippets appended (as a comma-joined suffix) to the
-# user's prompt. Stored in ~/.config/chatgpt-imagegen/styles.json; seeded once
-# from the built-ins below and never auto-overwritten (use `style reset`).
-_BUILTIN_STYLES = {
-    "doodle": (
-        "drawn as a deliberately crude doodle using the biggest possible blocks "
-        "of color, leaning hard into a scribbly, pathetically bad look. White "
-        "background, as if drawn with a mouse in an old-school computer paint "
-        "program. It should be faintly recognizable yet not quite right — like "
-        "it almost matches but everything is subtly off, awkward and confusing. "
-        "Low-res, smeared together pixel by pixel, showing off just how absurdly "
-        "bad it is. Honestly, draw it however you want — but the content must "
-        "still be readable."
-    ),
-    "xiaohei": (
-        "Ian 'Xiaohei' (小黑) hand-drawn explainer style. Pure white background — "
-        "NO paper texture, beige, shadows, or gradients. Thin hand-drawn black "
-        "ink linework with a slight hand-wobble, and lots of whitespace (the "
-        "subject fills only ~40-60% of the frame). Express ONE single idea: an "
-        "absurd machine, contraption, or metaphor. The protagonist is 小黑 — a "
-        "solid matte-black blob figure with two small white dot eyes, thin stick "
-        "legs, and a blank expression — actively operating the contraption, never "
-        "a decorative mascot in a corner. Add a few sparse handwritten Chinese "
-        "annotation labels in red, orange, and blue with thin hand-drawn arrows "
-        "pointing at parts of the scene. Weird, witty, and clean, but never cute "
-        "or childish. 16:9 landscape. (For the strongest match, pin a few example "
-        "images as references: `style add-ref xiaohei <img>`.)"
-    ),
-    "snoopy": (
-        "Classic mid-20th-century American newspaper comic-strip look, in the "
-        "gentle spirit of the Peanuts / Snoopy Sunday funnies. Simple, clean, "
-        "slightly wobbly thin black pen-ink outlines, as if hand-inked with a "
-        "nib. Characters are round-headed and minimalist — big heads, small "
-        "squat bodies, tiny dot eyes, and simple curved-line mouths and "
-        "eyebrows that carry all the expression. Flat cel-style fills in a "
-        "limited, slightly muted retro palette — no gradients, no rendering, no "
-        "shadows. Lots of clean white space and sparse, minimal backgrounds (a "
-        "single horizon line, a few simple props). Warm, wholesome, a touch "
-        "wistful and funny. Hand-lettered feel for any text. Keep it charming "
-        "and simple, never detailed or photorealistic."
-    ),
-}
-
+# user's prompt. Stored in ~/.config/chatgpt-imagegen/styles.json. There are NO
+# built-in styles: the library starts empty and fills from the gallery — either
+# one-off via `--style-online SLUG`, or persisted via `style pull SLUG` (and
+# `--style NAME` auto-pulls a missing name from the gallery on first use).
 _STYLE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 # An "asset" (a v2 styles entry) is either a recurring character (reproduce it
@@ -2795,51 +2758,11 @@ def _maybe_notify_update(emit) -> None:
         emit(_format_update_notice(latest, notes))
 
 
-def _builtin_styles() -> dict:
-    return dict(_BUILTIN_STYLES)
-
-
 def _default_styles_doc() -> dict:
     # version 2: entries are {kind, snippet, refs} objects and `default` is a
-    # list. Built-ins are seeded as bare strings (a legacy shape that
-    # `_normalize_doc` upgrades on load) so the on-disk seed stays minimal.
-    # `seeded` records which built-ins have ever been delivered, so a later
-    # release can add a NEW built-in to existing configs without resurrecting
-    # ones the user deleted (see `_merge_new_builtins`).
-    return {"version": 2, "default": [], "styles": _builtin_styles(),
-            "seeded": sorted(_BUILTIN_STYLES)}
-
-
-def _merge_new_builtins(doc: dict) -> bool:
-    """Add built-ins the user has never been offered into an existing config.
-
-    This is what makes shipping a NEW built-in style actually reach existing
-    installs: built-ins are seeded only when the file is first created, so
-    without this a new `_BUILTIN_STYLES` entry would never appear for anyone who
-    already has a styles.json.
-
-    `doc["seeded"]` is the set of built-in names ever delivered. A built-in is
-    added only if it's not in `seeded` AND not already present. A deletion (the
-    `rm` verb) leaves the name in `seeded`, so a removed built-in stays removed.
-    For a legacy doc with no `seeded` field, the baseline is the built-ins
-    currently present — so we never resurrect one the user had deleted, while
-    genuinely new built-ins still arrive. Returns True if it mutated the doc.
-    """
-    styles = doc.setdefault("styles", {})
-    seeded = doc.get("seeded")
-    if not isinstance(seeded, list):
-        seeded = [b for b in _BUILTIN_STYLES if b in styles]
-    seeded_set = {s for s in seeded if isinstance(s, str)}
-    changed = False
-    for name, snippet in _BUILTIN_STYLES.items():
-        if name not in seeded_set and name not in styles:
-            styles[name] = _normalize_entry(snippet)
-            changed = True
-    new_seeded = sorted(seeded_set | set(_BUILTIN_STYLES))
-    if doc.get("seeded") != new_seeded:
-        doc["seeded"] = new_seeded
-        changed = True
-    return changed
+    # list. A fresh install starts EMPTY — styles come from the gallery, never
+    # from the CLI itself (no built-ins to seed).
+    return {"version": 2, "default": [], "styles": {}}
 
 
 def _normalize_entry(value: Any) -> dict:
@@ -2908,13 +2831,14 @@ def _save_styles(doc: dict) -> None:
 
 
 def _load_styles() -> dict:
-    """Read the styles doc, seeding built-ins on first use. Raises SystemExit
-    (clear message) on a corrupt/unreadable file rather than clobbering it."""
+    """Read the styles doc. A fresh install starts with an empty library (styles
+    come from the gallery, not from built-ins). Raises SystemExit (clear message)
+    on a corrupt/unreadable file rather than clobbering it."""
     path = _styles_path()
     if not path.exists():
         doc = _default_styles_doc()
-        _save_styles(doc)            # seed the minimal (legacy-shaped) built-ins
-        return _normalize_doc(doc)   # but hand callers the normalized v2 shape
+        _save_styles(doc)            # write the empty library
+        return _normalize_doc(doc)   # hand callers the normalized v2 shape
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (ValueError, OSError) as e:
@@ -2926,21 +2850,18 @@ def _load_styles() -> dict:
             f"Fix it by hand or run `chatgpt-imagegen style reset`.")
     # Normalize immediately so every downstream site sees v2 objects + a list
     # `default` — legacy bare-string entries and a string `default` included.
-    doc = _normalize_doc(doc)
-    # Deliver any built-in the user has never been offered (e.g. a style added in
-    # a newer release), persisting once so it sticks. Best-effort: a read-only
-    # filesystem must never make `_load_styles` fail.
-    if _merge_new_builtins(doc):
-        try:
-            _save_styles(doc)
-        except OSError:
-            pass
-    return doc
+    return _normalize_doc(doc)
 
 
 def _die_unknown_style(name: str, styles: dict) -> None:
+    """Exit on a style name that isn't local. Points at the gallery, since that's
+    now the only source of styles (there are no built-ins to fall back on)."""
     avail = ", ".join(sorted(styles)) or "(none)"
-    raise SystemExit(f"error: unknown style {name!r}. available: {avail}")
+    raise SystemExit(
+        f"error: unknown style {name!r}. local styles: {avail}\n"
+        f"  browse the gallery: chatgpt-imagegen style search {name}\n"
+        f"  fetch + keep it:    chatgpt-imagegen style pull {name}\n"
+        f"  use once (no save): chatgpt-imagegen --style-online {name} ...")
 
 
 def _resolve_style_name(doc: dict, *, style_arg: str | None,
@@ -2981,6 +2902,37 @@ def _resolve_active_styles(doc: dict, *, style_args: list[str] | None,
         if n not in styles:
             _die_unknown_style(n, styles)
     return names
+
+
+def _ensure_styles_local(doc: dict, names: list[str]) -> bool:
+    """Auto-pull any explicit `--style NAME` that isn't in the local library yet.
+
+    This is what makes `--style snoopy` "just work" without a prior `style pull`:
+    a name that's missing locally is fetched from the gallery, persisted (so it's
+    offline-usable next time), and then resolves like any local style. A name
+    that's neither local nor on the gallery exits via `_die_unknown_style` (which
+    points at `style search` / `--style-online`). Returns True if it persisted
+    anything. Names already local are left untouched — no network call.
+    """
+    styles = doc.setdefault("styles", {})
+    changed = False
+    for name in names:
+        if name in styles:
+            continue
+        if not _valid_style_name(name):
+            _die_unknown_style(name, styles)
+        try:
+            pkg = _platform_request("GET", f"/api/styles/{name}/package")
+        except SystemExit:
+            # Not on the gallery (404) or unreachable — fall back to the standard
+            # unknown-style guidance rather than a bare platform error.
+            _die_unknown_style(name, styles)
+        _apply_package(doc, name, pkg)
+        _save_styles(doc)
+        changed = True
+        print(f"pulled {name!r} v{pkg.get('version')} from gallery "
+              f"(saved to your local library)", file=sys.stderr)
+    return changed
 
 
 def _collect_refs(doc: dict, active_names: list[str],
@@ -3058,7 +3010,7 @@ def _style_command(argv: list[str]) -> int:
     sp = sub.add_parser("use", help="set the active default asset set (accepts multiple)")
     sp.add_argument("name", nargs="+")
     sub.add_parser("clear", help="empty the active default asset set")
-    rp = sub.add_parser("reset", help="re-seed built-ins and wipe the asset library")
+    rp = sub.add_parser("reset", help="wipe the style library and all pinned refs (empty it)")
     rp.add_argument("-y", "--yes", action="store_true", help="skip the confirmation")
     sp = sub.add_parser("search", help="search the drawstyle platform")
     sp.add_argument("query", nargs="?", default="")
@@ -3378,15 +3330,16 @@ def _style_command(argv: list[str]) -> int:
     if a.verb == "reset":
         if not a.yes:
             sys.stderr.write(
-                "This discards all style edits AND deletes every pinned "
-                "reference image, restoring built-ins. Continue? [y/N] ")
+                "This discards all local styles AND deletes every pinned "
+                "reference image, leaving an empty library. Continue? [y/N] ")
             sys.stderr.flush()
             if sys.stdin.readline().strip().lower() not in ("y", "yes"):
                 print("aborted", file=sys.stderr)
                 return 1
         shutil.rmtree(_assets_root(), ignore_errors=True)
         _save_styles(_default_styles_doc())
-        print("styles reset to built-ins (asset library wiped)", file=sys.stderr)
+        print("style library reset to empty (re-pull styles from the gallery)",
+              file=sys.stderr)
         return 0
 
     return 0
@@ -3543,7 +3496,8 @@ def main() -> int:
         "--style", action="append", default=None, metavar="NAME",
         help="Apply a saved asset (style or character) to this prompt — its text "
              "snippet and any pinned reference images (see `chatgpt-imagegen "
-             "style list`). Repeatable: multiple assets stack. Overrides the "
+             "style list`). A name that isn't local yet is auto-pulled from the "
+             "gallery and saved. Repeatable: multiple assets stack. Overrides the "
              "active default set for this run.",
     )
     style_grp.add_argument(
@@ -3672,6 +3626,12 @@ def main() -> int:
     args = parser.parse_args()
     progress = not args.no_progress
     _styles_doc = _load_styles()
+    # An explicit `--style NAME` that isn't local yet is auto-pulled from the
+    # gallery and persisted (there are no built-ins; the gallery is the source of
+    # styles). `--no-style` short-circuits, and the saved `default` list is
+    # assumed already-local (only explicit args reach out).
+    if args.style and not args.no_style:
+        _ensure_styles_local(_styles_doc, args.style)
     # Resolve the active asset set (stacking-aware), fold each asset's snippet
     # into the prompt, then partition the assets' reference images into
     # character/style groups in deterministic order.

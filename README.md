@@ -43,7 +43,7 @@ You also need **one backend** — `web` (default, drives your logged-in Chrome, 
 ```bash
 chatgpt-imagegen "moody mountain sunset" -o web/hero.png --size 1536x1024
 chatgpt-imagegen "make it a warm golden-hour photo, cinematic 35mm" -i photo.jpg   # edit a reference
-chatgpt-imagegen "a robot mascot" --style doodle                                    # apply a saved style
+chatgpt-imagegen "a robot mascot" --style doodle                                    # apply a gallery style (auto-pulled + saved)
 OUT=$(chatgpt-imagegen "icon" --quiet)                                              # capture the path
 ```
 

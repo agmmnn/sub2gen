@@ -223,45 +223,24 @@ class StyleStorage(unittest.TestCase):
             self.assertEqual(cig._styles_path(),
                              Path(d) / "chatgpt-imagegen" / "styles.json")
 
-    def test_load_seeds_builtins_when_missing(self):
+    def test_load_starts_empty_when_missing(self):
+        # There are no built-in styles: a fresh install has an empty library.
         with _tmp_xdg():
             doc = cig._load_styles()
             self.assertEqual(doc["default"], [])          # v2: default is a list
-            self.assertIn("doodle", doc["styles"])
-            self.assertEqual(doc["styles"]["doodle"]["kind"], "style")  # normalized
-            for _b in ("xiaohei", "snoopy"):              # shipped built-ins
-                self.assertIn(_b, doc["styles"])
-                self.assertEqual(doc["styles"][_b]["kind"], "style")
-            self.assertTrue(cig._styles_path().exists())  # seeded to disk
+            self.assertEqual(doc["styles"], {})           # nothing seeded
+            self.assertNotIn("seeded", doc)               # machinery gone
+            self.assertTrue(cig._styles_path().exists())  # empty doc written
 
-    def test_existing_file_not_reseeded(self):
-        with _tmp_xdg():
-            cig._load_styles()                    # seed
-            doc = cig._load_styles()
-            del doc["styles"]["doodle"]           # user removes the builtin
-            cig._save_styles(doc)
-            again = cig._load_styles()
-            self.assertNotIn("doodle", again["styles"])  # stays deleted
-
-    def test_new_builtin_merges_into_existing_config(self):
-        # A legacy config (no `seeded`, missing a built-in we now ship) should
-        # gain the new built-in on next load — that's how a shipped style reaches
-        # existing installs.
+    def test_load_never_injects_styles(self):
+        # Loading must never add styles the user didn't put there — the only
+        # sources are `style pull` / auto-pull, never the CLI itself.
         with _tmp_xdg():
             cig._save_styles({"version": 2, "default": [],
                               "styles": {"mine": {"kind": "style",
                                                   "snippet": "x", "refs": []}}})
             doc = cig._load_styles()
-            self.assertIn("snoopy", doc["styles"])     # new built-in delivered
-            self.assertIn("mine", doc["styles"])       # user style untouched
-            self.assertIn("snoopy", doc["seeded"])     # recorded as delivered
-
-    def test_deleted_builtin_not_resurrected_by_merge(self):
-        with _tmp_xdg():
-            cig._load_styles()                         # seed (writes `seeded`)
-            self.assertEqual(cig._style_command(["rm", "snoopy"]), 0)
-            again = cig._load_styles()
-            self.assertNotIn("snoopy", again["styles"])  # rm kept it in `seeded`
+            self.assertEqual(list(doc["styles"]), ["mine"])  # nothing added
 
     def test_save_roundtrip_and_atomic(self):
         with _tmp_xdg():
@@ -387,14 +366,13 @@ class StyleCommand(unittest.TestCase):
                 "a cat", doc["styles"]["xiaohei"]["snippet"])
             self.assertIn("hand-drawn 小黑", composed)
 
-    def test_reset_restores_builtins(self):
+    def test_reset_empties_library(self):
         with _tmp_xdg():
             cig._style_command(["add", "neon", "x"])
-            cig._style_command(["rm", "doodle"])
             self.assertEqual(cig._style_command(["reset", "-y"]), 0)
             doc = cig._load_styles()
-            self.assertIn("doodle", doc["styles"])
-            self.assertNotIn("neon", doc["styles"])
+            self.assertEqual(doc["styles"], {})      # wiped, nothing re-seeded
+            self.assertEqual(doc["default"], [])
 
 
 class BuildWebText(unittest.TestCase):
@@ -820,7 +798,7 @@ class ResetWipesAssets(unittest.TestCase):
             self.assertFalse(cig._asset_dir("mascot").exists())
             self.assertFalse(cig._assets_root().exists())
             doc = cig._load_styles()
-            self.assertIn("doodle", doc["styles"])     # built-ins back
+            self.assertEqual(doc["styles"], {})        # empty library after reset
 
 
 class FromLast(unittest.TestCase):
@@ -1134,6 +1112,55 @@ class StylePull(unittest.TestCase):
                     cig._style_command(["pull", "../../etc"])
             self.assertIn("invalid slug", str(cm.exception))
             self.assertEqual(called, [])
+
+
+class EnsureStylesLocal(unittest.TestCase):
+    """`--style NAME` auto-pulls a missing name from the gallery and persists it."""
+
+    def test_local_name_no_network(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["mine"] = {"kind": "style", "snippet": "x", "refs": []}
+            def boom(*a, **k):  # any network call would fail the test
+                raise AssertionError("should not hit the platform")
+            with unittest.mock.patch.object(cig, "_platform_request", boom):
+                self.assertFalse(cig._ensure_styles_local(doc, ["mine"]))
+
+    def test_missing_name_is_pulled_and_persisted(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                changed = cig._ensure_styles_local(doc, ["pip"])
+            self.assertTrue(changed)
+            self.assertIn("pip", doc["styles"])                 # in the live doc
+            self.assertEqual(doc["styles"]["pip"]["origin"]["slug"], "pip")
+            reread = cig._load_styles()                         # and on disk
+            self.assertIn("pip", reread["styles"])
+
+    def test_not_on_gallery_dies_with_guidance(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            def not_found(*a, **k):
+                raise SystemExit("error: platform: not found")
+            with unittest.mock.patch.object(cig, "_platform_request", not_found):
+                with self.assertRaises(SystemExit) as cm:
+                    cig._ensure_styles_local(doc, ["ghost"])
+            msg = str(cm.exception)
+            self.assertIn("unknown style", msg)
+            self.assertIn("style search ghost", msg)            # points at gallery
+            self.assertNotIn("ghost", doc["styles"])            # nothing persisted
+
+    def test_invalid_name_dies_without_network(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            def boom(*a, **k):
+                raise AssertionError("should not hit the platform")
+            with unittest.mock.patch.object(cig, "_platform_request", boom):
+                with self.assertRaises(SystemExit):
+                    cig._ensure_styles_local(doc, ["Bad Name"])
 
 
 class StyleUpdate(unittest.TestCase):
