@@ -1208,6 +1208,84 @@ class EnsureStylesLocal(unittest.TestCase):
                     cig._ensure_styles_local(doc, ["Bad Name"])
 
 
+_SNOOPY_PKG = {"slug": "snoopy", "name": "Snoopy Comic", "kind": "style",
+               "snippet": "peanuts newspaper look", "version": 1,
+               "refs": [{"url": "https://drawstyle.leeguoo.com/img/s",
+                         "content_type": "image/jpeg"}]}
+
+
+class StaleLegacyBuiltin(unittest.TestCase):
+    """0.16-era text-only doodle/xiaohei/snoopy self-heal to the gallery version."""
+
+    def test_predicate(self):
+        stale = {"kind": "style", "snippet": "x", "refs": []}
+        self.assertTrue(cig._is_stale_legacy_builtin("snoopy", stale))
+        self.assertTrue(cig._is_stale_legacy_builtin("doodle", stale))
+        # has pinned refs → user-customized, leave it
+        self.assertFalse(cig._is_stale_legacy_builtin(
+            "xiaohei", {"snippet": "x", "refs": ["ref-1.jpg"]}))
+        # already pulled (has origin) → not stale
+        self.assertFalse(cig._is_stale_legacy_builtin(
+            "snoopy", {"snippet": "x", "refs": [],
+                       "origin": {"platform": "drawstyle", "slug": "snoopy",
+                                  "version": 1}}))
+        # not a legacy name → never touched
+        self.assertFalse(cig._is_stale_legacy_builtin("mine", stale))
+
+    def test_upgraded_in_place_to_gallery_version(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["snoopy"] = {"kind": "style",
+                                       "snippet": "old text-only", "refs": []}
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_SNOOPY_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                changed = cig._ensure_styles_local(doc, ["snoopy"])
+            self.assertTrue(changed)
+            e = doc["styles"]["snoopy"]
+            self.assertEqual(e["origin"]["slug"], "snoopy")   # now gallery-backed
+            self.assertEqual(len(e["refs"]), 1)               # now has a ref image
+
+    def test_offline_keeps_old_copy(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            old = {"kind": "style", "snippet": "old", "refs": []}
+            doc["styles"]["snoopy"] = dict(old)
+            def offline(*a, **k):
+                raise SystemExit("error: cannot reach gallery")
+            with unittest.mock.patch.object(cig, "_platform_request", offline):
+                changed = cig._ensure_styles_local(doc, ["snoopy"])
+            self.assertFalse(changed)
+            self.assertEqual(doc["styles"]["snoopy"], old)    # untouched, no crash
+
+    def test_customized_legacy_name_not_touched(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["xiaohei"] = {"kind": "style", "snippet": "mine",
+                                        "refs": ["ref-1.jpg"]}
+            def boom(*a, **k):
+                raise AssertionError("should not hit the platform")
+            with unittest.mock.patch.object(cig, "_platform_request", boom):
+                self.assertFalse(cig._ensure_styles_local(doc, ["xiaohei"]))
+
+    def test_pull_replaces_stale_legacy_instead_of_colliding(self):
+        with _tmp_xdg():
+            doc = cig._load_styles()
+            doc["styles"]["snoopy"] = {"kind": "style",
+                                       "snippet": "old text-only", "refs": []}
+            cig._save_styles(doc)
+            with unittest.mock.patch.object(cig, "_platform_request",
+                                            return_value=_SNOOPY_PKG), \
+                 unittest.mock.patch.object(cig, "_download_bytes",
+                                            return_value=_PNG):
+                rc = cig._style_command(["pull", "snoopy"])
+            self.assertEqual(rc, 0)
+            e = cig._load_styles()["styles"]["snoopy"]
+            self.assertEqual(e["origin"]["slug"], "snoopy")
+            self.assertEqual(len(e["refs"]), 1)
+
+
 class StyleUpdate(unittest.TestCase):
     def test_version_check_uses_detail_not_package(self):
         calls = []

@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.18.1"
+__version__ = "0.19.0"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.19.0]: 老装机里 0.16 遗留的纯文字 doodle/xiaohei/snoopy(无参考图)会在使用时自动升级为画廊版(带参考图);离线保留旧版不破坏
 # WHATSNEW[0.18.1]: 新增 `update`/`upgrade` 子命令(直接跑 skills update);此前敲 `upgrade` 会被当成图片 prompt 白烧配额
 # WHATSNEW[0.18.0]: 移除内置风格——风格全部来自画廊;`--style NAME` 本地没有时自动从画廊拉取并持久化(离线后仍可用)
 # WHATSNEW[0.17.0]: style search/pull/update/publish — drawstyle 平台集成
@@ -2905,34 +2906,72 @@ def _resolve_active_styles(doc: dict, *, style_args: list[str] | None,
     return names
 
 
-def _ensure_styles_local(doc: dict, names: list[str]) -> bool:
-    """Auto-pull any explicit `--style NAME` that isn't in the local library yet.
+# Names ever shipped as text-only built-ins (removed in 0.18.0). Their gallery
+# equivalents carry reference images, so a leftover text-only copy in an old
+# install is strictly weaker and silently shadows the good version. We
+# transparently upgrade such a copy to the gallery version when the user applies
+# or pulls that name — but ONLY when the entry still looks untouched (no pinned
+# refs, no gallery origin), so a user's own edits/pinned images are never
+# clobbered.
+_LEGACY_BUILTIN_NAMES = frozenset({"doodle", "xiaohei", "snoopy"})
 
-    This is what makes `--style snoopy` "just work" without a prior `style pull`:
-    a name that's missing locally is fetched from the gallery, persisted (so it's
-    offline-usable next time), and then resolves like any local style. A name
-    that's neither local nor on the gallery exits via `_die_unknown_style` (which
-    points at `style search` / `--style-online`). Returns True if it persisted
-    anything. Names already local are left untouched — no network call.
+
+def _is_stale_legacy_builtin(name: str, entry: dict) -> bool:
+    """True if ``entry`` is an untouched leftover of a removed text-only built-in.
+
+    Untouched means: one of the known legacy names, no gallery ``origin`` (never
+    pulled), and no pinned ``refs`` (user never added images). Such an entry is
+    safe to replace with the gallery version of the same slug.
+    """
+    return (name in _LEGACY_BUILTIN_NAMES
+            and not entry.get("origin")
+            and not entry.get("refs"))
+
+
+def _ensure_styles_local(doc: dict, names: list[str]) -> bool:
+    """Make each requested style name resolve to the best local copy.
+
+    Two self-healing behaviors, both keyed off the gallery:
+    - **missing** name → fetched from the gallery and persisted (so `--style
+      snoopy` "just works" without a prior `style pull`, and is offline-usable
+      next time). Missing + not-on-gallery → `_die_unknown_style`.
+    - **stale legacy built-in** (an untouched text-only leftover, see
+      `_is_stale_legacy_builtin`) → upgraded in place to the gallery version
+      (which carries a reference image). If the gallery is unreachable, the
+      existing text-only copy is kept — a working-but-weaker style must never
+      break offline.
+
+    A name that's already a real local style (pulled or user-created) is left
+    untouched with no network call. Returns True if it changed the doc.
     """
     styles = doc.setdefault("styles", {})
     changed = False
     for name in names:
-        if name in styles:
+        entry = styles.get(name)
+        upgrade = entry is not None and _is_stale_legacy_builtin(name, entry)
+        if entry is not None and not upgrade:
             continue
         if not _valid_style_name(name):
             _die_unknown_style(name, styles)
         try:
             pkg = _platform_request("GET", f"/api/styles/{name}/package")
         except SystemExit:
-            # Not on the gallery (404) or unreachable — fall back to the standard
+            if upgrade:
+                # Offline / not on the gallery: keep the legacy text-only copy
+                # rather than breaking a style that still works.
+                continue
+            # Missing locally AND unreachable/404 — fall back to the standard
             # unknown-style guidance rather than a bare platform error.
             _die_unknown_style(name, styles)
         _apply_package(doc, name, pkg)
         _save_styles(doc)
         changed = True
-        print(f"pulled {name!r} v{pkg.get('version')} from gallery "
-              f"(saved to your local library)", file=sys.stderr)
+        if upgrade:
+            print(f"upgraded legacy built-in {name!r} → gallery v{pkg.get('version')} "
+                  f"(now with a reference image; saved locally)", file=sys.stderr)
+        else:
+            print(f"pulled {name!r} v{pkg.get('version')} from gallery "
+                  f"(saved to your local library)", file=sys.stderr)
     return changed
 
 
@@ -3146,15 +3185,18 @@ def _style_command(argv: list[str]) -> int:
         name = a.local_name or a.slug
         if not _valid_style_name(name):
             raise SystemExit(f"error: invalid local name {name!r}")
-        if name in styles:
+        existing = styles.get(name)
+        replacing_legacy = existing is not None and _is_stale_legacy_builtin(name, existing)
+        if existing is not None and not replacing_legacy:
             raise SystemExit(
                 f"error: local style {name!r} already exists — "
                 f"pass --as OTHERNAME or `style rm {name}` first.")
         pkg = _platform_request("GET", f"/api/styles/{a.slug}/package")
         stored = _apply_package(doc, name, pkg)
         _save_styles(doc)
+        note = " (replaced the legacy text-only built-in)" if replacing_legacy else ""
         print(f"pulled {a.slug!r} v{pkg['version']} as {name!r} "
-              f"({len(stored)} ref{'s' if len(stored) != 1 else ''})",
+              f"({len(stored)} ref{'s' if len(stored) != 1 else ''}){note}",
               file=sys.stderr)
         return 0
 
@@ -3663,12 +3705,15 @@ def main() -> int:
     args = parser.parse_args()
     progress = not args.no_progress
     _styles_doc = _load_styles()
-    # An explicit `--style NAME` that isn't local yet is auto-pulled from the
-    # gallery and persisted (there are no built-ins; the gallery is the source of
-    # styles). `--no-style` short-circuits, and the saved `default` list is
-    # assumed already-local (only explicit args reach out).
-    if args.style and not args.no_style:
-        _ensure_styles_local(_styles_doc, args.style)
+    # Self-heal the styles that are about to be applied — explicit `--style NAME`
+    # if given, otherwise the saved default set. A missing name is auto-pulled
+    # from the gallery; an untouched text-only leftover of a removed built-in is
+    # upgraded to the gallery version (with its reference image). Already-good
+    # local styles need no network call. `--no-style` short-circuits.
+    if not args.no_style:
+        _wanted = list(args.style) if args.style else list(_styles_doc.get("default") or [])
+        if _wanted:
+            _ensure_styles_local(_styles_doc, _wanted)
     # Resolve the active asset set (stacking-aware), fold each asset's snippet
     # into the prompt, then partition the assets' reference images into
     # character/style groups in deterministic order.
