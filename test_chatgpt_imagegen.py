@@ -1071,6 +1071,9 @@ class ResolveOnlineStyles(unittest.TestCase):
             self.assertEqual(refs[0]["group"], "character")  # _PKG kind=character
             self.assertTrue(Path(refs[0]["ref"]).is_file())
             self.assertIn("online:pip", refs[0]["label"])
+            # provenance: the gallery source URL rides along for the run log
+            self.assertEqual(refs[0]["source"],
+                             "https://drawstyle.leeguoo.com/img/abc")
             # nothing was written to the local style library
             doc = cig._load_styles()
             self.assertNotIn("pip", doc["styles"])
@@ -1082,6 +1085,40 @@ class ResolveOnlineStyles(unittest.TestCase):
                                         return_value={"no": "kind"}):
             with self.assertRaises(SystemExit):
                 cig._resolve_online_styles(["pip"])
+
+
+class RefProvenance(unittest.TestCase):
+    """Issue #18: the run log must name each attached ref's source, not a count."""
+
+    def test_online_ref_shows_source_url_and_sha(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "ref-1.jpg"
+            f.write_bytes(b"hello-bytes")
+            lines = cig._format_ref_provenance([{
+                "ref": str(f), "group": "style",
+                "label": "online:snoopy/ref-1.jpg",
+                "source": "https://drawstyle.leeguoo.com/img/deadbeef.jpg"}])
+        self.assertEqual(len(lines), 1)
+        self.assertIn("[style]", lines[0])
+        self.assertIn("online:snoopy/ref-1.jpg", lines[0])
+        self.assertIn("source=https://drawstyle.leeguoo.com/img/deadbeef.jpg", lines[0])
+        # sha256 of b"hello-bytes", first 16 hex
+        import hashlib as _h
+        self.assertIn(_h.sha256(b"hello-bytes").hexdigest()[:16], lines[0])
+
+    def test_local_ref_shows_path_not_source(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "ref-1.png"
+            f.write_bytes(b"x")
+            lines = cig._format_ref_provenance([{
+                "ref": str(f), "group": "character", "label": "leo/ref-1.png"}])
+        self.assertIn(f"path={f}", lines[0])
+        self.assertNotIn("source=", lines[0])
+
+    def test_unreadable_ref_degrades_gracefully(self):
+        lines = cig._format_ref_provenance([{
+            "ref": "/no/such/file.png", "group": "style", "label": "x"}])
+        self.assertIn("sha256=?", lines[0])
 
 
 class StylePull(unittest.TestCase):

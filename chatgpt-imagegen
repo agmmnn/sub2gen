@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.19.0"
+__version__ = "0.20.0"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.20.0]: 出图前打印每张参考图的来源明细(label/group/路径或画廊源URL/sha256),不用再猜「那张图是本地/在线/上一张」
 # WHATSNEW[0.19.0]: 老装机里 0.16 遗留的纯文字 doodle/xiaohei/snoopy(无参考图)会在使用时自动升级为画廊版(带参考图);离线保留旧版不破坏
 # WHATSNEW[0.18.1]: 新增 `update`/`upgrade` 子命令(直接跑 skills update);此前敲 `upgrade` 会被当成图片 prompt 白烧配额
 # WHATSNEW[0.18.0]: 移除内置风格——风格全部来自画廊;`--style NAME` 本地没有时自动从画廊拉取并持久化(离线后仍可用)
@@ -2615,9 +2616,12 @@ def _resolve_online_styles(slugs: list[str]) -> tuple[list[str], list[dict]]:
         if pkg_refs:
             tmp = Path(tempfile.mkdtemp(prefix="cig-online-"))
             atexit.register(shutil.rmtree, str(tmp), ignore_errors=True)
-            for fn in _pull_refs_to_tmp(pkg_refs, tmp):
+            # _pull_refs_to_tmp returns filenames 1:1 with pkg_refs (all-or-
+            # nothing), so zip recovers each ref's source URL for provenance.
+            for fn, src in zip(_pull_refs_to_tmp(pkg_refs, tmp), pkg_refs):
                 refs.append({"ref": str(tmp / fn), "group": group,
-                             "label": f"online:{slug}/{fn}"})
+                             "label": f"online:{slug}/{fn}",
+                             "source": src.get("url")})
     return snippets, refs
 
 
@@ -3016,6 +3020,35 @@ def _cap_refs(ordered: list[dict], cap: int) -> tuple[list[dict], list[dict]]:
     if cap and len(ordered) > cap:
         return ordered[:cap], ordered[cap:]
     return list(ordered), []
+
+
+def _ref_sha256(path: str) -> str:
+    """Full sha256 hex of a reference file (or '?' if unreadable). Used only for
+    the provenance log — an online ref's hash should equal the sha256 in its
+    gallery URL filename, letting the user verify exactly what was attached."""
+    try:
+        return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    except OSError:
+        return "?"
+
+
+def _format_ref_provenance(kept_refs: list[dict]) -> list[str]:
+    """One provenance line per attached reference, for the pre-generation log.
+
+    Answers "what exactly got sent": which asset/online slug (label), whether
+    it's a character or style ref (group), its on-disk path or gallery source
+    URL, and a sha256 prefix to pin the actual bytes. Local asset refs and
+    ad-hoc ``--ref`` images show their path; online refs show ``source=<url>``.
+    """
+    lines: list[str] = []
+    for r in kept_refs:
+        sha = _ref_sha256(r["ref"])
+        sha_bit = f"sha256={sha[:16]}…" if sha != "?" else "sha256=?"
+        src = r.get("source")
+        loc = f"source={src}" if src else f"path={r['ref']}"
+        lines.append(f"[{r.get('group', 'style')}] {r.get('label', r['ref'])}  "
+                     f"{sha_bit}  {loc}")
+    return lines
 
 
 def _style_command(argv: list[str]) -> int:
@@ -3769,6 +3802,14 @@ def main() -> int:
         _shown = list(_active) + [f"{s} (online)" for s in (args.style_online or [])]
         if _shown:
             print(_dim(f"           styles: {', '.join(_shown)}"), file=sys.stderr)
+        # Provenance for every attached reference (issue #18): make it visible
+        # which exact image was sent — a local asset ref, an online gallery ref
+        # (with source URL), or an ad-hoc --ref — never leaving the user to guess
+        # from a bare "N reference(s)" count.
+        if _kept_refs:
+            print(_dim(f"           refs: {len(_kept_refs)} attached"), file=sys.stderr)
+            for _line in _format_ref_provenance(_kept_refs):
+                print(_dim(f"             • {_line}"), file=sys.stderr)
 
     image_bytes, meta = _dispatch(args, progress, stall_timeout, start)
 
