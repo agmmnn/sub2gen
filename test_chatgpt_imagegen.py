@@ -19,6 +19,7 @@ import tempfile
 import unittest
 import unittest.mock
 from contextlib import contextmanager
+from contextlib import redirect_stderr
 from contextlib import redirect_stdout
 from pathlib import Path
 
@@ -175,6 +176,50 @@ class UpdateNotify(unittest.TestCase):
         notes = cig._parse_whatsnew(head)
         self.assertIn(cig.__version__, notes)            # current release is documented
         self.assertTrue(notes[cig.__version__])
+
+
+class SelfUpdate(unittest.TestCase):
+    """`update` / `upgrade` shells out to `skills update` instead of drawing."""
+
+    def test_runs_skills_update(self):
+        calls = []
+
+        class _Res:
+            returncode = 0
+
+        def fake_run(argv, *a, **k):
+            calls.append(argv)
+            return _Res()
+
+        with unittest.mock.patch.object(cig.shutil, "which",
+                                        return_value="/usr/bin/skills"), \
+             unittest.mock.patch.object(cig.subprocess, "run", fake_run), \
+             unittest.mock.patch.object(cig, "_fetch_latest_info",
+                                        return_value=(None, {})):
+            rc = cig._self_update()
+        self.assertEqual(rc, 0)
+        self.assertEqual(calls,
+                         [["/usr/bin/skills", "update", "chatgpt-imagegen"]])
+
+    def test_missing_skills_prints_command_and_fails(self):
+        with unittest.mock.patch.object(cig.shutil, "which", return_value=None):
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                rc = cig._self_update()
+        self.assertEqual(rc, 1)
+        self.assertIn("skills update chatgpt-imagegen", buf.getvalue())
+
+    def test_propagates_nonzero_exit(self):
+        class _Res:
+            returncode = 3
+
+        with unittest.mock.patch.object(cig.shutil, "which",
+                                        return_value="/usr/bin/skills"), \
+             unittest.mock.patch.object(cig.subprocess, "run",
+                                        return_value=_Res()), \
+             unittest.mock.patch.object(cig, "_fetch_latest_info",
+                                        return_value=(None, {})):
+            self.assertEqual(cig._self_update(), 3)
 
 
 class IsUrl(unittest.TestCase):

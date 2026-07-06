@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.18.0"
+__version__ = "0.18.1"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.18.1]: 新增 `update`/`upgrade` 子命令(直接跑 skills update);此前敲 `upgrade` 会被当成图片 prompt 白烧配额
 # WHATSNEW[0.18.0]: 移除内置风格——风格全部来自画廊;`--style NAME` 本地没有时自动从画廊拉取并持久化(离线后仍可用)
 # WHATSNEW[0.17.0]: style search/pull/update/publish — drawstyle 平台集成
 # WHATSNEW[0.16.1]: 新内置风格现在会自动补进老配置(不再只对全新安装生效;已删除的内置不会被复活)
@@ -2712,7 +2713,7 @@ def _changes_since(notes: dict, base: str = __version__) -> list[tuple[str, str]
 def _format_update_notice(latest: str, notes: dict, max_lines: int = 3) -> str:
     """One header line + up to ``max_lines`` `• ver: what-changed` lines."""
     head = (f"提示:chatgpt-imagegen {latest} 可用(当前 {__version__})。"
-            f"更新:skills update chatgpt-imagegen")
+            f"更新:chatgpt-imagegen update")
     changes = _changes_since(notes)
     lines = [head]
     for ver, note in changes[:max_lines]:
@@ -3394,7 +3395,7 @@ def _doctor_command(argv: list[str]) -> int:
     latest, notes = _fetch_latest_info()  # always fresh here (no throttle)
     if latest and _version_tuple(latest) > _version_tuple(__version__):
         line("warn", "version",
-             f"{__version__} → {latest} 可用 (skills update chatgpt-imagegen)")
+             f"{__version__} → {latest} 可用 (chatgpt-imagegen update)")
         for ver, note in _changes_since(notes)[:5]:
             print(f"               • {ver}:{note}")
     else:
@@ -3471,9 +3472,43 @@ examples:
 subcommands:
   chatgpt-imagegen doctor          check which backend is ready (and which auto picks)
   chatgpt-imagegen style <verb>    manage reusable style/character assets (alias: styles)
+  chatgpt-imagegen update          upgrade this CLI (alias: upgrade)
 
 docs: https://github.com/leeguooooo/chatgpt-imagegen
 """
+
+
+def _self_update() -> int:
+    """`chatgpt-imagegen update` / `upgrade` — refresh the installed CLI.
+
+    Reserving these words as a subcommand fixes a real trap: without it,
+    `chatgpt-imagegen upgrade` silently became an image prompt (drawing the word
+    "upgrade" and burning quota). Delivery is the `skills` manager (what the
+    daily update reminder points at), so this shells out to
+    `skills update chatgpt-imagegen`; if `skills` isn't on PATH it prints the
+    exact command rather than failing silently. On success it reports the latest
+    known version — noting that the running process stays on the old code until
+    the next invocation (this .py file was just replaced underneath it).
+    """
+    skills = shutil.which("skills")
+    if not skills:
+        print("`skills` CLI 不在 PATH 上,无法自动升级。请手动执行:\n"
+              "  skills update chatgpt-imagegen", file=sys.stderr)
+        return 1
+    print("升级中:skills update chatgpt-imagegen", file=sys.stderr)
+    try:
+        rc = subprocess.run([skills, "update", "chatgpt-imagegen"]).returncode
+    except OSError as e:
+        print(f"error: 无法运行 `skills update`:{e}", file=sys.stderr)
+        return 1
+    if rc == 0:
+        latest, _ = _fetch_latest_info()
+        if latest and _version_tuple(latest) > _version_tuple(__version__):
+            print(f"完成 → v{latest}(当前进程仍是 v{__version__},下次运行即为新版)。",
+                  file=sys.stderr)
+        elif latest:
+            print(f"已是最新(v{__version__})。", file=sys.stderr)
+    return rc
 
 
 def main() -> int:
@@ -3481,6 +3516,8 @@ def main() -> int:
         return _style_command(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1] == "doctor":
         return _doctor_command(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] in ("update", "upgrade"):
+        return _self_update()
     parser = argparse.ArgumentParser(
         description="Generate an image with your ChatGPT subscription (no API key).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
