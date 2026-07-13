@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.20.0"
+__version__ = "0.21.0"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.21.0]: 新增 animate 子命令:一次生成4x2雪碧图,校验主体漂移并输出循环WebP/GIF
 # WHATSNEW[0.20.0]: 出图前打印每张参考图的来源明细(label/group/路径或画廊源URL/sha256),不用再猜「那张图是本地/在线/上一张」
 # WHATSNEW[0.19.0]: 老装机里 0.16 遗留的纯文字 doodle/xiaohei/snoopy(无参考图)会在使用时自动升级为画廊版(带参考图);离线保留旧版不破坏
 # WHATSNEW[0.18.1]: 新增 `update`/`upgrade` 子命令(直接跑 skills update);此前敲 `upgrade` 会被当成图片 prompt 白烧配额
@@ -86,6 +87,11 @@ REF_MAX_EDGE = 2048
 # Hard cap on how many bytes we pull from a `--ref` URL, so a hostile or
 # mistaken link can't OOM us by streaming gigabytes into memory.
 REF_DOWNLOAD_MAX = 25 * 1024 * 1024
+ANIMATION_COLS = 4
+ANIMATION_ROWS = 2
+ANIMATION_FRAME_COUNT = ANIMATION_COLS * ANIMATION_ROWS
+ANIMATION_DEFAULT_FPS = 8
+ANIMATION_DEFAULT_MAX_DRIFT = 8.0
 # Default idle gap (seconds) tolerated between SSE chunks before the stream is
 # treated as stalled. The connect timeout urllib applies to urlopen() also
 # governs every subsequent read, so without loosening it a >connect-timeout
@@ -182,6 +188,10 @@ class WebRateLimited(WebUnavailable):
     auto mode may safely fall back to codex (a different limiter). Retrying
     other Chrome profiles is pointless when they hold the same account, and
     each costs ~45s — so this aborts the candidate loop instead."""
+
+
+class AnimationError(RuntimeError):
+    """Raised when a generated sprite sheet cannot be safely encoded."""
 
 
 # ---------- auth ----------
@@ -1897,6 +1907,263 @@ def _positive_int(value: str) -> int:
     return v
 
 
+# ---------- animation sprite sheets ----------
+
+def _build_animation_prompt(prompt: str) -> str:
+    """Wrap a normal image prompt as a strict, crop-safe 4x2 animation sheet.
+
+    Models still choose the final pixel dimensions, so layout correctness is
+    enforced twice: strongly here, then deterministically in
+    ``_render_animation``. The wording deliberately fixes the body and camera;
+    this v1 is for loops such as waving/blinking/tail-wagging, not walk cycles
+    that intentionally translate across the canvas.
+    """
+    return (
+        f"Create an animation sprite sheet for this request: {prompt}\n\n"
+        "LAYOUT: exactly 4 columns by 2 rows, exactly eight equal rectangular "
+        "cells, read left-to-right across the top row and then the bottom row. "
+        "Fill the full canvas edge-to-edge. Do not draw borders, gutters, panel "
+        "frames, captions, labels, numbers, or instructions.\n"
+        "CONTINUITY: show the same single subject in all eight cells. Keep its "
+        "identity, body center, scale, camera, ground contact, baseline, and "
+        "background absolutely fixed. Only the requested moving part or small "
+        "pose detail may change. No character drift, zoom, squash, stretch, or "
+        "background movement.\n"
+        "MOTION: frame 1 is the resting pose; frames 2-4 move gradually toward "
+        "the action peak; frame 5 is the peak; frames 6-8 return gradually "
+        "toward frame 1. Use small, smooth increments suitable for a seamless "
+        "loop. Every cell must remain a clean independent animation frame."
+    )
+
+
+def _png_dimensions(data: bytes) -> tuple[int, int]:
+    """Read PNG IHDR dimensions without adding a Pillow dependency."""
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        raise AnimationError("animation source is not a valid PNG sprite sheet")
+    width = int.from_bytes(data[16:20], "big")
+    height = int.from_bytes(data[20:24], "big")
+    if width < ANIMATION_COLS or height < ANIMATION_ROWS:
+        raise AnimationError(f"animation sprite sheet is too small: {width}x{height}")
+    return width, height
+
+
+def _animation_frame_order(frame_count: int = ANIMATION_FRAME_COUNT,
+                           ping_pong: bool = True) -> list[int]:
+    order = list(range(frame_count))
+    if ping_pong and frame_count > 2:
+        order.extend(range(frame_count - 2, 0, -1))
+    return order
+
+
+def _animation_output_path(prompt: str, requested: str | None,
+                           fmt: str | None) -> tuple[Path, str]:
+    """Resolve the primary animation path and format.
+
+    An explicit .gif/.webp suffix is authoritative unless --animation-format
+    explicitly contradicts it, which is treated as an error rather than writing
+    bytes under the wrong extension.
+    """
+    explicit = Path(requested) if requested else None
+    suffix = explicit.suffix.lower().lstrip(".") if explicit else ""
+    if suffix in ("gif", "webp"):
+        if fmt and fmt != suffix:
+            raise AnimationError(
+                f"--animation-format={fmt} conflicts with output extension .{suffix}")
+        resolved_fmt = suffix
+    else:
+        resolved_fmt = fmt or "webp"
+    if explicit:
+        path = explicit if explicit.suffix else explicit.with_suffix(f".{resolved_fmt}")
+    else:
+        path = _default_out_path(prompt, resolved_fmt)
+    return path, resolved_fmt
+
+
+def _animation_preflight(fmt: str, also_gif: bool) -> None:
+    """Fail before spending an image generation when encoders are unavailable."""
+    if fmt == "gif" and also_gif:
+        raise AnimationError("--also-gif is redundant with --animation-format gif")
+    if not shutil.which("magick"):
+        raise AnimationError(
+            "animation needs ImageMagick (`magick`); install it, then rerun")
+    if fmt == "webp" and not shutil.which("img2webp"):
+        raise AnimationError(
+            "animated WebP needs `img2webp` (libwebp); install it or use "
+            "--animation-format gif")
+
+
+_CC_RE = re.compile(
+    r"^\s*\d+:\s+\d+x\d+\+[-\d]+\+[-\d]+\s+"
+    r"([\d.]+),([\d.]+)\s+(\d+)\s+gray\(255(?:\.0+)?\)\s*$"
+)
+
+
+def _connected_component_candidates(output: str, pixels: int,
+                                    height: int) -> list[tuple[float, float, int]]:
+    """Parse plausible subject anchors from ImageMagick verbose output."""
+    candidates: list[tuple[float, float, int]] = []
+    for line in output.splitlines():
+        match = _CC_RE.match(line)
+        if not match:
+            continue
+        x, y, area = float(match.group(1)), float(match.group(2)), int(match.group(3))
+        # Ignore specks and a thresholded background that fills most of a cell.
+        if pixels * 0.01 <= area <= pixels * 0.45:
+            candidates.append((x, y, area))
+    # Prefer a large component in the upper/middle part of the cell. This picks
+    # a stable head/torso anchor over grass or a moving tail in comic artwork.
+    candidates.sort(key=lambda item: item[2] * (1.35 if item[1] < height * 0.68 else 1.0),
+                    reverse=True)
+    return candidates
+
+
+def _subject_anchor(frame: Path, magick: str,
+                    width: int, height: int) -> tuple[float, float] | None:
+    """Best-effort dominant-subject anchor for drift rejection.
+
+    Two masks cover the common generated-art cases: a dense dark subject on a
+    light background, and a light subject on a colored/dark background. If no
+    trustworthy component exists we skip the heuristic instead of inventing a
+    coordinate. ImageMagick is already required for cropping/GIF encoding.
+    """
+    variants = [
+        ["-threshold", "35%", "-negate", "-morphology", "Erode", "Disk:3"],
+        ["-threshold", "85%", "-morphology", "Erode", "Disk:2"],
+    ]
+    found: list[tuple[float, float, int]] = []
+    for ops in variants:
+        proc = subprocess.run(
+            [magick, str(frame), "-colorspace", "gray", *ops,
+             "-define", "connected-components:verbose=true",
+             "-connected-components", "4", "null:"],
+            capture_output=True, text=True,
+        )
+        if proc.returncode not in (0, 1):
+            continue
+        found.extend(_connected_component_candidates(
+            proc.stdout + proc.stderr, width * height, height))
+    if not found:
+        return None
+    found.sort(key=lambda item: item[2] * (1.35 if item[1] < height * 0.68 else 1.0),
+               reverse=True)
+    return found[0][0], found[0][1]
+
+
+def _subject_drift(frames: list[Path], magick: str,
+                   width: int, height: int) -> tuple[float, float] | None:
+    anchors = [_subject_anchor(frame, magick, width, height) for frame in frames]
+    if any(anchor is None for anchor in anchors):
+        return None
+    xs = [anchor[0] for anchor in anchors if anchor is not None]
+    ys = [anchor[1] for anchor in anchors if anchor is not None]
+    mid_x = sorted(xs)[len(xs) // 2]
+    mid_y = sorted(ys)[len(ys) // 2]
+    return max(abs(x - mid_x) for x in xs), max(abs(y - mid_y) for y in ys)
+
+
+def _run_checked(command: list[str], label: str) -> None:
+    try:
+        proc = subprocess.run(command, capture_output=True, text=True)
+    except OSError as error:
+        raise AnimationError(f"could not run {label}: {error}") from error
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip()[-500:]
+        raise AnimationError(f"{label} failed: {detail or f'exit {proc.returncode}'}")
+
+
+def _render_animation(sprite_path: Path, sprite_bytes: bytes, out_path: Path,
+                      fmt: str, fps: int, also_gif: bool, keep_frames: bool,
+                      ping_pong: bool, max_drift: float,
+                      allow_drift: bool, progress: bool) -> list[Path]:
+    """Crop a generated 4x2 sheet, reject obvious drift, and encode outputs."""
+    _animation_preflight(fmt, also_gif)
+    magick = shutil.which("magick")
+    assert magick is not None
+
+    width, height = _png_dimensions(sprite_bytes)
+    cell_w, cell_h = width // ANIMATION_COLS, height // ANIMATION_ROWS
+    discarded_w = width - cell_w * ANIMATION_COLS
+    discarded_h = height - cell_h * ANIMATION_ROWS
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    permanent_dir = out_path.with_name(f"{out_path.stem}-frames")
+    temp_ctx = None
+    if keep_frames:
+        permanent_dir.mkdir(parents=True, exist_ok=True)
+        frame_dir = permanent_dir
+    else:
+        temp_ctx = tempfile.TemporaryDirectory(prefix="chatgpt-imagegen-frames-")
+        frame_dir = Path(temp_ctx.name)
+
+    try:
+        frames: list[Path] = []
+        for index in range(ANIMATION_FRAME_COUNT):
+            row, col = divmod(index, ANIMATION_COLS)
+            frame = frame_dir / f"frame-{index:02d}.png"
+            _run_checked(
+                [magick, str(sprite_path), "-crop",
+                 f"{cell_w}x{cell_h}+{col * cell_w}+{row * cell_h}",
+                 "+repage", str(frame)],
+                f"crop frame {index + 1}",
+            )
+            frames.append(frame)
+
+        drift = _subject_drift(frames, magick, cell_w, cell_h)
+        if drift is not None and max(drift) > max_drift and not allow_drift:
+            raise AnimationError(
+                f"subject drift is too large (x={drift[0]:.1f}px, "
+                f"y={drift[1]:.1f}px; limit={max_drift:.1f}px). "
+                "The sprite sheet was kept; regenerate it or pass --allow-drift "
+                "for intentional translation."
+            )
+        if progress:
+            normalized = (f"; discarded edge pixels {discarded_w}x{discarded_h}"
+                          if discarded_w or discarded_h else "")
+            if drift is None:
+                drift_text = "subject drift check skipped (no stable anchor)"
+            else:
+                drift_text = f"subject drift x={drift[0]:.1f}px y={drift[1]:.1f}px"
+            print(f"   .. animation cells {cell_w}x{cell_h}{normalized}; {drift_text}",
+                  file=sys.stderr)
+
+        order = _animation_frame_order(ping_pong=ping_pong)
+        sequence = [frames[index] for index in order]
+        outputs: list[Path] = []
+        duration_ms = max(1, round(1000 / fps))
+
+        if fmt == "webp":
+            img2webp = shutil.which("img2webp")
+            assert img2webp is not None
+            command = [img2webp, "-loop", "0", "-sharp_yuv"]
+            for frame in sequence:
+                command.extend(["-d", str(duration_ms), "-lossy", "-q", "82",
+                                "-m", "4", str(frame)])
+            command.extend(["-o", str(out_path)])
+            _run_checked(command, "animated WebP encoding")
+            outputs.append(out_path)
+            if also_gif:
+                gif_path = out_path.with_suffix(".gif")
+                delay = max(1, round(100 / fps))
+                _run_checked(
+                    [magick, "-delay", str(delay), "-loop", "0",
+                     *map(str, sequence), "-layers", "Optimize", str(gif_path)],
+                    "GIF encoding",
+                )
+                outputs.append(gif_path)
+        else:
+            delay = max(1, round(100 / fps))
+            _run_checked(
+                [magick, "-delay", str(delay), "-loop", "0",
+                 *map(str, sequence), "-layers", "Optimize", str(out_path)],
+                "GIF encoding",
+            )
+            outputs.append(out_path)
+        return outputs
+    finally:
+        if temp_ctx is not None:
+            temp_ctx.cleanup()
+
+
 # ---------- codex backend (headless responses API) ----------
 
 def run_codex(
@@ -3481,6 +3748,14 @@ def _doctor_command(argv: list[str]) -> int:
          "OAuth token present (~/.codex/auth.json)" if codex_ready
          else "no token — run `codex login`")
 
+    print("\n  animation:")
+    magick = shutil.which("magick")
+    img2webp = shutil.which("img2webp")
+    line("ok" if magick else "warn", "magick",
+         magick or "not installed — needed for sprite cropping and GIF")
+    line("ok" if img2webp else "warn", "img2webp",
+         img2webp or "not installed — needed for animated WebP")
+
     print("\n  web backend:")
     ab = _find_agent_browser()
     relay = False
@@ -3539,12 +3814,14 @@ def _open_file(path: Path, progress: bool) -> None:
 _HELP_EPILOG = """\
 examples:
   chatgpt-imagegen "a watercolor cat" -o cat.png
+  chatgpt-imagegen animate "a dog happily wagging its tail" --style-online snoopy --also-gif
   chatgpt-imagegen "coffee shop logo, vector style" -o logo.png --size 1024x1024
   chatgpt-imagegen "restyle this, golden hour" -i photo.jpg -o out.png   # image-to-image
   chatgpt-imagegen "a settings icon" --style doodle --open
   OUT=$(chatgpt-imagegen "icon" --quiet)                                 # capture the path
 
 subcommands:
+  chatgpt-imagegen animate PROMPT  generate a 4x2 sprite sheet and encode a loop
   chatgpt-imagegen doctor          check which backend is ready (and which auto picks)
   chatgpt-imagegen style <verb>    manage reusable style/character assets (alias: styles)
   chatgpt-imagegen update          upgrade this CLI (alias: upgrade)
@@ -3593,8 +3870,16 @@ def main() -> int:
         return _doctor_command(sys.argv[2:])
     if len(sys.argv) > 1 and sys.argv[1] in ("update", "upgrade"):
         return _self_update()
+    argv = sys.argv[1:]
+    animate_mode = bool(argv and argv[0] == "animate")
+    if animate_mode:
+        argv = argv[1:]
     parser = argparse.ArgumentParser(
-        description="Generate an image with your ChatGPT subscription (no API key).",
+        description=(
+            "Generate an 8-frame looping animation with your ChatGPT subscription."
+            if animate_mode else
+            "Generate an image with your ChatGPT subscription (no API key)."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=_HELP_EPILOG,
     )
@@ -3624,14 +3909,51 @@ def main() -> int:
              "Repeatable; stacks with --style. Great for one-off use of a "
              "gallery style: `chatgpt-imagegen \"a cat\" --style-online xiaohei`.",
     )
-    parser.add_argument("-o", "--out", help="Output file path (default: assets/generated/<slug>.<ext>)")
+    parser.add_argument(
+        "-o", "--out",
+        help=("Primary GIF/WebP output path (sprite PNG is saved beside it)"
+              if animate_mode else
+              "Output file path (default: assets/generated/<slug>.<ext>)"),
+    )
     parser.add_argument(
         "--size",
-        default="auto",
+        default="1536x1024" if animate_mode else "auto",
         help="auto | WIDTHxHEIGHT (e.g. 1024x1024, 1536x1024, 1024x1536). "
              "Forwarded as-is; the backend decides what it accepts.",
     )
-    parser.add_argument("--format", default="png", choices=["png", "jpeg", "webp"])
+    if animate_mode:
+        parser.add_argument(
+            "--animation-format", choices=["webp", "gif"], default=None,
+            help="Primary animation format (default: inferred from -o, otherwise webp)",
+        )
+        parser.add_argument(
+            "--also-gif", action="store_true",
+            help="Also write a GIF beside the primary WebP",
+        )
+        parser.add_argument(
+            "--fps", type=_positive_int, default=ANIMATION_DEFAULT_FPS,
+            help=f"Playback rate (default: {ANIMATION_DEFAULT_FPS})",
+        )
+        parser.add_argument(
+            "--keep-frames", action="store_true",
+            help="Keep the eight cropped PNG frames beside the output",
+        )
+        parser.add_argument(
+            "--no-ping-pong", action="store_true",
+            help="Play frames 1→8 directly instead of the smoother 1→8→2 loop",
+        )
+        parser.add_argument(
+            "--max-drift", type=float, default=ANIMATION_DEFAULT_MAX_DRIFT,
+            help=f"Reject detected subject drift above this many pixels "
+                 f"(default: {ANIMATION_DEFAULT_MAX_DRIFT:g})",
+        )
+        parser.add_argument(
+            "--allow-drift", action="store_true",
+            help="Encode even when the subject intentionally translates across frames",
+        )
+        parser.set_defaults(format="png")
+    else:
+        parser.add_argument("--format", default="png", choices=["png", "jpeg", "webp"])
     parser.add_argument("--model", default=os.environ.get("CHATGPT_IMAGEGEN_MODEL", "gpt-5.5"))
     parser.add_argument(
         "-i", "--ref",
@@ -3735,7 +4057,16 @@ def main() -> int:
         help="Open the saved image in the OS default viewer after generating "
              "(macOS `open`, Linux `xdg-open`, Windows default). Best-effort.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    if animate_mode and args.max_drift < 0:
+        parser.error("--max-drift must be zero or greater")
+    if animate_mode:
+        try:
+            animation_out_path, animation_format = _animation_output_path(
+                args.prompt, args.out, args.animation_format)
+            _animation_preflight(animation_format, args.also_gif)
+        except AnimationError as error:
+            parser.error(str(error))
     progress = not args.no_progress
     _styles_doc = _load_styles()
     # Self-heal the styles that are about to be applied — explicit `--style NAME`
@@ -3760,7 +4091,7 @@ def main() -> int:
             _gen_prompt, _styles_doc["styles"][_name].get("snippet"))
     for _snip in _online_snippets:
         _gen_prompt = _compose_prompt(_gen_prompt, _snip)
-    args.gen_prompt = _gen_prompt
+    args.gen_prompt = _build_animation_prompt(_gen_prompt) if animate_mode else _gen_prompt
 
     _ordered_refs = _collect_refs(_styles_doc, _active, args.ref)
     if _online_refs:
@@ -3795,9 +4126,10 @@ def main() -> int:
 
     if progress:
         prompt_preview = f"{args.prompt[:60]}{'…' if len(args.prompt) > 60 else ''}"
+        mode_bit = " animation-sprite" if animate_mode else ""
         meta_bit = _dim(f"(backend={args.backend} size={args.size} "
                         f"format={args.format} timeout={args.timeout}s)")
-        print(_fmt_progress(0.0, f"requesting image  {meta_bit}"), file=sys.stderr)
+        print(_fmt_progress(0.0, f"requesting{mode_bit} image  {meta_bit}"), file=sys.stderr)
         print(_dim(f"           prompt: {prompt_preview}"), file=sys.stderr)
         _shown = list(_active) + [f"{s} (online)" for s in (args.style_online or [])]
         if _shown:
@@ -3813,11 +4145,33 @@ def main() -> int:
 
     image_bytes, meta = _dispatch(args, progress, stall_timeout, start)
 
-    out_path = Path(args.out) if args.out else _default_out_path(args.prompt, args.format)
-    if args.out and progress:
-        _maybe_warn_extension_mismatch(out_path, args.format)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_bytes(image_bytes)
+    if animate_mode:
+        out_path = animation_out_path
+        sprite_path = out_path.with_name(f"{out_path.stem}-sprite.png")
+        sprite_path.parent.mkdir(parents=True, exist_ok=True)
+        sprite_path.write_bytes(image_bytes)
+        try:
+            animation_outputs = _render_animation(
+                sprite_path=sprite_path,
+                sprite_bytes=image_bytes,
+                out_path=out_path,
+                fmt=animation_format,
+                fps=args.fps,
+                also_gif=args.also_gif,
+                keep_frames=args.keep_frames,
+                ping_pong=not args.no_ping_pong,
+                max_drift=args.max_drift,
+                allow_drift=args.allow_drift,
+                progress=progress,
+            )
+        except AnimationError as error:
+            sys.exit(f"animation error: {error}\nsprite sheet kept at {sprite_path}")
+    else:
+        out_path = Path(args.out) if args.out else _default_out_path(args.prompt, args.format)
+        if args.out and progress:
+            _maybe_warn_extension_mismatch(out_path, args.format)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_bytes(image_bytes)
     # Record this image so `style add --from-last` / `add-ref --from-last` can
     # pin it. The `style` subcommand returns early above, so it never records.
     _record_last_output(out_path)
@@ -3833,6 +4187,10 @@ def main() -> int:
             ),
             file=sys.stderr,
         )
+        if animate_mode:
+            print(_dim(f"           sprite: {sprite_path}"), file=sys.stderr)
+            for extra in animation_outputs[1:]:
+                print(_dim(f"           extra: {extra}"), file=sys.stderr)
     if getattr(args, "open_after", False):
         _open_file(out_path, progress)
     # stdout is always exactly the saved path, one line — safe for `$(...)` capture.

@@ -44,8 +44,18 @@ You also need **one backend** — `web` (default, drives your logged-in Chrome, 
 chatgpt-imagegen "moody mountain sunset" -o web/hero.png --size 1536x1024
 chatgpt-imagegen "make it a warm golden-hour photo, cinematic 35mm" -i photo.jpg   # edit a reference
 chatgpt-imagegen "a robot mascot" --style doodle                                    # apply a gallery style (auto-pulled + saved)
+chatgpt-imagegen animate "a dog happily wagging its tail" --style-online snoopy --also-gif
 OUT=$(chatgpt-imagegen "icon" --quiet)                                              # capture the path
 ```
+
+`animate` asks the image model for a strict 4×2 sprite sheet, crops eight equal
+frames, rejects obvious subject drift, and writes a smooth ping-pong loop. It
+defaults to animated WebP; pass `--animation-format gif` or `--also-gif` when
+GIF compatibility matters. The source sprite PNG is always kept beside the
+animation. Animation post-processing needs
+[ImageMagick](https://imagemagick.org/) (`magick`); WebP output additionally
+needs [libwebp](https://developers.google.com/speed/webp/download) (`img2webp`).
+`chatgpt-imagegen doctor` reports whether both are installed.
 
 Full options: `chatgpt-imagegen --help`. → **[Generate images](https://drawstyle.leeguoo.com/en/docs/generate)** · **[Styles](https://drawstyle.leeguoo.com/en/docs/styles)**
 

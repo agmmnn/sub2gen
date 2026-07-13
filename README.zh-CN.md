@@ -44,8 +44,16 @@ sudo install chatgpt-imagegen/chatgpt-imagegen /usr/local/bin/chatgpt-imagegen
 chatgpt-imagegen "阴郁的山间日落" -o web/hero.png --size 1536x1024
 chatgpt-imagegen "改成暖调黄昏、电影感 35mm" -i photo.jpg          # 改一张参考图
 chatgpt-imagegen "一个机器人吉祥物" --style doodle                  # 套用画廊风格(本地没有会自动拉取并保存)
+chatgpt-imagegen animate "小狗开心地摇尾巴" --style-online snoopy --also-gif
 OUT=$(chatgpt-imagegen "icon" --quiet)                             # 只拿路径(便于管道)
 ```
+
+`animate` 会让模型生成严格的 4×2 雪碧图,等分裁出 8 帧,检测明显的主体漂移,
+再编码成平滑的往返循环。默认输出动态 WebP;需要 GIF 时使用
+`--animation-format gif` 或 `--also-gif`。原始雪碧图 PNG 会始终保存在动图旁边。
+动画后处理需要 [ImageMagick](https://imagemagick.org/)(`magick`);输出 WebP
+还需要 [libwebp](https://developers.google.com/speed/webp/download)(`img2webp`)。
+`chatgpt-imagegen doctor` 会检查两者是否就绪。
 
 完整参数:`chatgpt-imagegen --help`。→ **[生成图片](https://drawstyle.leeguoo.com/zh/docs/generate)** · **[风格系统](https://drawstyle.leeguoo.com/zh/docs/styles)**
 

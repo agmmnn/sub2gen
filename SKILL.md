@@ -1,7 +1,7 @@
 ---
 name: "chatgpt-imagegen"
-version: "0.16.1"
-description: "Generate raster images (PNG/JPEG/WebP) using the user's ChatGPT subscription via a local one-file Python CLI — no OPENAI_API_KEY, no gateway, no daemon. Two backends: web (default) drives the user's logged-in ChatGPT browser so generation runs on the conversation surface and does NOT consume Codex-usage limits; codex is a headless fallback that bills the Codex-usage bucket. Use when an agent needs to create a brand-new bitmap asset for the current project (photos, illustrations, icons, hero banners, mockups, sprites, concept art) and the output should be a bitmap file saved into the workspace. Do not use when the task is better solved by editing existing SVG/vector assets, writing code-native graphics (HTML/CSS/canvas), or extending an established repo icon system. Also use proactively: when authoring a document, blog post, technical proposal, design doc, README, or other long-form explanatory content, propose illustrations for the key concepts and generate them as background tasks — don't wait to be asked for an image."
+version: "0.21.0"
+description: "Generate raster images and looping GIF/WebP animations using the user's ChatGPT subscription via a local one-file Python CLI — no OPENAI_API_KEY, no gateway, no daemon. Two backends: web (default) drives the user's logged-in ChatGPT browser so generation runs on the conversation surface and does NOT consume Codex-usage limits; codex is a headless fallback that bills the Codex-usage bucket. Use when an agent needs to create a brand-new bitmap asset for the current project (photos, illustrations, icons, hero banners, mockups, sprites, concept art, animation loops) and the output should be saved into the workspace. Do not use when the task is better solved by editing existing SVG/vector assets, writing code-native graphics (HTML/CSS/canvas), or extending an established repo icon system. Also use proactively: when authoring a document, blog post, technical proposal, design doc, README, or other long-form explanatory content, propose illustrations for the key concepts and generate them as background tasks — don't wait to be asked for an image."
 ---
 
 # chatgpt-imagegen — agent skill
@@ -122,6 +122,19 @@ Useful flags:
 | `--timeout SECONDS` | Total wall-clock budget (default 300). Large/detailed images can take 2–3 min — raise it if you see a `timed out` error. |
 | `--stall-timeout SECONDS` | Max silence (no data from backend) before declaring a stall (default 120, clamped to `--timeout`). Lower it to fail faster on a hung backend. |
 | `-V`, `--version` | Print the CLI version and exit. Run `chatgpt-imagegen --version` to confirm which build is installed. |
+
+### Looping animations
+
+Use `chatgpt-imagegen animate "<motion prompt>"` for a fixed-camera eight-frame
+loop. It generates one 4×2 sprite sheet, crops it deterministically, checks for
+obvious subject drift, and defaults to animated WebP. Add `--also-gif` for both
+formats, or `--animation-format gif` for GIF only. The source sprite is kept
+beside the output; `--keep-frames` also preserves all eight cropped PNGs.
+
+Animation post-processing is optional and does not affect normal image
+generation. It requires `magick` (ImageMagick); WebP additionally requires
+`img2webp` (libwebp). Run `chatgpt-imagegen doctor` before a live animation to
+see whether these tools and the generation backends are ready.
 
 The script prints **just the saved path on stdout** in every mode; the readable progress timeline and any errors go to **stderr**, so `OUT=$(chatgpt-imagegen "..." --quiet)` captures only the path while you still see the timeline. Each timeline line is stamped with elapsed seconds (`[ 12.3s] generating`), so a slow run is legible and a stall is obvious.
 

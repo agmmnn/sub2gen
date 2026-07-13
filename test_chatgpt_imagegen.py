@@ -459,6 +459,83 @@ class DefaultOutPath(unittest.TestCase):
             self.assertEqual(cig._default_out_path("!!!", "webp").name, "image.webp")
 
 
+class AnimationHelpers(unittest.TestCase):
+    def test_prompt_locks_grid_and_subject(self):
+        text = cig._build_animation_prompt("a dog wags its tail")
+        self.assertIn("exactly 4 columns by 2 rows", text)
+        self.assertIn("exactly eight", text)
+        self.assertIn("body center", text)
+        self.assertIn("a dog wags its tail", text)
+
+    def test_png_dimensions_reads_ihdr(self):
+        data = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" +
+                (1774).to_bytes(4, "big") + (887).to_bytes(4, "big"))
+        self.assertEqual(cig._png_dimensions(data), (1774, 887))
+
+    def test_png_dimensions_rejects_non_png(self):
+        with self.assertRaises(cig.AnimationError):
+            cig._png_dimensions(b"not a png")
+
+    def test_ping_pong_order_avoids_duplicate_endpoints(self):
+        self.assertEqual(
+            cig._animation_frame_order(),
+            [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1],
+        )
+        self.assertEqual(cig._animation_frame_order(ping_pong=False), list(range(8)))
+
+    def test_output_extension_is_authoritative(self):
+        path, fmt = cig._animation_output_path("wave", "out/wave.gif", None)
+        self.assertEqual((path, fmt), (Path("out/wave.gif"), "gif"))
+        with self.assertRaises(cig.AnimationError):
+            cig._animation_output_path("wave", "wave.gif", "webp")
+
+    def test_component_parser_filters_background_and_specks(self):
+        output = """Objects (id: bounding-box centroid area mean-color):
+  0: 443x443+0+0 221.0,221.0 170000 gray(255)
+  1: 120x120+100+80 160.5,140.5 9000 gray(255)
+  2: 2x2+0+0 1.0,1.0 4 gray(255)
+"""
+        self.assertEqual(
+            cig._connected_component_candidates(output, 443 * 443, 443),
+            [(160.5, 140.5, 9000)],
+        )
+
+    def test_render_crops_eight_cells_and_encodes_webp_plus_gif(self):
+        data = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" +
+                (1774).to_bytes(4, "big") + (887).to_bytes(4, "big"))
+        commands = []
+        with tempfile.TemporaryDirectory() as d, \
+             unittest.mock.patch.object(cig.shutil, "which",
+                                        side_effect=lambda name: f"/bin/{name}"), \
+             unittest.mock.patch.object(cig, "_run_checked",
+                                        side_effect=lambda command, label: commands.append((command, label))), \
+             unittest.mock.patch.object(cig, "_subject_drift", return_value=(1.0, 0.0)):
+            root = Path(d)
+            outputs = cig._render_animation(
+                root / "sheet.png", data, root / "wave.webp", "webp", 8,
+                also_gif=True, keep_frames=False, ping_pong=True,
+                max_drift=8.0, allow_drift=False, progress=False,
+            )
+        self.assertEqual([p.name for p in outputs], ["wave.webp", "wave.gif"])
+        self.assertEqual(sum(label.startswith("crop frame") for _, label in commands), 8)
+        self.assertEqual(commands[-2][1], "animated WebP encoding")
+        self.assertEqual(commands[-1][1], "GIF encoding")
+
+    def test_render_rejects_detected_drift(self):
+        data = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" +
+                (1600).to_bytes(4, "big") + (800).to_bytes(4, "big"))
+        with tempfile.TemporaryDirectory() as d, \
+             unittest.mock.patch.object(cig.shutil, "which", return_value="/bin/tool"), \
+             unittest.mock.patch.object(cig, "_run_checked"), \
+             unittest.mock.patch.object(cig, "_subject_drift", return_value=(20.0, 3.0)):
+            with self.assertRaisesRegex(cig.AnimationError, "subject drift"):
+                cig._render_animation(
+                    Path(d) / "sheet.png", data, Path(d) / "wave.gif", "gif", 8,
+                    also_gif=False, keep_frames=False, ping_pong=True,
+                    max_drift=8.0, allow_drift=False, progress=False,
+                )
+
+
 class ExtractAccessToken(unittest.TestCase):
     def test_reads_nested_tokens(self):
         auth = {"tokens": {"access_token": "AAA", "account_id": "acc",
