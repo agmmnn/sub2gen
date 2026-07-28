@@ -15,6 +15,7 @@ import io
 import json
 import os
 import re
+import ssl
 import tempfile
 import unittest
 import unittest.mock
@@ -1798,6 +1799,26 @@ class UploadReferences(unittest.TestCase):
     def test_legacy_selector_is_still_last_resort(self):
         # Old DOMs exposed only input[accept="image/*"]; keep them working.
         self.assertIn('input[accept="image/*"]', cig._UPLOAD_SELECTORS)
+
+
+class SslContext(unittest.TestCase):
+    """The gallery's Cloudflare chain trips Python 3.13+'s VERIFY_X509_STRICT
+    (issue #20). We clear that ONE flag — and nothing else."""
+
+    def test_strict_x509_is_cleared(self):
+        self.assertFalse(cig._ssl_ctx().verify_flags & ssl.VERIFY_X509_STRICT)
+
+    def test_certificate_verification_stays_on(self):
+        # The whole point: relax RFC-strictness, never verification itself.
+        ctx = cig._ssl_ctx()
+        self.assertTrue(ctx.check_hostname)
+        self.assertEqual(ctx.verify_mode, ssl.CERT_REQUIRED)
+
+    def test_only_strict_differs_from_the_default_context(self):
+        # Guards against a future edit quietly widening this into "trust all".
+        default = ssl.create_default_context().verify_flags
+        self.assertEqual(cig._ssl_ctx().verify_flags,
+                         default & ~ssl.VERIFY_X509_STRICT)
 
 
 if __name__ == "__main__":

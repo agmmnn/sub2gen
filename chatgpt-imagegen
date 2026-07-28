@@ -44,6 +44,7 @@ import atexit
 import re
 import secrets
 import shutil
+import ssl
 import subprocess
 import sys
 import tempfile
@@ -57,13 +58,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.21.1"
+__version__ = "0.21.2"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.21.2]: 修复 Python 3.13+ 上画廊全线连不上(证书链严格校验),style search/pull 与 --style-online 恢复可用
 # WHATSNEW[0.21.1]: 修复 web 后端 img2img 失效——ChatGPT 换了 composer 文件输入框,参考图改投 #upload-files(旧选择器只命中表单外的 sr-only 假输入框)
 # WHATSNEW[0.21.0]: 新增 animate 子命令:一次生成4x2雪碧图,校验主体漂移并输出循环WebP/GIF
 # WHATSNEW[0.20.0]: 出图前打印每张参考图的来源明细(label/group/路径或画廊源URL/sha256),不用再猜「那张图是本地/在线/上一张」
@@ -245,7 +247,8 @@ def _refresh_access_token(refresh_token: str, timeout: int = 30) -> JsonDict:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout,
+                                    context=_ssl_ctx()) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
@@ -384,6 +387,32 @@ def _sniff_mime(data: bytes) -> str | None:
     return None
 
 
+def _ssl_ctx() -> ssl.SSLContext:
+    """TLS context for our own HTTPS calls, with RFC-strict X.509 checking off.
+
+    Python 3.13 enabled `VERIFY_X509_STRICT` by default in
+    `ssl.create_default_context()`. The gallery sits behind Cloudflare, whose
+    default "Compatible" bundling ships the *cross-signed* form of the root so
+    the chain reaches as many clients as possible — and that path walks up to a
+    1998-era root whose `basicConstraints` isn't marked critical, which strict
+    mode rejects. Net effect (issue #20): every gallery call died on 3.13+ with
+    `CERTIFICATE_VERIFY_FAILED ... Basic Constraints of CA cert not marked
+    critical`, while curl, browsers, and Python <= 3.12 were all perfectly happy.
+
+    This can't be fixed server-side: with Universal SSL, Cloudflare picks the CA
+    and may change it at any time without notice, and bundle methodology is only
+    selectable for uploaded custom certificates.
+
+    Verification is NOT disabled. Hostname, expiry, and a complete chain to a
+    trusted root are all still enforced — the only thing relaxed is RFC 5280
+    pedantry about a root certificate that predates those rules, which is what
+    every other HTTP client on the machine already does.
+    """
+    ctx = ssl.create_default_context()
+    ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    return ctx
+
+
 def _download_ref_url(ref: str) -> bytes:
     """Download a `--ref` URL into memory, capped at REF_DOWNLOAD_MAX bytes.
 
@@ -393,7 +422,7 @@ def _download_ref_url(ref: str) -> bytes:
     """
     try:
         req = urllib.request.Request(ref, headers={"User-Agent": FALLBACK_UA})
-        with urllib.request.urlopen(req, timeout=60) as r:
+        with urllib.request.urlopen(req, timeout=60, context=_ssl_ctx()) as r:
             raw = r.read(REF_DOWNLOAD_MAX + 1)
     except Exception as e:  # noqa: BLE001
         sys.exit(f"could not download reference {ref!r}: {e}")
@@ -2498,7 +2527,7 @@ def _platform_base() -> str:
 
 
 def _urlopen(req, timeout):  # tiny seam so tests can fake the network
-    return urllib.request.urlopen(req, timeout=timeout)
+    return urllib.request.urlopen(req, timeout=timeout, context=_ssl_ctx())
 
 
 def _platform_request(method: str, path: str, *, data: bytes | None = None,
