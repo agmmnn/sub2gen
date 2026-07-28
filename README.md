@@ -48,6 +48,21 @@ chatgpt-imagegen animate "a dog happily wagging its tail" --style-online snoopy 
 OUT=$(chatgpt-imagegen "icon" --quiet)                                              # capture the path
 ```
 
+All three below came straight out of the commands above — no retouching:
+
+<table>
+<tr>
+<td width="33%"><img src="./docs/gallery/watercolor-cat.png" alt="Watercolor cat on a windowsill"></td>
+<td width="33%"><img src="./docs/gallery/mountain-sunset.png" alt="Moody mountain sunset"></td>
+<td width="33%"><img src="./docs/gallery/coffee-logo.png" alt="Coffee shop logo"></td>
+</tr>
+<tr>
+<td><sub><code>"a watercolor cat sitting on a windowsill"</code></sub></td>
+<td><sub><code>"moody mountain sunset" --size 1536x1024</code></sub></td>
+<td><sub><code>"a coffee shop logo, circular emblem"</code></sub></td>
+</tr>
+</table>
+
 `animate` asks the image model for a strict 4×2 sprite sheet, crops eight equal
 frames, rejects obvious subject drift, and writes a smooth ping-pong loop. It
 defaults to animated WebP; pass `--animation-format gif` or `--also-gif` when
@@ -64,10 +79,30 @@ Full options: `chatgpt-imagegen --help`. → **[Generate images](https://drawsty
 Browse and reuse art styles other people tuned — a public gallery at **[drawstyle.leeguoo.com](https://drawstyle.leeguoo.com)**. No script update needed:
 
 ```bash
-chatgpt-imagegen "a fox barista" --style-online pip     # generate with a gallery style, nothing saved
+chatgpt-imagegen "a fox barista" --style-online doodle  # generate with a gallery style, nothing saved
 chatgpt-imagegen style search "watercolor mascot"       # search the gallery
 chatgpt-imagegen style publish mystyle --category cute --from-last   # share yours (one-time login)
 ```
+
+A style can pin a **character**, not just a look. Style assets carry reference images, so the same character comes back in a brand-new scene:
+
+```bash
+chatgpt-imagegen style add pip --kind character --ref pip-ref.png
+chatgpt-imagegen "a fox barista" --style pip
+```
+
+<table>
+<tr>
+<td width="50%"><img src="./docs/gallery/pip-ref.png" alt="Pip the fox — character reference"></td>
+<td width="50%"><img src="./docs/gallery/pip-cafe.png" alt="Pip the fox, redrawn in a cafe scene"></td>
+</tr>
+<tr>
+<td align="center"><sub>the pinned reference</sub></td>
+<td align="center"><sub>generated from <code>"a fox barista"</code></sub></td>
+</tr>
+</table>
+
+Gallery packages can be characters too — `xiaohei` is one.
 
 → **[Using gallery styles](https://drawstyle.leeguoo.com/en/docs/community)** · **[Submitting a style](https://drawstyle.leeguoo.com/en/docs/submit)**
 

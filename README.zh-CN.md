@@ -48,6 +48,21 @@ chatgpt-imagegen animate "小狗开心地摇尾巴" --style-online snoopy --also
 OUT=$(chatgpt-imagegen "icon" --quiet)                             # 只拿路径(便于管道)
 ```
 
+下面三张都是上面这些命令直接出的图,没有后期修饰:
+
+<table>
+<tr>
+<td width="33%"><img src="./docs/gallery/watercolor-cat.png" alt="窗台上的水彩猫"></td>
+<td width="33%"><img src="./docs/gallery/mountain-sunset.png" alt="阴郁的山间日落"></td>
+<td width="33%"><img src="./docs/gallery/coffee-logo.png" alt="咖啡店 logo"></td>
+</tr>
+<tr>
+<td><sub><code>"一只坐在窗台的水彩橘猫"</code></sub></td>
+<td><sub><code>"阴郁的山间日落" --size 1536x1024</code></sub></td>
+<td><sub><code>"一个咖啡店 logo,圆形徽章"</code></sub></td>
+</tr>
+</table>
+
 `animate` 会让模型生成严格的 4×2 雪碧图,等分裁出 8 帧,检测明显的主体漂移,
 再编码成平滑的往返循环。默认输出动态 WebP;需要 GIF 时使用
 `--animation-format gif` 或 `--also-gif`。原始雪碧图 PNG 会始终保存在动图旁边。
@@ -62,10 +77,30 @@ OUT=$(chatgpt-imagegen "icon" --quiet)                             # 只拿路�
 浏览、复用别人调好的画风——公共画廊在 **[drawstyle.leeguoo.com](https://drawstyle.leeguoo.com)**,不用更新脚本:
 
 ```bash
-chatgpt-imagegen "一只狐狸咖啡师" --style-online pip     # 直接用画廊风格生图,本地不落盘
+chatgpt-imagegen "一只狐狸咖啡师" --style-online doodle  # 直接用画廊风格生图,本地不落盘
 chatgpt-imagegen style search "水彩 吉祥物"              # 搜索画廊
 chatgpt-imagegen style publish mystyle --category cute --from-last   # 分享你的(需一次登录)
 ```
+
+风格不只能固定画风,还能**固定角色**。风格资产可以绑参考图,同一个角色能在全新场景里复现:
+
+```bash
+chatgpt-imagegen style add pip --kind character --ref pip-ref.png
+chatgpt-imagegen "一只狐狸咖啡师" --style pip
+```
+
+<table>
+<tr>
+<td width="50%"><img src="./docs/gallery/pip-ref.png" alt="小狐狸 Pip —— 角色参考图"></td>
+<td width="50%"><img src="./docs/gallery/pip-cafe.png" alt="小狐狸 Pip 在咖啡馆场景中重绘"></td>
+</tr>
+<tr>
+<td align="center"><sub>绑定的参考图</sub></td>
+<td align="center"><sub>用 <code>"一只狐狸咖啡师"</code> 生成</sub></td>
+</tr>
+</table>
+
+画廊里的包也可以是角色包——`xiaohei` 就是。
 
 → **[用画廊的风格](https://drawstyle.leeguoo.com/zh/docs/community)** · **[投稿与审核](https://drawstyle.leeguoo.com/zh/docs/submit)**
 
