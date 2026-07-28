@@ -57,13 +57,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-__version__ = "0.21.0"
+__version__ = "0.21.1"
 
 # What's-new, newest first — one terse line per release. The update reminder
 # surfaces these so a user learns WHAT changed, not just that a newer version
 # exists. Kept as flat, easy-to-regex comments near the top so the remote copy
 # can be parsed from the same 8KB prefix the reminder already reads — no extra
 # file to drift, no import needed. Format: `# WHATSNEW[<version>]: <summary>`.
+# WHATSNEW[0.21.1]: 修复 web 后端 img2img 失效——ChatGPT 换了 composer 文件输入框,参考图改投 #upload-files(旧选择器只命中表单外的 sr-only 假输入框)
 # WHATSNEW[0.21.0]: 新增 animate 子命令:一次生成4x2雪碧图,校验主体漂移并输出循环WebP/GIF
 # WHATSNEW[0.20.0]: 出图前打印每张参考图的来源明细(label/group/路径或画廊源URL/sha256),不用再猜「那张图是本地/在线/上一张」
 # WHATSNEW[0.19.0]: 老装机里 0.16 遗留的纯文字 doodle/xiaohei/snoopy(无参考图)会在使用时自动升级为画廊版(带参考图);离线保留旧版不破坏
@@ -1692,17 +1693,38 @@ _JS_PENDING_UPLOADS = r"""(() => {
 })()"""
 
 
+# Composer file inputs to hand `chrome-use upload`, in order. ChatGPT reshuffled
+# these (issue #19, seen 2026-07): the composer's REAL input is `#upload-files`,
+# and the elements matching the old `input[accept="image/*"]` selector are now
+# `sr-only` 1x1 decoys sitting OUTSIDE the composer form — files handed to those
+# are silently dropped, which is exactly the "file input is still empty after
+# upload" failure. `#upload-files` renders 0x0, but `upload` resolves and drives
+# hidden inputs fine, so no page-side injection is needed. The later entries keep
+# older / A-B-tested layouts working.
+_UPLOAD_SELECTORS = ("#upload-files", "form input[type=file]",
+                     'input[accept="image/*"]')
+
+
 def _upload_references(ab, session, ref_paths, remaining, emit) -> None:
     """Attach reference image files to the composer via `chrome-use upload`.
 
-    ChatGPT's composer exposes a standard <input accept="image/*">, so the
-    generic upload command drives it with NO ChatGPT-specific support needed.
+    Tries `_UPLOAD_SELECTORS` in order so a composer reshuffle costs one selector
+    rather than a broken img2img, and re-raises the LAST failure when none work.
     Waits for the thumbnail(s) to render so the caller's baseline capture counts
     them as pre-existing — never mistaking a reference for the generated result.
     """
     emit(f"attaching {len(ref_paths)} reference image(s)")
-    _ab(ab, "upload", 'input[accept="image/*"]', *ref_paths,
-        session=session, timeout=min(90.0, remaining()))
+    err: GatewayError | None = None
+    for sel in _UPLOAD_SELECTORS:
+        try:
+            _ab(ab, "upload", sel, *ref_paths,
+                session=session, timeout=min(90.0, remaining()))
+            err = None
+            break
+        except GatewayError as e:
+            err = e
+    if err is not None:
+        raise err
     for _ in range(15):  # best-effort confirmation; proceed regardless
         try:
             n = _ab_eval(ab, _JS_PENDING_UPLOADS, session=session,

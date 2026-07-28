@@ -1755,5 +1755,50 @@ class ApplyPackageMalformed(unittest.TestCase):
         self.assertIn("malformed package response", str(cm.exception))
 
 
+class UploadReferences(unittest.TestCase):
+    """The composer's file input moved (issue #19) — the selector cascade is what
+    keeps img2img working across that reshuffle, so pin its behaviour."""
+
+    @staticmethod
+    def _run(fail_selectors):
+        """Drive _upload_references with a fake _ab that rejects some selectors.
+
+        Returns (selectors tried, emitted lines) or raises whatever it raises.
+        """
+        tried, emitted = [], []
+
+        def fake_ab(ab, *args, session=None, timeout=None, profile=None):
+            if args[0] == "upload":
+                tried.append(args[1])
+                if args[1] in fail_selectors:
+                    raise cig.GatewayError(f"chrome-use upload failed: {args[1]}")
+                return ""
+            return json.dumps(json.dumps(1))  # _JS_PENDING_UPLOADS → 1 thumbnail
+
+        with unittest.mock.patch.object(cig, "_ab", fake_ab), \
+                unittest.mock.patch.object(cig.time, "sleep", lambda *_: None):
+            cig._upload_references("ab", "s", ["/tmp/a.png"],
+                                   lambda: 90.0, emitted.append)
+        return tried, emitted
+
+    def test_uses_current_composer_input_first(self):
+        tried, emitted = self._run(fail_selectors=())
+        self.assertEqual(tried, ["#upload-files"])
+        self.assertIn("reference attached", emitted)
+
+    def test_falls_back_to_next_selector(self):
+        tried, _ = self._run(fail_selectors=("#upload-files",))
+        self.assertEqual(tried, ["#upload-files", "form input[type=file]"])
+
+    def test_reraises_last_error_when_all_selectors_fail(self):
+        with self.assertRaises(cig.GatewayError) as cm:
+            self._run(fail_selectors=tuple(cig._UPLOAD_SELECTORS))
+        self.assertIn(cig._UPLOAD_SELECTORS[-1], str(cm.exception))
+
+    def test_legacy_selector_is_still_last_resort(self):
+        # Old DOMs exposed only input[accept="image/*"]; keep them working.
+        self.assertIn('input[accept="image/*"]', cig._UPLOAD_SELECTORS)
+
+
 if __name__ == "__main__":
     unittest.main()
