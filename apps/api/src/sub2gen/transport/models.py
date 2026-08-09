@@ -15,6 +15,27 @@ from ..core.auth import verify_api_key_flexible
 router = APIRouter()
 
 
+@router.get("/v1/styles")
+async def list_styles(
+    auth_ctx: AuthContext = Depends(verify_api_key_flexible),
+    container: AppContainer = Depends(get_container),
+):
+    """List locally available and explicitly enabled style presets."""
+    del auth_ctx
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": preset.style_id,
+                "name": preset.name,
+                "source": preset.source,
+                "reference_count": len(preset.references),
+            }
+            for preset in container.style_registry.list()
+        ],
+    }
+
+
 @router.get("/v1/models")
 async def list_models(
     auth_ctx: AuthContext = Depends(verify_api_key_flexible),

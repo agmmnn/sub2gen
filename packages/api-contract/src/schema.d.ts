@@ -3105,6 +3105,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/styles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Styles
+         * @description List locally available and explicitly enabled style presets.
+         */
+        get: operations["list_styles_v1_styles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1beta/models": {
         parameters: {
             query?: never;
@@ -3309,6 +3329,8 @@ export interface components {
              * @enum {string}
              */
             response_format: "url" | "b64_json";
+            /** Style */
+            style?: string | null;
         };
         /** Body_restore_sqlite_database_api_admin_database_restore_post */
         Body_restore_sqlite_database_api_admin_database_restore_post: {
@@ -4341,6 +4363,8 @@ export interface components {
             response_format: "url" | "b64_json";
             /** Size */
             size?: string | null;
+            /** Style */
+            style?: string | null;
             /** User */
             user?: string | null;
         } & {
@@ -11672,6 +11696,39 @@ export interface operations {
         };
     };
     list_runway_voices_v1_runway_voices_get: {
+        parameters: {
+            query?: {
+                key?: string | null;
+            };
+            header?: {
+                "x-goog-api-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_styles_v1_styles_get: {
         parameters: {
             query?: {
                 key?: string | null;

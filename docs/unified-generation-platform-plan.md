@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 10 complete; Phase 11 (styles and a third provider) is next.
+Status: Phases 0 through 11 complete; Phase 12 (release hardening) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -665,15 +665,15 @@ Exit criteria:
 
 ### Phase 11: Styles and additional providers
 
-- [ ] Support local prompt presets and pinned reference assets first.
-- [ ] Treat remote style/gallery packages as untrusted input with explicit opt-in,
+- [x] Support local prompt presets and pinned reference assets first.
+- [x] Treat remote style/gallery packages as untrusted input with explicit opt-in,
   provenance, size/type validation, and local review.
-- [ ] Disable automatic gallery updates in server and worker defaults.
-- [ ] Prove a third provider through the SDK before declaring the plugin surface stable.
-- [ ] If direct Google Gemini support remains a product goal, implement it as
+- [x] Disable automatic gallery updates in server and worker defaults.
+- [x] Prove a third provider through the SDK before declaring the plugin surface stable.
+- [x] If direct Google Gemini support remains a product goal, implement it as
   `packages/provider-google-gemini`; do not treat the existing GeminiGen service as the
   same provider.
-- [ ] Document provider compatibility, quotas, rate limits, session lifetime, and
+- [x] Document provider compatibility, quotas, rate limits, session lifetime, and
   execution requirements.
 
 Exit criteria:

@@ -26,6 +26,7 @@ dependencies = [
   "tomli==2.2.1",
   "uvicorn[standard]==0.32.1",
   "sub2gen-provider-google-flow",
+  "sub2gen-provider-google-gemini",
   "sub2gen-provider-sdk",
   "sub2gen-worker-protocol",
 ]
@@ -59,6 +60,7 @@ members = [
   "apps/image-worker",
   "packages/provider-sdk-python",
   "packages/provider-google-flow",
+  "packages/provider-google-gemini",
   "packages/provider-chatgpt",
   "packages/worker-protocol",
 ]
@@ -66,6 +68,7 @@ members = [
 [tool.uv.sources]
 sub2gen-provider-sdk = { workspace = true }
 sub2gen-provider-google-flow = { workspace = true }
+sub2gen-provider-google-gemini = { workspace = true }
 sub2gen-provider-chatgpt = { workspace = true }
 sub2gen-worker-protocol = { workspace = true }
 
@@ -75,6 +78,7 @@ testpaths = [
   "apps/api/tests",
   "packages/provider-sdk-python/tests",
   "packages/provider-google-flow/tests",
+  "packages/provider-google-gemini/tests",
   "packages/provider-chatgpt/tests",
   "packages/worker-protocol/tests",
   "apps/image-worker/tests",

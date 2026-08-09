@@ -214,6 +214,17 @@
             ],
             "title": "Response Format",
             "type": "string"
+          },
+          "style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style"
           }
         },
         "required": [
@@ -2868,6 +2879,17 @@
               }
             ],
             "title": "Size"
+          },
+          "style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style"
           },
           "user": {
             "anyOf": [
@@ -15208,6 +15230,72 @@
           }
         ],
         "summary": "List Runway Voices"
+      }
+    },
+    "/v1/styles": {
+      "get": {
+        "description": "List locally available and explicitly enabled style presets.",
+        "operationId": "list_styles_v1_styles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-goog-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Goog-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Styles"
       }
     },
     "/v1beta/models": {

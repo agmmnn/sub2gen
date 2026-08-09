@@ -12,6 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 from sub2gen_provider_chatgpt import ChatGPTWebProvider
+from sub2gen_provider_google_gemini import GoogleGeminiHttpBackend, GoogleGeminiProvider
 from sub2gen_provider_sdk import (
     Artifact,
     CancellationToken,
@@ -31,6 +32,7 @@ from ..core.api_key_manager import AuthContext
 from ..core.config import config
 from ..generation.signals import RouteHealth, RouteSignal
 from ..persistence import GenerationArtifactRecord, GenerationJobRecord, GenerationJobStatus
+from ..persistence import CredentialResolver
 from .generation_routing import authenticated_caller_from_api_key, trusted_routing_config_from_app
 from .provider_execution import ProviderExecutionOutcome
 from .worker_runtime import WorkerRuntime, WorkerRuntimeError
@@ -186,14 +188,36 @@ class UnifiedImageService:
     async def execute(self, prepared: PreparedImageGeneration) -> ProviderExecutionOutcome:
         if prepared.request is None or prepared.resolved is None:
             raise RuntimeError("an existing job cannot be executed again")
-        if prepared.resolved.provider_id != "chatgpt-web":
+        close_backend = None
+        if prepared.resolved.provider_id == "chatgpt-web":
+            backend = WorkerChatGPTBackend(
+                self.container.worker_runtime,
+                self.container.worker_artifact_inbox,
+                base_url=prepared.base_url,
+            )
+            provider = ChatGPTWebProvider(backend)
+        elif prepared.resolved.provider_id == "google-gemini":
+            bindings = await self.container.repositories.credential_bindings.list_metadata(
+                prepared.resolved.provider_account_id
+            )
+            binding = next(
+                (
+                    item
+                    for item in bindings
+                    if item.enabled and item.credential_type.strip().lower().replace("-", "_") == "api_key"
+                ),
+                None,
+            )
+            if binding is None:
+                raise ProviderError(ProviderErrorCode.AUTHENTICATION, "Gemini account has no API key binding")
+            credential = await CredentialResolver(
+                self.container.repositories.credential_bindings
+            ).resolve_for_api_host(binding.id)
+            backend = GoogleGeminiHttpBackend(credential.secret)
+            close_backend = backend
+            provider = GoogleGeminiProvider(backend)
+        else:
             raise ValueError("provider is executed by the existing Flow pipeline")
-        backend = WorkerChatGPTBackend(
-            self.container.worker_runtime,
-            self.container.worker_artifact_inbox,
-            base_url=prepared.base_url,
-        )
-        provider = ChatGPTWebProvider(backend)
         context = ProviderExecutionContext(
             prepared.resolved,
             CancellationToken(),
@@ -248,6 +272,9 @@ class UnifiedImageService:
                     ),
                 )
             raise
+        finally:
+            if close_backend is not None:
+                await close_backend.aclose()
         self.container.routing_signals.update(
             provider_id=prepared.resolved.provider_id,
             provider_account_id=prepared.resolved.provider_account_id,

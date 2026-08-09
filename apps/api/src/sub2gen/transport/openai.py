@@ -36,6 +36,7 @@ class ImageGenerationRequest(BaseModel):
     response_format: Literal["url", "b64_json"] = "url"
     user: str | None = None
     project_id: str | None = None
+    style: str | None = None
     reference_images: list[str] = Field(default_factory=list)
     image: str | list[str] | None = None
     async_mode: bool = Field(default=False, alias="async")
@@ -115,10 +116,14 @@ async def _execute_provider_image(
     if image_request.n != 1:
         raise HTTPException(status_code=400, detail="This provider currently supports n=1")
     references = await _reference_inputs_from_uris(_image_uris(image_request), container=container, auth=auth)
+    try:
+        prompt, references = container.style_registry.apply(image_request.style, image_request.prompt, references)
+    except KeyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     base_url = legacy._get_request_base_url(raw_request)
     try:
         prepared = await container.unified_images.prepare(
-            prompt=image_request.prompt,
+            prompt=prompt,
             model=image_request.model,
             references=references,
             auth=auth,
@@ -227,10 +232,15 @@ async def create_image_generation(
 ):
     descriptor = container.model_registry.resolve(image_request.model)
     if descriptor.provider_id == "google-flow":
+        references = await _reference_inputs_from_uris(_image_uris(image_request), container=container, auth=auth)
+        try:
+            prompt, references = container.style_registry.apply(image_request.style, image_request.prompt, references)
+        except KeyError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         normalized = legacy.NormalizedGenerationRequest(
             model=descriptor.resolved_model,
-            prompt=image_request.prompt,
-            images=[item.read_bytes() for item in await _reference_inputs_from_uris(_image_uris(image_request), container=container, auth=auth)],
+            prompt=prompt,
+            images=[item.read_bytes() for item in references],
             project_id=image_request.project_id,
         )
         allowed, project_id = await legacy._select_generation_target(
@@ -267,6 +277,7 @@ async def create_image_edit(
     response_format: Annotated[Literal["url", "b64_json"], Form()] = "url",
     project_id: Annotated[str | None, Form()] = None,
     async_mode: Annotated[bool, Form(alias="async")] = False,
+    style: Annotated[str | None, Form()] = None,
     auth: AuthContext = Depends(verify_api_key_flexible),
     container: AppContainer = Depends(get_container),
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
@@ -285,6 +296,7 @@ async def create_image_edit(
             "n": n,
             "response_format": response_format,
             "project_id": project_id,
+            "style": style,
             "reference_images": references,
             "async": async_mode,
         }

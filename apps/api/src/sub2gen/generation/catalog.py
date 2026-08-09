@@ -91,6 +91,16 @@ class ModelRegistry:
                     credential_kinds=frozenset({"oauth"}),
                     execution_location="local-worker",
                 ),
+                ModelDescriptor(
+                    model_id="google-gemini/gemini-2.5-flash-image",
+                    provider_id="google-gemini",
+                    resolved_model="gemini-2.5-flash-image",
+                    kind=GenerationKind.IMAGE,
+                    billing_pool="google-gemini:api",
+                    capability="image.generate:google-gemini",
+                    credential_kinds=frozenset({"api_key"}),
+                    execution_location="server",
+                ),
             )
         )
         return cls(tuple(descriptors))

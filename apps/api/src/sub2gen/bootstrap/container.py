@@ -12,6 +12,7 @@ from ..core.config import config
 from ..core.config import get_runtime_data_dir
 from ..core.database import Database, create_database
 from ..generation.catalog import ModelRegistry
+from ..generation.styles import StyleRegistry
 from ..generation.routing import GenerationRouter
 from ..generation.signals import RuntimeSignalRegistry
 from ..persistence.repositories import Repositories
@@ -55,6 +56,7 @@ class AppContainer:
     generation_handler: GenerationHandler
     generation_audit: GenerationAuditService
     model_registry: ModelRegistry
+    style_registry: StyleRegistry
     generation_router: GenerationRouter
     routing_signals: RuntimeSignalRegistry
     persistent_generation_router: PersistentGenerationRouter
@@ -132,6 +134,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
             repositories.generation_attempts,
         ),
         model_registry=model_registry,
+        style_registry=StyleRegistry.for_runtime(get_runtime_data_dir() / "styles"),
         generation_router=generation_router,
         routing_signals=routing_signals,
         persistent_generation_router=PersistentGenerationRouter(

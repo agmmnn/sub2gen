@@ -8,6 +8,7 @@ members = [
     "sub2gen-image-worker",
     "sub2gen-provider-chatgpt",
     "sub2gen-provider-google-flow",
+    "sub2gen-provider-google-gemini",
     "sub2gen-provider-sdk",
     "sub2gen-worker-protocol",
 ]
@@ -1181,6 +1182,7 @@ dependencies = [
     { name = "python-multipart" },
     { name = "redis", extra = ["hiredis"] },
     { name = "sub2gen-provider-google-flow" },
+    { name = "sub2gen-provider-google-gemini" },
     { name = "sub2gen-provider-sdk" },
     { name = "sub2gen-worker-protocol" },
     { name = "tomli" },
@@ -1215,6 +1217,7 @@ requires-dist = [
     { name = "python-multipart", specifier = "==0.0.20" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2,<7.0" },
     { name = "sub2gen-provider-google-flow", editable = "packages/provider-google-flow" },
+    { name = "sub2gen-provider-google-gemini", editable = "packages/provider-google-gemini" },
     { name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" },
     { name = "sub2gen-worker-protocol", editable = "packages/worker-protocol" },
     { name = "tomli", specifier = "==2.2.1" },
@@ -1278,6 +1281,21 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" }]
+
+[[package]]
+name = "sub2gen-provider-google-gemini"
+version = "0.1.0"
+source = { editable = "packages/provider-google-gemini" }
+dependencies = [
+    { name = "httpx" },
+    { name = "sub2gen-provider-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" },
+]
 
 [[package]]
 name = "sub2gen-provider-sdk"

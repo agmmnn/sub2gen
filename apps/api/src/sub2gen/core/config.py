@@ -613,21 +613,26 @@ class Config:
     def allowed_generation_providers(self) -> frozenset[str]:
         return self._routing_set(
             self._config.get("generation_routing", {}).get("allowed_providers"),
-            ("google-flow", "chatgpt-web", "chatgpt-codex"),
+            ("google-flow", "chatgpt-web", "chatgpt-codex", "google-gemini"),
         )
 
     @property
     def allowed_generation_billing_pools(self) -> frozenset[str]:
         return self._routing_set(
             self._config.get("generation_routing", {}).get("allowed_billing_pools"),
-            ("google-flow:subscription", "chatgpt:web-subscription", "chatgpt:codex-subscription"),
+            (
+                "google-flow:subscription",
+                "chatgpt:web-subscription",
+                "chatgpt:codex-subscription",
+                "google-gemini:api",
+            ),
         )
 
     @property
     def allowed_generation_credential_kinds(self) -> frozenset[str]:
         return self._routing_set(
             self._config.get("generation_routing", {}).get("allowed_credential_kinds"),
-            ("session_token", "browser_session", "oauth"),
+            ("session_token", "browser_session", "oauth", "api_key"),
         )
 
     @property
