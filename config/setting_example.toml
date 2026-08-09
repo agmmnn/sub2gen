@@ -53,6 +53,10 @@ video_timeout = 1500
 [generation_routing]
 extension_generation_enabled = false
 extension_generation_fallback_mode = "local_http_on_recaptcha"  # none/local_http_on_recaptcha
+allowed_providers = ["google-flow", "chatgpt-web", "chatgpt-codex"]
+allowed_billing_pools = ["google-flow:subscription", "chatgpt:web-subscription", "chatgpt:codex-subscription"]
+allowed_credential_kinds = ["session_token", "browser_session", "oauth"]
+allow_cross_billing_fallback = false
 
 [call_logic]
 call_mode = "default"  # default=随机轮询策略, polling=顺序轮询策略

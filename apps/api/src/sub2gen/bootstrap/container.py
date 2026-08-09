@@ -11,12 +11,17 @@ from ..core.api_key_manager import ApiKeyManager
 from ..core.config import config
 from ..core.config import get_runtime_data_dir
 from ..core.database import Database, create_database
+from ..generation.catalog import ModelRegistry
+from ..generation.routing import GenerationRouter
+from ..generation.signals import RuntimeSignalRegistry
 from ..persistence.repositories import Repositories
 from ..services.concurrency_manager import ConcurrencyManager
 from ..services.failed_payload_store import FailedPayloadManager, failed_payload_manager
 from ..services.flow_client import FlowClient
 from ..services.geminigen_service import GeminiGenService
-from ..services.generation_handler import GenerationHandler
+from ..services.generation_handler import MODEL_CONFIG, GenerationHandler
+from ..services.generation_audit import GenerationAuditService
+from ..services.generation_routing import PersistentGenerationRouter
 from ..services.google_drive_backup import GoogleDriveBackupService
 from ..services.load_balancer import LoadBalancer
 from ..services.proxy_manager import ProxyManager
@@ -46,6 +51,11 @@ class AppContainer:
     concurrency_manager: ConcurrencyManager
     load_balancer: LoadBalancer
     generation_handler: GenerationHandler
+    generation_audit: GenerationAuditService
+    model_registry: ModelRegistry
+    generation_router: GenerationRouter
+    routing_signals: RuntimeSignalRegistry
+    persistent_generation_router: PersistentGenerationRouter
     runway_service: RunwayService
     geminigen_service: GeminiGenService
     google_drive_backup_service: GoogleDriveBackupService
@@ -98,6 +108,9 @@ def build_container(*, database: Database | None = None) -> AppContainer:
     worker_pairing = PersistentDevicePairing(repositories.workers.devices)
     worker_artifact_grants = ArtifactGrantStore()
     worker_coordinator = WorkerCoordinator()
+    model_registry = ModelRegistry.for_platform(MODEL_CONFIG)
+    generation_router = GenerationRouter(model_registry)
+    routing_signals = RuntimeSignalRegistry()
     return AppContainer(
         db=db,
         repositories=repositories,
@@ -107,6 +120,19 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         concurrency_manager=concurrency_manager,
         load_balancer=load_balancer,
         generation_handler=generation_handler,
+        generation_audit=GenerationAuditService(
+            repositories.generation_jobs,
+            repositories.generation_attempts,
+        ),
+        model_registry=model_registry,
+        generation_router=generation_router,
+        routing_signals=routing_signals,
+        persistent_generation_router=PersistentGenerationRouter(
+            model_registry,
+            generation_router,
+            repositories,
+            routing_signals,
+        ),
         runway_service=runway_service,
         geminigen_service=geminigen_service,
         google_drive_backup_service=google_drive_backup_service,

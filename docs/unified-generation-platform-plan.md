@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 6 complete; Phase 7 (model routing and execution audit) is next.
+Status: Phases 0 through 7 complete; Phase 8 (public image API and asynchronous jobs) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -601,15 +601,15 @@ Exit criteria:
 
 ### Phase 7: Model registry, routing policy, and execution audit
 
-- [ ] Introduce namespaced model descriptors and compatibility aliases.
-- [ ] Resolve `ExecutionPolicy` only from trusted server configuration and authenticated
+- [x] Introduce namespaced model descriptors and compatibility aliases.
+- [x] Resolve `ExecutionPolicy` only from trusted server configuration and authenticated
   caller context.
-- [ ] Enforce provider, account, worker, credential-kind, billing-pool, and capability
+- [x] Enforce provider, account, worker, credential-kind, billing-pool, and capability
   constraints before dispatch.
-- [ ] Persist `ResolvedExecution` for success, failure, cancellation, and timeout.
-- [ ] Deny cross-billing fallback by default.
-- [ ] Add deterministic routing and concurrency tests for multiple workers/accounts.
-- [ ] Add quota and health signals without allowing one provider's limiter to poison
+- [x] Persist `ResolvedExecution` for success, failure, cancellation, and timeout.
+- [x] Deny cross-billing fallback by default.
+- [x] Add deterministic routing and concurrency tests for multiple workers/accounts.
+- [x] Add quota and health signals without allowing one provider's limiter to poison
   another provider.
 
 Exit criteria:

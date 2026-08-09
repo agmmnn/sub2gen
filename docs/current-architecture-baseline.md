@@ -46,6 +46,13 @@ logging, and streaming orchestration remains in `FlowClient` and `GenerationHand
 Runway and GeminiGen combine provider HTTP, persistence, capacity, task, cache, and
 normalization behavior in service modules.
 
+The unified generation control plane now has a namespaced `ModelRegistry`, a
+deterministic `GenerationRouter`, persistence-backed provider/account/worker/credential
+candidate inventory, provider-isolated runtime health/quota signals, and a durable
+`GenerationAuditService`. Generic provider accounts are assigned to managed API keys
+through `provider_account_api_keys`; adopted Flow accounts continue to inherit their
+existing token assignment isolation.
+
 The separate `apps/agent-gateway` application exposes its own solve HTTP/WebSocket
 surface and has an in-memory connected-agent registry. It does not share a protocol
 implementation with the API application's extension worker.

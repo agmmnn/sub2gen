@@ -126,7 +126,7 @@ async def test_identity_migration_disables_old_managed_key_prefixes(tmp_path) ->
 async def test_tracked_0002_database_upgrades_to_unified_provider_schema(tmp_path) -> None:
     path = tmp_path / "upgrade-0002.db"
     migrations = discover_sqlite_migrations()
-    assert [migration.revision for migration in migrations] == ["0001", "0002", "0003"]
+    assert [migration.revision for migration in migrations] == ["0001", "0002", "0003", "0004"]
 
     async with aiosqlite.connect(path) as connection:
         await connection.executescript(migrations[0].sql_text)
@@ -157,7 +157,7 @@ async def test_tracked_0002_database_upgrades_to_unified_provider_schema(tmp_pat
             SELECT name FROM sqlite_master
             WHERE type = 'table' AND name IN (
                 'provider_accounts', 'credential_bindings', 'worker_devices',
-                'generation_jobs', 'generation_attempts'
+                'generation_jobs', 'generation_attempts', 'provider_account_api_keys'
             )
             ORDER BY name
             """
@@ -169,6 +169,7 @@ async def test_tracked_0002_database_upgrades_to_unified_provider_schema(tmp_pat
         "credential_bindings",
         "generation_attempts",
         "generation_jobs",
+        "provider_account_api_keys",
         "provider_accounts",
         "worker_devices",
     ]

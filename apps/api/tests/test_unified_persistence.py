@@ -239,7 +239,7 @@ async def test_legacy_account_catalog_describes_without_copying_credentials() ->
 
 
 def test_sqlite_and_postgres_0003_define_the_same_provider_tables() -> None:
-    postgres = discover_postgres()[-1]
+    postgres = next(migration for migration in discover_postgres() if migration.revision == "0003")
     assert postgres.revision == "0003"
     postgres_tables, _ = baseline_schema_signature(postgres)
 

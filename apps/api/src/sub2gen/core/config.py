@@ -598,6 +598,42 @@ class Config:
             normalized = "local_http_on_recaptcha"
         self._config["generation_routing"]["extension_generation_fallback_mode"] = normalized
 
+    @staticmethod
+    def _routing_set(value: Any, defaults: tuple[str, ...]) -> frozenset[str]:
+        if isinstance(value, str):
+            items = value.split(",")
+        elif isinstance(value, (list, tuple, set, frozenset)):
+            items = value
+        else:
+            items = defaults
+        normalized = frozenset(str(item).strip() for item in items if str(item).strip())
+        return normalized or frozenset(defaults)
+
+    @property
+    def allowed_generation_providers(self) -> frozenset[str]:
+        return self._routing_set(
+            self._config.get("generation_routing", {}).get("allowed_providers"),
+            ("google-flow", "chatgpt-web", "chatgpt-codex"),
+        )
+
+    @property
+    def allowed_generation_billing_pools(self) -> frozenset[str]:
+        return self._routing_set(
+            self._config.get("generation_routing", {}).get("allowed_billing_pools"),
+            ("google-flow:subscription", "chatgpt:web-subscription", "chatgpt:codex-subscription"),
+        )
+
+    @property
+    def allowed_generation_credential_kinds(self) -> frozenset[str]:
+        return self._routing_set(
+            self._config.get("generation_routing", {}).get("allowed_credential_kinds"),
+            ("session_token", "browser_session", "oauth"),
+        )
+
+    @property
+    def allow_cross_billing_fallback(self) -> bool:
+        return bool(self._config.get("generation_routing", {}).get("allow_cross_billing_fallback", False))
+
     @property
     def sub2gen_gemini_api_keys(self) -> str:
         return str(self._config.get("generation_routing", {}).get("sub2gen_gemini_api_keys", "") or "")

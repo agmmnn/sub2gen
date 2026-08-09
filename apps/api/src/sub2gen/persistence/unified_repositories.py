@@ -114,6 +114,42 @@ class ProviderAccountRepository:
             await connection.commit()
             return int(cursor.rowcount or 0) == 1
 
+    async def assign_api_key(self, account_id: str, api_key_id: int) -> None:
+        async with self.database._connect(write=True) as connection:
+            await connection.execute(
+                """
+                INSERT INTO provider_account_api_keys (provider_account_id, api_key_id)
+                VALUES (?, ?)
+                ON CONFLICT(provider_account_id, api_key_id) DO NOTHING
+                """,
+                (account_id, api_key_id),
+            )
+            await connection.commit()
+
+    async def unassign_api_key(self, account_id: str, api_key_id: int) -> bool:
+        async with self.database._connect(write=True) as connection:
+            cursor = await connection.execute(
+                "DELETE FROM provider_account_api_keys WHERE provider_account_id = ? AND api_key_id = ?",
+                (account_id, api_key_id),
+            )
+            await connection.commit()
+            return int(cursor.rowcount or 0) == 1
+
+    async def list_ids_for_api_key(self, api_key_id: int) -> tuple[str, ...]:
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT pa.id
+                FROM provider_account_api_keys AS assignment
+                JOIN provider_accounts AS pa ON pa.id = assignment.provider_account_id
+                WHERE assignment.api_key_id = ? AND pa.enabled = ?
+                ORDER BY pa.id
+                """,
+                (api_key_id, True),
+            )
+            rows = await cursor.fetchall()
+        return tuple(str(row[0]) for row in rows)
+
     @staticmethod
     def _record(row: Any) -> ProviderAccountRecord:
         return ProviderAccountRecord(
@@ -567,7 +603,7 @@ class GenerationAttemptRepository:
         self,
         attempt_id: str,
         *,
-        expected_lease_id: str,
+        expected_lease_id: str | None,
         status: GenerationAttemptStatus,
         provider_job_id: str | None = None,
         error_code: str | None = None,
@@ -579,9 +615,17 @@ class GenerationAttemptRepository:
                 UPDATE generation_attempts
                 SET status = ?, provider_job_id = COALESCE(?, provider_job_id),
                     finished_at = CURRENT_TIMESTAMP, error_code = ?, error_detail = ?
-                WHERE id = ? AND lease_id = ? AND finished_at IS NULL
+                WHERE id = ? AND (lease_id = ? OR (lease_id IS NULL AND ? IS NULL)) AND finished_at IS NULL
                 """,
-                (status.value, provider_job_id, error_code, error_detail, attempt_id, expected_lease_id),
+                (
+                    status.value,
+                    provider_job_id,
+                    error_code,
+                    error_detail,
+                    attempt_id,
+                    expected_lease_id,
+                    expected_lease_id,
+                ),
             )
             await connection.commit()
             return int(cursor.rowcount or 0) == 1
