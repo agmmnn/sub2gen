@@ -1356,46 +1356,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/agent-gateway/connections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Agent Gateway Connections
-         * @description Fetch currently connected agent sessions from configured gateway.
-         */
-        get: operations["get_agent_gateway_connections_api_agent_gateway_connections_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/agent-gateway/mode": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Agent Gateway Mode
-         * @description Probe configured agent-gateway mode via remote_browser_base_url health.
-         */
-        get: operations["get_agent_gateway_mode_api_agent_gateway_mode_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/cache/admin/file/{filename}": {
         parameters: {
             query?: never;
@@ -1781,7 +1741,7 @@ export interface paths {
         put?: never;
         /**
          * Extension Generation Upload
-         * @description Receive large extension generation HTTP response bodies (side-channel for captcha_ws).
+         * @description Receive an extension generation response body over the authenticated HTTP side channel.
          */
         post: operations["extension_generation_upload_api_extension_generation_upload_post"];
         delete?: never;
@@ -3964,6 +3924,8 @@ export interface components {
             refresh_interval_minutes: number;
             /** Session Token */
             session_token: string;
+            /** Worker Id */
+            worker_id?: string | null;
         };
         /** ExtensionWorkerBindRequest */
         ExtensionWorkerBindRequest: {
@@ -8242,68 +8204,6 @@ export interface operations {
         };
     };
     get_storage_status_api_admin_storage_status_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_agent_gateway_connections_api_agent_gateway_connections_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_agent_gateway_mode_api_agent_gateway_mode_get: {
         parameters: {
             query?: never;
             header?: {

@@ -32,6 +32,9 @@ except ModuleNotFoundError:
         def inc(self, *args: Any, **kwargs: Any) -> None:
             return None
 
+        def dec(self, *args: Any, **kwargs: Any) -> None:
+            return None
+
         def set(self, *args: Any, **kwargs: Any) -> None:
             return None
 
@@ -156,6 +159,17 @@ TOKEN_REFRESH_TOTAL = Counter(
     "sub2gen_token_refresh_total",
     "Token refresh attempts grouped by kind and result.",
     ["kind", "result"],
+    registry=MAIN_REGISTRY,
+)
+WORKER_PROTOCOL_SESSIONS_TOTAL = Counter(
+    "sub2gen_worker_protocol_sessions_total",
+    "Canonical worker sessions grouped by negotiated version and result.",
+    ["version", "result"],
+    registry=MAIN_REGISTRY,
+)
+WORKER_PROTOCOL_ACTIVE = Gauge(
+    "sub2gen_worker_protocol_active",
+    "Currently authenticated canonical worker sessions.",
     registry=MAIN_REGISTRY,
 )
 TOKENS_TOTAL = Gauge(

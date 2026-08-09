@@ -21,11 +21,17 @@ from ..workers.extension.routing import ExtensionWorkerRouting
 from ..workers.extension.registry import ExtensionConnectionRegistry
 from ..workers.extension.refresh import ExtensionRefreshJobs
 from ..workers.extension.uploads import GenerationUploadStore
+from .canonical_browser_worker import CanonicalBrowserWorkerService
 
 
 class ExtensionCaptchaService:
     _instance: Optional["ExtensionCaptchaService"] = None
     _lock = asyncio.Lock()
+    _canonical: Optional[CanonicalBrowserWorkerService] = None
+
+    @classmethod
+    def configure_canonical(cls, runtime, repositories) -> None:
+        cls._canonical = CanonicalBrowserWorkerService(runtime, repositories)
 
     def __init__(self, db=None):
         self.db = db
@@ -686,6 +692,16 @@ class ExtensionCaptchaService:
         token_id: Optional[int] = None,
         managed_api_key_id: Optional[int] = None,
     ) -> Dict[str, Any]:
+        if self._canonical is not None and not self.active_connections:
+            return await self._canonical.relay(
+                url=url,
+                method=method,
+                headers=dict(headers or {}),
+                json_data=json_data if isinstance(json_data, dict) else {},
+                timeout=timeout,
+                token_id=token_id,
+                managed_api_key_id=managed_api_key_id,
+            )
         route_key = ""
         if managed_api_key_id is None and token_id is not None:
             if not self.has_generation_worker_for_token(token_id):
@@ -745,6 +761,16 @@ class ExtensionCaptchaService:
         token_id: Optional[int] = None,
         managed_api_key_id: Optional[int] = None,
     ) -> Dict[str, Any]:
+        if self._canonical is not None and not self.active_connections:
+            return await self._canonical.relay(
+                url=url,
+                method=method,
+                headers=dict(headers or {}),
+                json_data=json_data if isinstance(json_data, dict) else {},
+                timeout=timeout,
+                token_id=token_id,
+                managed_api_key_id=managed_api_key_id,
+            )
         route_key = ""
         if managed_api_key_id is None and token_id is not None:
             if not self.has_generation_worker_for_token(token_id):
@@ -816,6 +842,10 @@ class ExtensionCaptchaService:
         rid = str(req_id or "").strip()
         if not rid:
             return None
+        if self._canonical is not None:
+            captured = self._canonical.consume_user_agent(rid)
+            if captured:
+                return captured
         return self.job_broker.consume_user_agent(rid)
 
     async def notify_upstream_verdict(
@@ -860,6 +890,14 @@ class ExtensionCaptchaService:
         token_id: Optional[int] = None,
         managed_api_key_id: Optional[int] = None,
     ) -> tuple[Optional[str], Optional[str]]:
+        if self._canonical is not None and not self.active_connections:
+            return await self._canonical.get_token(
+                project_id=project_id,
+                action=action,
+                timeout=timeout,
+                token_id=token_id,
+                managed_api_key_id=managed_api_key_id,
+            )
         route_key = ""
         queue_wait_timeout = 20
         fallback_to_managed = False
@@ -1039,6 +1077,16 @@ class ExtensionCaptchaService:
         """
         if token_id is None:
             return ExtensionStRefreshResult(failure_code="extension_no_worker_or_empty")
+        if self._canonical is not None and not self.active_connections:
+            try:
+                session_token = await self._canonical.refresh_session(token_id=token_id, timeout=timeout)
+            except Exception as exc:
+                debug_logger.log_warning(f"[Protocol v1 worker] session refresh failed: {exc}")
+                return ExtensionStRefreshResult(failure_code="extension_worker_offline")
+            return ExtensionStRefreshResult(
+                session_token=session_token,
+                failure_code=None if session_token else "extension_no_worker_or_empty",
+            )
         conn = self._select_connection(
             route_key="",
             managed_api_key_id=None,

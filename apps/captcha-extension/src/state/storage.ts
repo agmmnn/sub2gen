@@ -12,12 +12,13 @@ export const WORKER_RECAPTCHA_SETTLE_DEFAULT_MS = 3000
 export const WORKER_RECAPTCHA_SETTLE_MAX_MS = 120000
 
 export const DEFAULT_SETTINGS = {
-  serverUrl: "ws://localhost:8000/captcha_ws",
+  serverUrl: "ws://localhost:8000/worker_ws",
   connectionMode: "endUser" as WorkerMode,
   apiKey: "",
   captchaWorkerAuthKey: "",
   refreshTokenId: "",
   clientLabel: "",
+  pairingCode: "",
   accountAutoImportEnabled: false,
   accountAutoImportIntervalMinutes: 30,
   accountRefreshIntervalMinutes: 120,
@@ -42,6 +43,7 @@ export interface CaptchaExtensionSettings {
   captchaWorkerAuthKey: string
   refreshTokenId: string
   clientLabel: string
+  pairingCode: string
   workerPageUrl: string
   usePersistentWorkerTab: boolean
   autoRecycleWorkerTabOnCaptchaFailure: boolean
@@ -84,6 +86,7 @@ export function normalizeSettings(values: StorageRecord): CaptchaExtensionSettin
     captchaWorkerAuthKey: String(values.captchaWorkerAuthKey ?? "").trim(),
     refreshTokenId: String(values.refreshTokenId ?? "").trim(),
     clientLabel: String(values.clientLabel ?? "").trim(),
+    pairingCode: String(values.pairingCode ?? "").trim(),
     workerPageUrl: normalizeWorkerPageUrl(values.workerPageUrl),
     usePersistentWorkerTab: values.usePersistentWorkerTab === true,
     autoRecycleWorkerTabOnCaptchaFailure: values.autoRecycleWorkerTabOnCaptchaFailure !== false,

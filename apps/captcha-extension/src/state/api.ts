@@ -6,6 +6,7 @@ export interface AccountImportRequest {
   sessionToken: string
   googleCookies: unknown[]
   refreshIntervalMinutes: number
+  workerId?: string
 }
 
 export interface AccountImportResponse {
@@ -22,7 +23,7 @@ export async function importGoogleAccount(
   fetcher: typeof fetch,
   request: AccountImportRequest,
 ): Promise<AccountImportResponse> {
-  const baseUrl = webSocketUrlToHttpBase(request.serverUrl)
+  const baseUrl = webSocketUrlToHttpBase(request.serverUrl, "/worker_ws")
   if (!baseUrl) throw new Error("Invalid WebSocket URL")
   const response = await requestJson<AccountImportResponse>(
     fetcher,
@@ -37,6 +38,7 @@ export async function importGoogleAccount(
         session_token: request.sessionToken,
         google_cookies: JSON.stringify(request.googleCookies),
         refresh_interval_minutes: request.refreshIntervalMinutes,
+        worker_id: request.workerId || null,
       }),
     },
   )

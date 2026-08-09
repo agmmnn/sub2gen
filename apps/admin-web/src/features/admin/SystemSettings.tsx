@@ -1526,7 +1526,7 @@ export function SystemSettings({ active }: { active: boolean }) {
             </Select>
             {m === "extension" ? (
               <p className="text-xs text-muted-foreground mt-1">
-                Uses your Chrome extension connected to <code className="rounded bg-muted px-1">/captcha_ws</code> instead
+                Uses your paired Chrome extension connected to <code className="rounded bg-muted px-1">/worker_ws</code> instead
                 of headed Playwright/Chromium. reCAPTCHA requests use the shared captcha worker pool first. Token-bound
                 refresh workers are reserved for ST refresh only.
               </p>

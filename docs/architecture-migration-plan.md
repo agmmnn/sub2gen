@@ -50,7 +50,7 @@ sub2gen/
 │   ├── admin-web/
 │   ├── captcha-extension/
 │   ├── metadata-extension/
-│   └── agent-gateway/
+│   └── image-worker/
 ├── packages/
 │   ├── api-contract/
 │   └── extension-core/

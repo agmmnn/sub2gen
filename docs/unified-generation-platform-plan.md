@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 8 complete; Phase 9 (provider administration) is next.
+Status: Phases 0 through 10 complete; Phase 11 (styles and a third provider) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -209,7 +209,6 @@ sub2gen/
 │   ├── api/
 │   ├── admin-web/
 │   ├── image-worker/
-│   ├── agent-gateway/
 │   ├── captcha-extension/
 │   └── metadata-extension/
 ├── packages/
@@ -311,8 +310,7 @@ Delivery rules:
 - `worker_session_id` identifies a connection; provider values such as a CAPTCHA
   `solve_session_id` use distinct fields.
 - Registration advertises `supported_versions` and capabilities; the server selects a
-  version. A missing version list means the legacy dialect, and the server never emits
-  v1 messages to a client that did not negotiate them.
+  version. Missing or unsupported versions are rejected.
 
 ## Local worker security
 
@@ -406,11 +404,10 @@ resolved-execution auditing have production coverage.
 
 ### Phase 0: Architecture baseline and decision record
 
-- [x] Inventory current model routing, provider account tables, task lifecycle,
-  artifact storage, extension worker messages, and agent-gateway messages.
-- [x] Freeze both legacy wire dialects as codecs and fixtures: `/captcha_ws` uses
-  `req_id`, partially untyped results, refresh, CAPTCHA, and HTTP relay messages, while
-  `/ws/agents` uses `job_id` and solve-only typed messages.
+- [x] Inventory model routing, provider account tables, task lifecycle, artifact
+  storage, and worker messages.
+- [x] Record the superseded worker message shapes before replacing them with protocol
+  v1; the temporary fixtures and codecs were removed at cutover.
 - [x] Record protocol defects that v1 must resolve: inconsistent generation capability
   flags, missing timeout propagation, ping/pong behavior, gateway response ownership,
   and lifecycle feedback.
@@ -533,17 +530,14 @@ Exit criteria:
 - Existing deployments upgrade without changing existing provider behavior.
 - Repository parity tests pass for SQLite and PostgreSQL.
 
-### Phase 4: Worker protocol v1 and compatibility bridge
+### Phase 4: Worker protocol v1
 
 - [x] Add canonical JSON schemas and generated Python/TypeScript types.
 - [x] Implement version negotiation, registration, capabilities, heartbeat, leases,
   progress, cancellation, results, and structured errors.
 - [x] Add device pairing, challenge/response authentication, revocation, and expiry.
 - [x] Add worker-side policy schemas and fail-closed capability validation.
-- [x] Build a server-side compatibility adapter for current CAPTCHA-extension messages.
-- [x] Build a compatibility adapter for the current agent-gateway message flow.
-- [x] Deploy dual-reading servers before v1-writing clients; treat absent
-  `supported_versions` as legacy and retain the existing endpoints and authentication.
+- [x] Replace prior worker dialects with protocol v1 and reject unversioned clients.
 - [x] Resolve generation capability, timeout, fingerprint/solve-session, gateway
   response ownership, ping/pong, and upstream-feedback semantics before freezing v1.
 - [x] Define job-scoped artifact upload grants with short expiry, worker/job ownership,
@@ -654,17 +648,19 @@ Exit criteria:
 
 ### Phase 10: Existing worker migration
 
-- [ ] Migrate the CAPTCHA extension to generated protocol-v1 types incrementally.
-- [ ] Migrate agent-gateway registration and job lifecycle onto the canonical protocol.
-- [ ] Remove the superseded endpoints and codecs in the same breaking release; this
+- [x] Migrate the CAPTCHA extension to generated protocol-v1 types incrementally.
+- [x] Retire the standalone browser gateway; browser agents now pair directly with the
+  canonical worker endpoint and use the same job lifecycle.
+- [x] Remove the superseded endpoints and codecs in the same breaking release; this
   project does not retain legacy worker compatibility.
-- [ ] Add protocol-version metrics and reject non-v1 clients with a clear diagnostic.
+- [x] Add protocol-version metrics and reject non-v1 clients with a clear diagnostic.
 
 Exit criteria:
 
 - New and migrated clients use one registration, heartbeat, lease, cancellation, and
   result contract.
-- Legacy worker code is absent rather than maintained in parallel.
+- Legacy wire endpoints, codecs, and contract fixtures are absent rather than maintained
+  in parallel.
 - Different worker implementations remain independently deployable.
 
 ### Phase 11: Styles and additional providers
@@ -734,8 +730,8 @@ possible quota or credit consumption.
 1. Existing Flow routes and models remain the baseline compatibility contract.
 2. New tables are additive until their owning migration phase; existing provider tables
    are not destructively rewritten for an identity-only change.
-3. Legacy unversioned worker endpoints remain separate from protocol v1 until
-   compatibility adapters and client rollout are verified.
+3. Worker clients and servers must negotiate protocol v1; unversioned endpoints are
+   intentionally unsupported.
 4. Provider failures never trigger cross-billing fallback by accident.
 5. Every migration phase starts from a clean, pushed `main` and produces an independently
    runnable state.

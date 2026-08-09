@@ -1,7 +1,6 @@
-# In-container headed browser (VNC optional) + agent gateway + Cloudflare Tunnel.
+# In-container headed browser (VNC optional) + protocol-v1 workers + Cloudflare Tunnel.
 #   docker compose -f infra/compose/docker-compose.headed.yml up -d --build
 # In Zero Trust, point the admin and API hostnames to http://sub2gen-headed:8000
-# Optional agent hostname can point to http://agent-gateway:9080 (for /ws/agents).
 
 services:
   sub2gen-headed:
@@ -46,31 +45,9 @@ services:
       redis:
         condition: service_healthy
 
-  agent-gateway:
-    build:
-      context: ../..
-      dockerfile: infra/docker/Dockerfile.agent-gateway
-    container_name: agent-gateway
-    ports:
-      - "9080:9080"
-    environment:
-      - GATEWAY_SUB2GEN_BEARER=${GATEWAY_SUB2GEN_BEARER:-change-me-match-sub2gen}
-      - GATEWAY_AGENT_DEVICE_TOKEN=${GATEWAY_AGENT_DEVICE_TOKEN:-change-me-device-secret}
-      - GATEWAY_AGENT_AUTH_MODE=${GATEWAY_AGENT_AUTH_MODE:-keygen}
-      - KEYGEN_VERIFY_MODE=${KEYGEN_VERIFY_MODE:-introspection}
-      - KEYGEN_API_URL=${KEYGEN_API_URL:-https://api.keygen.sh}
-      - KEYGEN_ACCOUNT=${KEYGEN_ACCOUNT:-}
-      - KEYGEN_PUBLIC_KEY=${KEYGEN_PUBLIC_KEY}
-      - KEYGEN_API_TOKEN=${KEYGEN_API_TOKEN:-}
-      - SOLVE_TIMEOUT_SECONDS=${SOLVE_TIMEOUT_SECONDS:-120}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-    depends_on:
-      - redis
-    restart: unless-stopped
-
   redis:
     image: redis:7-alpine
-    container_name: agent-gateway-redis
+    container_name: sub2gen-headed-redis
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "384mb", "--maxmemory-policy", "noeviction"]
     mem_limit: 512m
     volumes:
@@ -90,7 +67,6 @@ services:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     depends_on:
       - sub2gen-headed
-      - agent-gateway
     restart: unless-stopped
 
 volumes:

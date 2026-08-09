@@ -2074,15 +2074,6 @@ from ..transport.gemini import (
 router.include_router(gemini_router)
 
 
-from ..transport.websocket import (
-    captcha_websocket_endpoint,
-    router as websocket_router,
-)
-
-
-router.include_router(websocket_router)
-
-
 from ..transport.worker_protocol import (
     create_worker_pairing_code,
     pair_worker,

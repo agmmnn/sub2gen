@@ -4,20 +4,12 @@ import { importGoogleAccount } from "./api"
 import { createAccountSyncState, reduceAccountSync } from "./account-sync"
 import { DEFAULT_SETTINGS, normalizeSettings } from "./storage"
 import { reduceWebSocketPhase } from "./websocket"
-import { buildWorkerSocketUrl, inferWorkerMode } from "./worker-mode"
+import { inferWorkerMode } from "./worker-mode"
 
 describe("worker mode state", () => {
-  it("keeps legacy worker settings compatible and isolates credentials", () => {
-    expect(inferWorkerMode({ connectionMode: "worker" })).toBe("refreshWorker")
-    expect(inferWorkerMode({ captchaWorkerAuthKey: "captcha", apiKey: "" })).toBe("captchaWorker")
-    const url = buildWorkerSocketUrl(
-      "ws://localhost:8000/captcha_ws",
-      "refreshWorker",
-      { apiKey: "must-not-leak", refreshTokenId: "42" },
-      "instance-1",
-    )
-    expect(url.searchParams.get("refresh_token_id")).toBe("42")
-    expect(url.searchParams.has("key")).toBe(false)
+  it("isolates capability modes", () => {
+    expect(inferWorkerMode({ connectionMode: "captchaWorker" })).toBe("captchaWorker")
+    expect(inferWorkerMode({ connectionMode: "refreshWorker" })).toBe("refreshWorker")
   })
 })
 
@@ -41,16 +33,16 @@ describe("connection and account state machines", () => {
 
 describe("settings and API boundaries", () => {
   it("defaults to the local sub2gen WebSocket", () => {
-    expect(DEFAULT_SETTINGS.serverUrl).toBe("ws://localhost:8000/captcha_ws")
+    expect(DEFAULT_SETTINGS.serverUrl).toBe("ws://localhost:8000/worker_ws")
   })
 
   it("normalizes public sockets and clamps persisted intervals", () => {
     const settings = normalizeSettings({
-      serverUrl: "ws://api.example.test/captcha_ws",
+      serverUrl: "ws://api.example.test/worker_ws",
       accountAutoImportIntervalMinutes: 1,
       accountRefreshIntervalMinutes: 5000,
     })
-    expect(settings.serverUrl).toBe("wss://api.example.test/captcha_ws")
+    expect(settings.serverUrl).toBe("wss://api.example.test/worker_ws")
     expect(settings.accountAutoImportIntervalMinutes).toBe(5)
     expect(settings.accountRefreshIntervalMinutes).toBe(1440)
   })
@@ -63,11 +55,12 @@ describe("settings and API boundaries", () => {
     )
     await expect(
       importGoogleAccount(fetcher, {
-        serverUrl: "ws://localhost:8000/captcha_ws",
+        serverUrl: "ws://localhost:8000/worker_ws",
         apiKey: "key",
         sessionToken: "session",
         googleCookies: [{ name: "SID", value: "secret" }],
         refreshIntervalMinutes: 120,
+        workerId: "worker-test",
       }),
     ).resolves.toMatchObject({ success: true, token_id: 7 })
     expect(fetcher).toHaveBeenCalledWith(

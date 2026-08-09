@@ -964,7 +964,7 @@ class Config:
 
     @property
     def extension_generation_large_upload_enabled(self) -> bool:
-        """POST large generation responses to sub2gen HTTP instead of embedding in captcha_ws."""
+        """POST large generation responses to sub2gen HTTP instead of embedding in a worker frame."""
         return bool(
             self._config.get("generation_routing", {}).get("extension_generation_large_upload_enabled", True)
         )

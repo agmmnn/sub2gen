@@ -62,8 +62,33 @@ export function encodeEnvelope(envelope: Envelope): string {
   return JSON.stringify(validateEnvelope(envelope))
 }
 
-export function negotiateProtocol(supportedVersions: readonly string[] | undefined): "1.0" | "legacy" {
-  if (supportedVersions === undefined) return "legacy"
+export function makeEnvelope<TPayload extends Record<string, unknown>>(
+  messageType: MessageType,
+  workerId: string,
+  payload: TPayload,
+  options: {
+    correlationId?: string | null
+    jobId?: string | null
+    jobKind?: string | null
+    messageId?: string
+    sentAt?: string
+  } = {},
+): Envelope<TPayload> {
+  return validateEnvelope({
+    protocol_version: PROTOCOL_VERSION,
+    message_id: options.messageId ?? `msg_${crypto.randomUUID().replaceAll("-", "")}`,
+    message_type: messageType,
+    correlation_id: options.correlationId ?? null,
+    job_id: options.jobId ?? null,
+    job_kind: options.jobKind ?? null,
+    worker_id: workerId,
+    sent_at: options.sentAt ?? new Date().toISOString(),
+    payload,
+  }) as Envelope<TPayload>
+}
+
+export function negotiateProtocol(supportedVersions: readonly string[] | undefined): "1.0" {
+  if (supportedVersions === undefined) throw new ProtocolCodecError("worker protocol version is required")
   if (supportedVersions.includes(PROTOCOL_VERSION)) return PROTOCOL_VERSION
   throw new ProtocolCodecError("worker does not support a server protocol version")
 }

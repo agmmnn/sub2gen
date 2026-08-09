@@ -31,13 +31,13 @@ describe("extension storage primitives", () => {
 
 describe("extension transport primitives", () => {
   it("keeps local sockets insecure and upgrades public sockets", () => {
-    expect(normalizeWebSocketUrl("ws://localhost:8000/captcha_ws")).toBe(
-      "ws://localhost:8000/captcha_ws",
+    expect(normalizeWebSocketUrl("ws://localhost:8000/worker_ws")).toBe(
+      "ws://localhost:8000/worker_ws",
     )
-    expect(normalizeWebSocketUrl("ws://api.example.test/captcha_ws")).toBe(
-      "wss://api.example.test/captcha_ws",
+    expect(normalizeWebSocketUrl("ws://api.example.test/worker_ws")).toBe(
+      "wss://api.example.test/worker_ws",
     )
-    expect(webSocketUrlToHttpBase("wss://api.example.test/root/captcha_ws")).toBe(
+    expect(webSocketUrlToHttpBase("wss://api.example.test/root/worker_ws")).toBe(
       "https://api.example.test/root",
     )
   })

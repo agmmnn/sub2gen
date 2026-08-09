@@ -138,7 +138,7 @@ class ApiOnlyHostRouteTests(unittest.TestCase):
         self.assertTrue(_path_allowed_on_api_only_host("/v1beta/models/foo:generateContent"))
         self.assertTrue(_path_allowed_on_api_only_host("/models/foo"))
         self.assertTrue(_path_allowed_on_api_only_host("/api/cache/blob/file.png"))
-        self.assertTrue(_path_allowed_on_api_only_host("/captcha_ws"))
+        self.assertTrue(_path_allowed_on_api_only_host("/worker_ws"))
 
     def test_api_only_host_blocks_admin_ui_and_admin_api_routes(self):
         from sub2gen.main import _path_allowed_on_api_only_host

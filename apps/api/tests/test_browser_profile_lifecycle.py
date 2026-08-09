@@ -599,7 +599,7 @@ class ProductionLogRedactionTests(unittest.TestCase):
                 "nested": {"password": "password-secret"},
             }
         )
-        url = redact_url_for_log("/captcha_ws?key=query-secret&instance_id=safe")
+        url = redact_url_for_log("/worker_ws?key=query-secret&instance_id=safe")
         text = redact_text_for_log("Authorization: Bearer header-secret")
         rendered = repr(headers) + repr(body) + url + text
 
@@ -619,7 +619,7 @@ class ProductionLogRedactionTests(unittest.TestCase):
             (
                 "127.0.0.1:1234",
                 "WebSocket",
-                "/captcha_ws?key=websocket-secret&instance_id=safe",
+                "/worker_ws?key=websocket-secret&instance_id=safe",
                 "1.1",
                 101,
             ),
@@ -640,7 +640,7 @@ class ProductionLogRedactionTests(unittest.TestCase):
             '%s - "WebSocket %s" [accepted]',
             (
                 "127.0.0.1:1234",
-                "/captcha_ws?key=websocket-secret&instance_id=safe",
+                "/worker_ws?key=websocket-secret&instance_id=safe",
             ),
             None,
         )

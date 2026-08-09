@@ -10,7 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sub2gen/extension-core": "workspace:*"
+    "@sub2gen/extension-core": "workspace:*",
+    "@sub2gen/worker-protocol": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.32",

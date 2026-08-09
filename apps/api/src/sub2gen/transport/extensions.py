@@ -16,6 +16,7 @@ from ..core.auth import verify_api_key_flexible
 from ..core.config import config as app_config
 from ..core.logger import debug_logger
 from ..services.browser_captcha_extension import ExtensionCaptchaService
+from ..persistence import ProviderAccountRecord
 
 
 router = APIRouter()
@@ -27,6 +28,7 @@ class ExtensionAccountImportRequest(BaseModel):
     session_token: str = Field(min_length=1, max_length=16_384)
     google_cookies: str = Field(min_length=2, max_length=262_144)
     refresh_interval_minutes: int = Field(default=120, ge=5, le=1_440)
+    worker_id: str | None = Field(default=None, max_length=160)
 
 
 def _require_token_import_scope(auth_ctx: AuthContext) -> None:
@@ -146,12 +148,41 @@ async def extension_import_current_account(
                 )
                 await container.api_key_manager.invalidate(auth_ctx.key_id)
 
+        provider_account = None
+        repositories = getattr(container, "repositories", None)
+        if repositories is not None:
+            provider_account = await repositories.provider_accounts.get_by_legacy(
+                "google-flow", "tokens", str(token_id)
+            )
+            if provider_account is None:
+                provider_account = await repositories.provider_accounts.create(
+                    ProviderAccountRecord(
+                        provider_key="google-flow",
+                        label=email,
+                        external_account_id=email,
+                        legacy_source="tokens",
+                        legacy_id=str(token_id),
+                        metadata={"billing_pool": "google-flow:subscription"},
+                    )
+                )
+            if auth_ctx.key_id is not None:
+                await repositories.provider_accounts.assign_api_key(provider_account.id, auth_ctx.key_id)
+            if body.worker_id:
+                worker = await repositories.workers.get_device_for_auth(body.worker_id)
+                if worker is None or not worker.enabled or worker.revoked_at is not None:
+                    raise HTTPException(status_code=400, detail="The paired worker is unavailable")
+                await repositories.credential_bindings.bind_worker_session(
+                    provider_account_id=provider_account.id,
+                    worker_id=worker.id,
+                )
+
         return {
             "success": True,
             "added": added,
             "updated": updated,
             "email": email,
             "token_id": token_id,
+            "provider_account_id": provider_account.id if provider_account is not None else None,
             "expires": expires,
         }
     except HTTPException:
@@ -167,7 +198,7 @@ async def extension_generation_upload(
     upload_id: str = Query(..., description="Slot id from submit_generation message"),
     upload_secret: str = Query(..., description="One-time secret for this upload"),
 ):
-    """Receive large extension generation HTTP response bodies (side-channel for captcha_ws)."""
+    """Receive an extension generation response body over the authenticated HTTP side channel."""
     body = await request.body()
     if len(body) > int(app_config.extension_generation_upload_max_bytes):
         raise HTTPException(status_code=413, detail="body_too_large")

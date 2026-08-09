@@ -84,6 +84,7 @@ function setMode(mode: WorkerMode): void {
 function applySettings(settings: CaptchaExtensionSettings): void {
   element<HTMLInputElement>("serverUrl").value = settings.serverUrl
   element<HTMLInputElement>("clientLabel").value = settings.clientLabel
+  element<HTMLInputElement>("pairingCode").value = settings.pairingCode
   element<HTMLInputElement>("apiKey").value = settings.apiKey
   element<HTMLInputElement>("captchaWorkerAuthKey").value = settings.captchaWorkerAuthKey
   element<HTMLInputElement>("refreshTokenId").value = settings.refreshTokenId
@@ -139,15 +140,9 @@ function readForm(): Record<string, unknown> {
   const apiKey = element<HTMLInputElement>("apiKey").value.trim()
   const captchaWorkerAuthKey = element<HTMLInputElement>("captchaWorkerAuthKey").value.trim()
   const refreshTokenId = element<HTMLInputElement>("refreshTokenId").value.trim()
+  const pairingCode = element<HTMLInputElement>("pairingCode").value.trim()
 
   if (activeMode === "endUser" && !apiKey) throw new Error("Enter a managed API key for My account mode.")
-  if (activeMode === "captchaWorker" && !captchaWorkerAuthKey) {
-    throw new Error("Enter a CAPTCHA worker key for CAPTCHA-only mode.")
-  }
-  if (activeMode === "refreshWorker" && !refreshTokenId) {
-    throw new Error("Enter the token ID for Refresh-only mode.")
-  }
-
   return {
     serverUrl,
     connectionMode: activeMode,
@@ -155,6 +150,7 @@ function readForm(): Record<string, unknown> {
     apiKey: activeMode === "endUser" ? apiKey : "",
     captchaWorkerAuthKey: activeMode === "captchaWorker" ? captchaWorkerAuthKey : "",
     refreshTokenId: activeMode === "refreshWorker" ? refreshTokenId : "",
+    pairingCode,
     accountAutoImportEnabled:
       activeMode === "endUser" && element<HTMLInputElement>("accountAutoImportEnabled").checked,
     accountAutoImportIntervalMinutes: clampAccountInterval(

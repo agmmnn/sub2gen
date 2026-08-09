@@ -15,12 +15,18 @@ import {
 } from "./state/storage"
 import { reduceWebSocketPhase } from "./state/websocket"
 import {
-    buildRegistrationMessage,
-    buildWorkerSocketUrl,
+    CAPTCHA_CAPABILITY,
+    CanonicalWorkerConnection,
+    REFRESH_CAPABILITY,
+    RELAY_CAPABILITY,
+    pairWorker,
+} from "./state/canonical-worker"
+import {
     inferWorkerMode,
 } from "./state/worker-mode"
 
 let ws = null;
+let canonicalConnection = null;
 let reconnectTimeout = null;
 let heartbeatInterval = null;
 let cachedInstanceId = null;
@@ -404,6 +410,7 @@ async function importCurrentGoogleAccount(reason = "manual") {
             sessionToken: sessionResult.sessionToken,
             googleCookies: cookies,
             refreshIntervalMinutes: settings.accountRefreshIntervalMinutes,
+            workerId: (await loadCanonicalIdentity())?.workerId || undefined,
         });
 
         const message = `${reason}: ${payload.email || "unknown account"} (token ${payload.token_id || "?"})`;
@@ -482,6 +489,10 @@ function closeSocket() {
         }
         ws = null;
     }
+    if (canonicalConnection) {
+        canonicalConnection.close();
+        canonicalConnection = null;
+    }
 }
 
 function normalizeFlowSessionTokenHistory(raw) {
@@ -536,9 +547,6 @@ function stopWorkerSessionRefreshScheduler() {
 
 async function performSessionRefresh({ reason = "server_request", reqId = null } = {}) {
     const refreshReason = String(reason || "server_request");
-    if (runtimeState.connectionMode !== "refreshWorker") {
-        return { success: false, error: "refresh_worker_mode_required", reason: refreshReason };
-    }
     if (runtimeState.sessionRefreshInFlight) {
         return { success: false, error: "session_refresh_busy", reason: refreshReason };
     }
@@ -646,7 +654,7 @@ function resetExtensionToDefaults(done) {
     closeSocket();
     closeWorkerTabIfAny().finally(() => {
         chrome.storage.local.remove(
-            ["extensionInstanceId", "routeKey", FLOW_SESSION_TOKEN_HISTORY_KEY, STORAGE_WORKER_TAB_ID],
+            ["extensionInstanceId", "canonicalWorkerIdentity", "routeKey", FLOW_SESSION_TOKEN_HISTORY_KEY, STORAGE_WORKER_TAB_ID],
             () => {
                 chrome.storage.local.set(
                     {
@@ -656,6 +664,7 @@ function resetExtensionToDefaults(done) {
                         captchaWorkerAuthKey: DEFAULT_SETTINGS.captchaWorkerAuthKey,
                         refreshTokenId: DEFAULT_SETTINGS.refreshTokenId,
                         clientLabel: DEFAULT_SETTINGS.clientLabel,
+                        pairingCode: DEFAULT_SETTINGS.pairingCode,
                         accountAutoImportEnabled: DEFAULT_SETTINGS.accountAutoImportEnabled,
                         accountAutoImportIntervalMinutes: DEFAULT_SETTINGS.accountAutoImportIntervalMinutes,
                         accountRefreshIntervalMinutes: DEFAULT_SETTINGS.accountRefreshIntervalMinutes,
@@ -1258,156 +1267,125 @@ async function handleGenerationRequest(data, commandType) {
     }
 }
 
-async function connectWS() {
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+function capabilitiesForMode(mode) {
+    if (mode === "captchaWorker") return [CAPTCHA_CAPABILITY];
+    if (mode === "refreshWorker") return [REFRESH_CAPABILITY];
+    return [CAPTCHA_CAPABILITY, REFRESH_CAPABILITY, RELAY_CAPABILITY];
+}
 
+function canonicalSocketUrl(rawUrl) {
+    const url = new URL(rawUrl || DEFAULT_SETTINGS.serverUrl);
+    url.pathname = "/worker_ws";
+    url.search = "";
+    return url.toString();
+}
+
+function loadCanonicalIdentity() {
+    return new Promise((resolve) => {
+        chrome.storage.local.get({ canonicalWorkerIdentity: null }, (stored) => {
+            resolve(stored.canonicalWorkerIdentity || null);
+        });
+    });
+}
+
+async function ensureCanonicalIdentity(settings, instanceId, capabilities) {
+    let identity = await loadCanonicalIdentity();
+    if (identity && identity.workerId && identity.publicKey && identity.privateKey && !settings.pairingCode) {
+        return identity;
+    }
+    if (!settings.pairingCode) {
+        throw new Error("pairing_required");
+    }
+    const httpBaseUrl = webSocketUrlToHttpBase(settings.serverUrl || DEFAULT_SETTINGS.serverUrl, "/worker_ws");
+    if (!httpBaseUrl) throw new Error("invalid_server_url");
+    identity = await pairWorker(fetch, {
+        httpBaseUrl,
+        pairingCode: settings.pairingCode,
+        workerId: `worker_${instanceId}`,
+        label: settings.clientLabel || `${settings.connectionMode} Chrome`,
+        capabilities,
+    });
+    await new Promise((resolve, reject) => chrome.storage.local.set(
+        { canonicalWorkerIdentity: identity, pairingCode: "" },
+        () => chrome.runtime.lastError ? reject(new Error(chrome.runtime.lastError.message)) : resolve()
+    ));
+    return identity;
+}
+
+async function executeCanonicalJob(offer) {
+    if (offer.capability === CAPTCHA_CAPABILITY) {
+        const action = String(offer.input.action || "IMAGE_GENERATION");
+        const result = await generateTokenForCaptcha(action);
+        recordCaptchaJobCompletion(offer.lease_id, action, result.success, result.error || "");
+        if (!result.success) throw new Error(result.error || "captcha_failed");
+        return { token: result.token };
+    }
+    if (offer.capability === REFRESH_CAPABILITY) {
+        const result = await performSessionRefresh({ reason: "worker_job" });
+        if (!result.success) throw new Error(result.error || "session_refresh_failed");
+        return { session_token: result.sessionToken };
+    }
+    if (offer.capability === RELAY_CAPABILITY) {
+        const result = await executeGenerationHttpRequest(offer.input);
+        recordGenerationJob("http.relay", offer.input, result);
+        if (!result.success) throw new Error(result.error || "http_relay_failed");
+        return {
+            response_status: result.response_status,
+            response_text: result.response_text,
+            response_json: result.response_json,
+        };
+    }
+    throw new Error(`unsupported_capability:${offer.capability}`);
+}
+
+async function connectWS() {
+    if (canonicalConnection) return;
     const settings = await getSettings();
     const instanceId = await getInstanceId();
     const mode = inferWorkerMode(settings);
-    stopWorkerSessionRefreshScheduler();
+    const capabilities = capabilitiesForMode(mode);
     runtimeState.connectionMode = mode;
     runtimeState.instanceId = instanceId;
-    runtimeState.workerSessionId = "";
-    runtimeState.managedApiKeyId = "";
-    runtimeState.captchaWorkerId = "";
-    runtimeState.bindingSource = "";
     runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "connect" });
     runtimeState.lastRegisterStatus = "pending";
-    runtimeState.lastRegisterError = "";
-    runtimeState.lastError = "";
-    pushEvent("connect_start", `Connecting to ${settings.serverUrl || DEFAULT_SETTINGS.serverUrl}`);
-    const url = buildWorkerSocketUrl(
-        settings.serverUrl || DEFAULT_SETTINGS.serverUrl,
-        mode,
-        settings,
-        instanceId
-    );
-    const socket = new WebSocket(url.toString());
-    ws = socket;
-
-    socket.onopen = () => {
-        if (socket !== ws) return;
-        console.log("[sub2gen] Background connected to WebSocket", url.toString());
-        runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "open" });
-        pushEvent("connect_open", "WebSocket connected");
-        socket.send(JSON.stringify(buildRegistrationMessage(mode, settings.clientLabel, instanceId)));
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
-        heartbeatInterval = setInterval(() => {
-            if (socket === ws && socket.readyState === WebSocket.OPEN) {
-                socket.send(JSON.stringify({ type: "ping" }));
-            }
-        }, 20000);
-    };
-
-    let tokenQueue = Promise.resolve();
-
-    socket.onmessage = async (event) => {
-        if (socket !== ws) return;
-        let data;
-        try {
-            data = JSON.parse(event.data);
-        } catch (e) {
-            return;
-        }
-
-        if (data.type === "register_ack") {
-            const ackStatus = data.status || "ok";
-            const ackError = String(data.error || "").trim();
-            runtimeState.lastRegisterStatus = ackStatus;
-            runtimeState.lastRegisterError = ackError;
-            runtimeState.bindingSource = String(data.binding_source || "");
-            runtimeState.instanceId = String(data.instance_id || runtimeState.instanceId || "");
-            runtimeState.workerSessionId = String(data.worker_session_id || "");
-            runtimeState.managedApiKeyId = String(data.managed_api_key_id || "");
-            runtimeState.captchaWorkerId = String(data.captcha_worker_id || "");
-            runtimeState.refreshTokenId = String(data.refresh_token_id || "");
-            const ac = data.allow_captcha;
-            const ar = data.allow_session_refresh;
-            const ag = data.allow_generation;
-            runtimeState.allowCaptcha = ac !== false && ac !== 0 && ac !== "0";
-            runtimeState.allowSessionRefresh = ar !== false && ar !== 0 && ar !== "0";
-            runtimeState.allowGeneration = ag === true || ag === 1 || ag === "1";
-            runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, {
-                type: "register",
-                ok: ackStatus !== "error",
-            });
-            if (ackStatus === "error") {
-                runtimeState.lastError = ackError || "register_failed";
-                pushEvent("register_ack", `Register failed: ${ackError || "unknown"}`, "error");
-                console.log("[sub2gen] Register ack error:", ackError || "unknown");
-                stopWorkerSessionRefreshScheduler();
-            } else {
-                runtimeState.lastError = "";
-                pushEvent("register_ack", "Register successful");
-                console.log(
-                    "[sub2gen] Registered managed_api_key_id=",
-                    runtimeState.managedApiKeyId || "-",
-                    "captcha_worker_id=",
-                    runtimeState.captchaWorkerId || "-",
-                    "binding_source=",
-                    runtimeState.bindingSource || "-",
-                    "allowCaptcha=",
-                    runtimeState.allowCaptcha,
-                    "allowSessionRefresh=",
-                    runtimeState.allowSessionRefresh
-                );
-                stopWorkerSessionRefreshScheduler();
-            }
-            return;
-        }
-
-        if (data.type === "captcha_upstream_verdict") {
-            tokenQueue = tokenQueue.then(() => handleCaptchaUpstreamVerdict(data)).catch(err => {
-                console.error("[sub2gen] captcha_upstream_verdict error:", err);
-            });
-            return;
-        }
-
-        if (data.type === "get_token") {
-            tokenQueue = tokenQueue.then(() => handleGetToken(data)).catch(err => {
-                console.error("[sub2gen] Queue Error:", err);
-            });
-            return;
-        }
-        if (data.type === "submit_generation") {
-            tokenQueue = tokenQueue.then(() => handleGenerationRequest(data, "submit_generation")).catch(err => {
-                console.error("[sub2gen] submit_generation queue error:", err);
-            });
-            return;
-        }
-        if (data.type === "poll_generation") {
-            tokenQueue = tokenQueue.then(() => handleGenerationRequest(data, "poll_generation")).catch(err => {
-                console.error("[sub2gen] poll_generation queue error:", err);
-            });
-            return;
-        }
-        if (data.type === "refresh_st") {
-            tokenQueue = tokenQueue.then(() => handleRefreshSessionToken(data)).catch(err => {
-                console.error("[sub2gen] refresh_st queue error:", err);
-            });
-        }
-    };
-
-    socket.onclose = () => {
-        if (socket !== ws) return;
-        console.log("[sub2gen] WebSocket Closed. Reconnecting in 2s...");
-        runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "close" });
-        stopWorkerSessionRefreshScheduler();
-        pushEvent("connect_close", "WebSocket closed, reconnect scheduled", "warn");
-        ws = null;
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
-        if (reconnectTimeout) clearTimeout(reconnectTimeout);
-        reconnectTimeout = setTimeout(connectWS, 2000);
-    };
-
-    socket.onerror = (e) => {
-        if (socket !== ws) return;
-        console.log("[sub2gen] WebSocket Error", e);
-        runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "error" });
-        runtimeState.lastError = "websocket_error";
-        pushEvent("connect_error", "WebSocket transport error", "error");
-    };
+    try {
+        const identity = await ensureCanonicalIdentity(settings, instanceId, capabilities);
+        runtimeState.workerSessionId = identity.workerId;
+        canonicalConnection = new CanonicalWorkerConnection(
+            canonicalSocketUrl(settings.serverUrl),
+            identity,
+            instanceId,
+            capabilities,
+            { execute: executeCanonicalJob },
+            (state, detail) => {
+                if (state === "registered") {
+                    runtimeState.wsStatus = "open";
+                    runtimeState.lastRegisterStatus = "ok";
+                    runtimeState.lastRegisterError = "";
+                    pushEvent("worker_registered", "Protocol v1 worker registered");
+                } else if (state === "error") {
+                    runtimeState.wsStatus = "error";
+                    runtimeState.lastError = detail || "worker_protocol_error";
+                } else if (state === "closed") {
+                    runtimeState.wsStatus = "closed";
+                    canonicalConnection = null;
+                    if (reconnectTimeout) clearTimeout(reconnectTimeout);
+                    reconnectTimeout = setTimeout(connectWS, 2000);
+                } else if (state === "connecting") {
+                    runtimeState.wsStatus = "connecting";
+                }
+            },
+        );
+        canonicalConnection.connect();
+    } catch (error) {
+        runtimeState.wsStatus = "error";
+        runtimeState.lastRegisterStatus = "error";
+        runtimeState.lastRegisterError = error && error.message ? error.message : String(error);
+        runtimeState.lastError = runtimeState.lastRegisterError;
+        pushEvent("worker_connect_error", runtimeState.lastRegisterError, "error");
+    }
 }
+
 
 async function handleGetToken(data) {
     if (runtimeState.allowCaptcha === false) {

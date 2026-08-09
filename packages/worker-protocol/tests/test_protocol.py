@@ -12,10 +12,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from sub2gen_worker_protocol.artifacts import ArtifactGrantError, ArtifactGrantStore
 from sub2gen_worker_protocol.codec import ProtocolCodecError, decode_envelope, encode_envelope
-from sub2gen_worker_protocol.compat import (
-    legacy_extension_server_frame_to_v1,
-    legacy_gateway_server_frame_to_v1,
-)
 from sub2gen_worker_protocol.coordinator import WorkerCoordinator, WorkerProtocolError
 from sub2gen_worker_protocol.generated import (
     JobProgressPayload,
@@ -44,9 +40,10 @@ def test_python_codec_round_trips_shared_golden_transcripts() -> None:
 
 
 def test_protocol_negotiation_never_sends_v1_to_unversioned_clients() -> None:
-    assert negotiate_protocol(None).legacy is True
+    with pytest.raises(ProtocolNegotiationError):
+        negotiate_protocol(None)
     negotiated = negotiate_protocol(["0.9", "1.0"])
-    assert negotiated.version == "1.0" and negotiated.legacy is False
+    assert negotiated.version == "1.0"
     with pytest.raises(ProtocolNegotiationError):
         negotiate_protocol(["2.0"])
 
@@ -223,18 +220,3 @@ def test_coordinator_covers_registration_heartbeat_progress_result_and_disconnec
     )
     assert result.output == {"ok": True}
     assert coordinator.disconnect("worker-1") == ()
-
-
-def test_legacy_translators_map_both_dialects_to_canonical_offers() -> None:
-    extension = legacy_extension_server_frame_to_v1(
-        {"type": "get_token", "req_id": "req-1", "action": "IMAGE_GENERATION"},
-        worker_id="extension-1",
-    )
-    gateway = legacy_gateway_server_frame_to_v1(
-        {"type": "solve_job", "job_id": "job-2", "url": "https://example.test"},
-        worker_id="gateway-1",
-    )
-    assert extension.message_type is MessageType.JOB_OFFER
-    assert extension.job_kind == "captcha.solve"
-    assert gateway.message_type is MessageType.JOB_OFFER
-    assert gateway.job_kind == "captcha.solve"

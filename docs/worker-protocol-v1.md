@@ -10,7 +10,7 @@ suites.
 A new worker sends `worker.hello` with `supported_versions`. The server selects `1.0`,
 issues a proof-of-possession challenge, validates `worker.register`, and replies with
 `worker.registered`. A client with no version list is legacy and remains on its frozen
-`/captcha_ws` or `/ws/agents` codec. Unsupported explicit versions are rejected.
+unversioned worker codec. Missing or unsupported versions are rejected.
 
 Registered sessions use `worker_session_id`, while a provider-specific solve or browser
 session stays inside the typed job input. Heartbeats carry the active lease IDs and free

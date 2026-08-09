@@ -27,6 +27,7 @@ from ..bootstrap.container import AppContainer
 from ..bootstrap.dependencies import get_container, get_websocket_container
 from ..core.api_key_manager import AuthContext
 from ..core.auth import verify_api_key_flexible
+from ..core.monitoring import WORKER_PROTOCOL_ACTIVE, WORKER_PROTOCOL_SESSIONS_TOTAL
 
 router = APIRouter()
 
@@ -144,9 +145,7 @@ async def worker_websocket_endpoint(websocket: WebSocket):
         ):
             raise ProtocolCodecError("first frame must be worker.hello")
         worker_id = hello_envelope.worker_id
-        negotiated = negotiate_protocol(hello_payload.supported_versions)
-        if negotiated.legacy:
-            raise ProtocolNegotiationError("legacy workers must use their existing endpoint")
+        negotiate_protocol(hello_payload.supported_versions)
 
         challenge_id, nonce, expires_at = await container.worker_pairing.issue_challenge(worker_id)
         challenge = make_envelope(
@@ -195,6 +194,8 @@ async def worker_websocket_endpoint(websocket: WebSocket):
         )
         await websocket.send_text(encode_envelope(registered))
         container.worker_runtime.connect(worker_id, websocket.send_text)
+        WORKER_PROTOCOL_SESSIONS_TOTAL.labels(version="1.0", result="registered").inc()
+        WORKER_PROTOCOL_ACTIVE.inc()
 
         while True:
             envelope, payload = decode_envelope(await websocket.receive_text())
@@ -206,7 +207,10 @@ async def worker_websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     except (ProtocolCodecError, ProtocolNegotiationError, DeviceAuthError, RuntimeError) as exc:
+        WORKER_PROTOCOL_SESSIONS_TOTAL.labels(version="invalid", result="rejected").inc()
         await websocket.close(code=1008, reason=str(exc)[:120])
     finally:
         if worker_id:
+            if container.worker_runtime.is_connected(worker_id):
+                WORKER_PROTOCOL_ACTIVE.dec()
             container.worker_runtime.disconnect(worker_id)

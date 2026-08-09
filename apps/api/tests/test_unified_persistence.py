@@ -62,6 +62,11 @@ async def test_provider_accounts_credentials_workers_and_jobs_survive_reopen(tmp
             secret_ref="browser-session://profile/default",
         )
     )
+    await repositories.credential_bindings.bind_worker_session(
+        provider_account_id=account.id,
+        worker_id=worker.id,
+        binding_key="canonical-browser",
+    )
     job = await repositories.generation_jobs.create(
         GenerationJobRecord(
             request_id="request-1",
@@ -140,6 +145,7 @@ async def test_provider_accounts_credentials_workers_and_jobs_survive_reopen(tmp
     assert restored_attempts[0].provider_job_id == "upstream-job"
     assert restored_artifacts[0].filename == "result.png"
     assert binding_views[0].id == browser_binding.id
+    assert {view.binding_key for view in binding_views} == {"browser", "canonical-browser"}
     assert not hasattr(binding_views[0], "secret_ref")
     assert worker_views[0].id == worker.id
     assert not hasattr(worker_views[0], "auth_key_hash")

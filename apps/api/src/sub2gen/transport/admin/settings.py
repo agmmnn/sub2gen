@@ -10,7 +10,6 @@ PREFIXES = (
     "/api/plugin",
     "/api/call-logic",
     "/api/admin/debug",
-    "/api/agent-gateway",
 )
 
 

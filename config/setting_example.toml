@@ -102,8 +102,8 @@ ezcaptcha_api_key = ""
 ezcaptcha_base_url = "https://api.ez-captcha.com"
 capsolver_api_key = ""
 capsolver_base_url = "https://api.capsolver.com"
-# Docker 自建 Agent Gateway: 合并 infra/compose/docker-compose.yml 与 infra/compose/docker-compose.agent.yml
-# 见 docs/agent-gateway.md。容器网内填 http://agent-gateway:9080，key 与 GATEWAY_SUB2GEN_BEARER 一致
-remote_browser_base_url = ""  # 远程有头打码 / Agent Gateway 基地址
-remote_browser_api_key = ""   # 远程打码或 Gateway 的 Bearer（与 GATEWAY_SUB2GEN_BEARER 相同）
+# Optional remote browser service. Protocol-v1 workers should normally connect
+# directly to /worker_ws instead.
+remote_browser_base_url = ""  # Remote headed-browser service base URL
+remote_browser_api_key = ""   # Remote service Bearer token
 remote_browser_timeout = 60   # 远程有头打码请求超时(秒)

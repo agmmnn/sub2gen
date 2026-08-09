@@ -27,13 +27,19 @@
           <section class="settings-card" aria-labelledby="connectionTitle">
             <div class="card-header">
               <h2 class="card-title" id="connectionTitle">Connection</h2>
-              <p class="card-description">Choose one role for this Chrome profile, then enter its matching credential.</p>
+              <p class="card-description">Pair this Chrome profile once, then choose which local capabilities it provides.</p>
             </div>
             <div class="card-content">
               <label class="field">
                 <span class="field-label">sub2gen WebSocket URL</span>
-                <input class="input" id="serverUrl" type="url" autocomplete="url" spellcheck="false" placeholder="ws://localhost:8000/captcha_ws" />
+                <input class="input" id="serverUrl" type="url" autocomplete="url" spellcheck="false" placeholder="ws://localhost:8000/worker_ws" />
                 <span class="field-hint">Use <strong>ws://</strong> locally and <strong>wss://</strong> for a public server.</span>
+              </label>
+
+              <label class="field">
+                <span class="field-label">Pairing code</span>
+                <input class="input" id="pairingCode" type="password" autocomplete="one-time-code" placeholder="Create a code in Platform → Workers" />
+                <span class="field-hint">Required once. The extension creates its own device key and clears this code after pairing.</span>
               </label>
 
               <div class="field">
@@ -62,17 +68,17 @@
 
               <div class="mode-panel" id="panelCaptcha" role="tabpanel" hidden>
                 <label class="field">
-                  <span class="field-label">CAPTCHA worker key</span>
-                  <input class="input" id="captchaWorkerAuthKey" type="password" autocomplete="off" placeholder="Paste worker key" />
-                  <span class="field-hint">Create this key under API key manager → CAPTCHA worker keys.</span>
+                    <span class="field-label">Profile label</span>
+                  <input class="input" id="captchaWorkerAuthKey" type="text" autocomplete="off" placeholder="CAPTCHA worker" />
+                  <span class="field-hint">Pairing controls access; no separate worker key is used.</span>
                 </label>
               </div>
 
               <div class="mode-panel" id="panelRefresh" role="tabpanel" hidden>
                 <label class="field">
-                  <span class="field-label">Token ID</span>
-                  <input class="input" id="refreshTokenId" type="number" min="1" inputmode="numeric" placeholder="2" />
-                  <span class="field-hint">The token ID shown in sub2gen’s token list. This mode cannot solve CAPTCHA.</span>
+                  <span class="field-label">Profile label</span>
+                  <input class="input" id="refreshTokenId" type="text" autocomplete="off" placeholder="Refresh worker" />
+                  <span class="field-hint">Bind this worker to an account from the control plane after pairing.</span>
                 </label>
               </div>
             </div>

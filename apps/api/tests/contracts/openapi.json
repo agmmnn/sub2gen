@@ -1455,6 +1455,18 @@
             "minLength": 1,
             "title": "Session Token",
             "type": "string"
+          },
+          "worker_id": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Worker Id"
           }
         },
         "required": [
@@ -9428,82 +9440,6 @@
         "summary": "Get Storage Status"
       }
     },
-    "/api/agent-gateway/connections": {
-      "get": {
-        "description": "Fetch currently connected agent sessions from configured gateway.",
-        "operationId": "get_agent_gateway_connections_api_agent_gateway_connections_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "title": "Authorization",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Agent Gateway Connections"
-      }
-    },
-    "/api/agent-gateway/mode": {
-      "get": {
-        "description": "Probe configured agent-gateway mode via remote_browser_base_url health.",
-        "operationId": "get_agent_gateway_mode_api_agent_gateway_mode_get",
-        "parameters": [
-          {
-            "in": "header",
-            "name": "authorization",
-            "required": false,
-            "schema": {
-              "title": "Authorization",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Agent Gateway Mode"
-      }
-    },
     "/api/cache/admin/file/{filename}": {
       "get": {
         "description": "Stream a cache file for the admin UI (Bearer auth). Plain <img src> cannot use managed-key /api/cache/blob/… URLs.",
@@ -10660,7 +10596,7 @@
     },
     "/api/extension/generation-upload": {
       "post": {
-        "description": "Receive large extension generation HTTP response bodies (side-channel for captcha_ws).",
+        "description": "Receive an extension generation response body over the authenticated HTTP side channel.",
         "operationId": "extension_generation_upload_api_extension_generation_upload_post",
         "parameters": [
           {

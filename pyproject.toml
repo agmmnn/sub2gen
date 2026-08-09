@@ -43,23 +43,13 @@ dev = [
   "ruff>=0.12,<1",
   "sub2gen-provider-chatgpt",
 ]
-agent-gateway = [
-  "fastapi==0.119.0",
-  "httpx==0.28.1",
-  "pyjwt[crypto]==2.10.1",
-  "pydantic==2.10.4",
-  "uvicorn[standard]==0.32.1",
-  "websockets==14.1",
-  "sub2gen-worker-protocol",
-]
-
 [build-system]
 requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["apps/api/src", "apps/agent-gateway/src"]
-include = ["sub2gen*", "sub2gen_gateway*"]
+where = ["apps/api/src"]
+include = ["sub2gen*"]
 
 [tool.setuptools.package-data]
 sub2gen = ["migrations/**/*.sql", "services/*.csv"]

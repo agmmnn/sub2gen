@@ -10,9 +10,9 @@ describe("worker protocol v1", () => {
     }
   })
 
-  test("negotiates v1 and keeps absent version lists on legacy", () => {
+  test("requires an explicit supported v1 version", () => {
     expect(negotiateProtocol(["1.0"])).toBe("1.0")
-    expect(negotiateProtocol(undefined)).toBe("legacy")
+    expect(() => negotiateProtocol(undefined)).toThrow(ProtocolCodecError)
     expect(() => negotiateProtocol(["2.0"])).toThrow(ProtocolCodecError)
   })
 

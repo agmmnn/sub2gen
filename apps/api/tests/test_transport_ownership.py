@@ -11,7 +11,6 @@ from sub2gen.transport import (
     openai,
     projects,
     runway,
-    websocket,
     worker_protocol,
 )
 from sub2gen.transport.admin import api_keys, auth as admin_auth, cache as admin_cache, logs
@@ -32,7 +31,6 @@ PUBLIC_ROUTERS = (
     openai.router,
     projects.router,
     runway.router,
-    websocket.router,
     worker_protocol.router,
 )
 

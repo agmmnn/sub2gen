@@ -15,7 +15,7 @@ export function normalizeWebSocketUrl(raw: unknown): string {
   }
 }
 
-export function webSocketUrlToHttpBase(raw: unknown, socketPath = "/captcha_ws"): string {
+export function webSocketUrlToHttpBase(raw: unknown, socketPath = "/worker_ws"): string {
   const value = String(raw ?? "").trim()
   if (!value) return ""
   try {

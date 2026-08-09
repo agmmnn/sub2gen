@@ -9,7 +9,6 @@ export const MANAGE_TABS = [
   "runway",
   "geminigen",
   "cache",
-  "agent",
 ] as const
 
 export type ManageTab = (typeof MANAGE_TABS)[number]

@@ -32,6 +32,7 @@ from ..services.unified_images import UnifiedImageService
 from ..services.worker_protocol import PersistentDevicePairing
 from ..services.worker_artifacts import WorkerArtifactInbox
 from ..services.worker_runtime import WorkerRuntime
+from ..services.browser_captcha_extension import ExtensionCaptchaService
 from .tasks import TaskRegistry
 
 
@@ -117,7 +118,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
     model_registry = ModelRegistry.for_platform(MODEL_CONFIG)
     generation_router = GenerationRouter(model_registry)
     routing_signals = RuntimeSignalRegistry()
-    return AppContainer(
+    container = AppContainer(
         db=db,
         repositories=repositories,
         proxy_manager=proxy_manager,
@@ -155,3 +156,5 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         ),
         worker_runtime=worker_runtime,
     )
+    ExtensionCaptchaService.configure_canonical(worker_runtime, repositories)
+    return container

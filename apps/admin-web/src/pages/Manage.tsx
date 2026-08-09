@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useCallback } from "react"
+import { useMemo, useEffect, useCallback } from "react"
 import { Link, useSearchParams } from "react-router-dom"
 import { Layout } from "../components/Layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
@@ -7,21 +7,16 @@ import { ControlPlane } from "../features/admin/ControlPlane"
 import { SystemSettings } from "../features/admin/SystemSettings"
 import { RequestLogs } from "../features/admin/RequestLogs"
 import { CacheManagement } from "../features/admin/CacheManagement"
-import { AgentGateway } from "../features/admin/AgentGateway"
 import { AIGateway } from "../features/admin/AIGateway"
 import { ApiKeyManagement } from "../features/admin/ApiKeyManagement"
 import { AdobeSettings } from "../features/admin/AdobeSettings"
 import { RunwaySettings } from "../features/admin/RunwaySettings"
 import { GeminiGenSettings } from "../features/admin/GeminiGenSettings"
 import { cn } from "@/lib/utils"
-import { useAuth } from "../contexts/AuthContext"
-import { adminJson } from "../lib/adminApi"
 import { MANAGE_TABS, parseManageTab, type ManageTab } from "../features/admin/manageTabs"
 
 export default function Manage() {
-  const { token } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [showAgentTab, setShowAgentTab] = useState(false)
   const tab = useMemo(
     () => parseManageTab(searchParams.get("tab")),
     [searchParams]
@@ -36,32 +31,6 @@ export default function Manage() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams])
-
-  const refreshAgentVisibility = useCallback(async () => {
-    const resp = await adminJson<Record<string, unknown>>("/api/captcha/config", token)
-    if (!resp.ok || !resp.data) return
-    const captchaMethod = String(resp.data.captcha_method || "")
-    const browserFallback = resp.data.browser_fallback_to_remote_browser !== false
-    const visible = captchaMethod === "remote_browser" || (captchaMethod === "browser" && browserFallback)
-    setShowAgentTab(visible)
-  }, [token])
-
-  useEffect(() => {
-    const initial = window.setTimeout(() => void refreshAgentVisibility(), 0)
-    const timer = window.setInterval(() => {
-      void refreshAgentVisibility()
-    }, 5000)
-    return () => {
-      window.clearTimeout(initial)
-      window.clearInterval(timer)
-    }
-  }, [refreshAgentVisibility])
-
-  useEffect(() => {
-    if (tab === "agent" && !showAgentTab) {
-      setTab("settings")
-    }
-  }, [setTab, tab, showAgentTab])
 
   return (
     <Layout>
@@ -148,16 +117,6 @@ export default function Manage() {
             >
               Cache management
             </TabsTrigger>
-            {showAgentTab ? (
-              <TabsTrigger
-                value="agent"
-                className={cn(
-                  "rounded-none border-b-2 border-transparent px-1 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
-                )}
-              >
-                Agent gateway
-              </TabsTrigger>
-            ) : null}
           </TabsList>
           <Link
             to="/test"
@@ -220,13 +179,6 @@ export default function Manage() {
             <CacheManagement active={true} />
           </div>
         </TabsContent>
-        {showAgentTab ? (
-          <TabsContent value="agent" className="mt-0 outline-hidden focus-visible:ring-0">
-            <div className="animate-in fade-in duration-300">
-              <AgentGateway />
-            </div>
-          </TabsContent>
-        ) : null}
       </Tabs>
     </Layout>
   )

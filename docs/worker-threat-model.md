@@ -4,9 +4,8 @@
 - Last reviewed: 2026-08-09
 
 This document defines the minimum security boundary for sub2gen's browser extension,
-local image worker, agent gateway, and future provider workers. It covers the planned
-canonical worker protocol as well as compatibility adapters for the current
-`/captcha_ws` and `/ws/agents` dialects.
+local image worker, and future provider workers. All execution workers use the canonical
+protocol-v1 `/worker_ws` endpoint.
 
 ## Scope and security objectives
 
@@ -43,18 +42,6 @@ The objectives are:
 This model does not claim to protect a browser profile from malware or an administrator
 already controlling the worker host. OS account separation, disk encryption, endpoint
 security, browser updates, and physical access controls remain operator responsibilities.
-
-### Legacy security status
-
-This is a target baseline, not a claim that either legacy dialect already satisfies it.
-Until pairing and proof-of-possession ship, legacy worker endpoints should be limited to
-loopback or a trusted private network, protected by their existing scoped credentials,
-and monitored for unexpected clients. A compatibility codec may translate only fixed,
-reviewed operations. In particular, legacy HTTP-relay messages must be restricted to
-provider-owned destinations and typed request templates; an arbitrary URL/header/body
-relay has no protocol-v1 equivalent and must be rejected rather than preserved. Static
-legacy keys should be rotated after migration and must not be promoted into device
-identity credentials.
 
 ## Assets
 

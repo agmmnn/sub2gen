@@ -20,6 +20,7 @@ from .domain import (
     ProviderAccountRecord,
     WorkerDeviceRecord,
     WorkerDeviceView,
+    new_public_id,
 )
 
 
@@ -80,6 +81,20 @@ class ProviderAccountRepository:
                 FROM provider_accounts WHERE id = ?
                 """,
                 (account_id,),
+            )
+            row = await cursor.fetchone()
+        return self._record(row) if row else None
+
+    async def get_by_legacy(self, provider_key: str, legacy_source: str, legacy_id: str) -> ProviderAccountRecord | None:
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT id, provider_key, label, external_account_id, enabled,
+                       metadata_json, legacy_source, legacy_id, created_at, updated_at
+                FROM provider_accounts
+                WHERE provider_key = ? AND legacy_source = ? AND legacy_id = ?
+                """,
+                (provider_key, legacy_source, legacy_id),
             )
             row = await cursor.fetchone()
         return self._record(row) if row else None
@@ -255,6 +270,42 @@ class CredentialBindingRepository:
             )
             await connection.commit()
             return int(cursor.rowcount or 0) == 1
+
+    async def bind_worker_session(
+        self,
+        *,
+        provider_account_id: str,
+        worker_id: str,
+        binding_key: str = "chrome",
+    ) -> None:
+        binding_id = new_public_id("cb")
+        async with self.database._connect(write=True) as connection:
+            await connection.execute(
+                """
+                INSERT INTO credential_bindings (
+                    id, provider_account_id, worker_id, binding_key, credential_type,
+                    storage_kind, secret_ref, enabled
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(provider_account_id, binding_key) DO UPDATE SET
+                    worker_id = excluded.worker_id,
+                    credential_type = excluded.credential_type,
+                    storage_kind = excluded.storage_kind,
+                    secret_ref = excluded.secret_ref,
+                    enabled = excluded.enabled,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (
+                    binding_id,
+                    provider_account_id,
+                    worker_id,
+                    binding_key,
+                    "browser_session",
+                    CredentialStorageKind.BROWSER_SESSION.value,
+                    f"worker://{worker_id}",
+                    True,
+                ),
+            )
+            await connection.commit()
 
     @staticmethod
     def _record(row: Any) -> CredentialBindingRecord:
