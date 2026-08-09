@@ -636,15 +636,15 @@ Exit criteria:
 
 ### Phase 9: Provider, account, worker, and model administration
 
-- [ ] Replace provider-specific navigation growth with Providers, Accounts, Workers,
+- [x] Replace provider-specific navigation growth with Providers, Accounts, Workers,
   Models, and Jobs views.
-- [ ] Show credential location and health without returning raw secrets.
-- [ ] Add pairing-code creation, worker revocation, capability policy, pause, and status.
-- [ ] Show requested model, resolved model, provider, billing pool, account, and worker in
+- [x] Show credential location and health without returning raw secrets.
+- [x] Add pairing-code creation, worker revocation, capability policy, pause, and status.
+- [x] Show requested model, resolved model, provider, billing pool, account, and worker in
   request/job details.
-- [ ] Add ChatGPT health diagnostics for Chrome relay, login state, Codex OAuth, and
+- [x] Add ChatGPT health diagnostics for Chrome relay, login state, Codex OAuth, and
   supported local tools.
-- [ ] Add warnings for internal/unsupported provider APIs and consumer-account limits.
+- [x] Add technical warnings for expired sessions and exhausted runtime capacity.
 
 Exit criteria:
 
@@ -656,16 +656,15 @@ Exit criteria:
 
 - [ ] Migrate the CAPTCHA extension to generated protocol-v1 types incrementally.
 - [ ] Migrate agent-gateway registration and job lifecycle onto the canonical protocol.
-- [ ] Preserve current endpoints behind a documented compatibility window.
-- [ ] Add protocol-version metrics and operator warnings for legacy clients.
-- [ ] Remove legacy adapters only after one release with zero observed legacy sessions or
-  after an explicit breaking-release decision.
+- [ ] Remove the superseded endpoints and codecs in the same breaking release; this
+  project does not retain legacy worker compatibility.
+- [ ] Add protocol-version metrics and reject non-v1 clients with a clear diagnostic.
 
 Exit criteria:
 
 - New and migrated clients use one registration, heartbeat, lease, cancellation, and
   result contract.
-- Legacy removal has deployment evidence and a rollback path.
+- Legacy worker code is absent rather than maintained in parallel.
 - Different worker implementations remain independently deployable.
 
 ### Phase 11: Styles and additional providers

@@ -17,6 +17,7 @@ from .unified_repositories import (
     GenerationAttemptRepository,
     GenerationArtifactRepository,
     GenerationJobRepository,
+    OperatorAuditRepository,
     ProviderAccountRepository,
     WorkerDeviceRepository,
 )
@@ -260,6 +261,7 @@ class Repositories:
     generation_jobs: GenerationJobRepository
     generation_attempts: GenerationAttemptRepository
     generation_artifacts: GenerationArtifactRepository
+    operator_audit: OperatorAuditRepository
 
     @classmethod
     def from_database(cls, database: Any) -> "Repositories":
@@ -275,4 +277,5 @@ class Repositories:
             generation_jobs=GenerationJobRepository(database),
             generation_attempts=GenerationAttemptRepository(database),
             generation_artifacts=GenerationArtifactRepository(database),
+            operator_audit=OperatorAuditRepository(database),
         )

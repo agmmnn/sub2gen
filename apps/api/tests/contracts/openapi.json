@@ -1,6 +1,19 @@
 {
   "components": {
     "schemas": {
+      "AccountMutation": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AccountMutation",
+        "type": "object"
+      },
       "AddTokenRequest": {
         "properties": {
           "auto_refresh_enabled": {
@@ -1298,6 +1311,19 @@
           }
         },
         "title": "CloneImageItemRequest",
+        "type": "object"
+      },
+      "ConfirmMutation": {
+        "properties": {
+          "confirm": {
+            "title": "Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm"
+        ],
+        "title": "ConfirmMutation",
         "type": "object"
       },
       "CreateManagedApiKeyRequest": {
@@ -3226,19 +3252,6 @@
         "title": "PairWorkerRequest",
         "type": "object"
       },
-      "PairingCodeRequest": {
-        "properties": {
-          "ttl_seconds": {
-            "default": 300,
-            "maximum": 1800.0,
-            "minimum": 30.0,
-            "title": "Ttl Seconds",
-            "type": "integer"
-          }
-        },
-        "title": "PairingCodeRequest",
-        "type": "object"
-      },
       "ProxyConfigRequest": {
         "properties": {
           "media_proxy_enabled": {
@@ -4817,6 +4830,63 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkerMutation": {
+        "properties": {
+          "capabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capabilities"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "title": "WorkerMutation",
+        "type": "object"
+      },
+      "sub2gen__transport__admin__control_plane__PairingCodeRequest": {
+        "properties": {
+          "ttl_seconds": {
+            "default": 300,
+            "maximum": 1800.0,
+            "minimum": 60.0,
+            "title": "Ttl Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "PairingCodeRequest",
+        "type": "object"
+      },
+      "sub2gen__transport__worker_protocol__PairingCodeRequest": {
+        "properties": {
+          "ttl_seconds": {
+            "default": 300,
+            "maximum": 1800.0,
+            "minimum": 30.0,
+            "title": "Ttl Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "PairingCodeRequest",
         "type": "object"
       }
     },
@@ -6841,6 +6911,350 @@
           }
         },
         "summary": "Update Admin Config"
+      }
+    },
+    "/api/admin/control-plane/accounts/{account_id}": {
+      "patch": {
+        "operationId": "update_account_api_admin_control_plane_accounts__account_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountMutation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Update Account Api Admin Control Plane Accounts  Account Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Account",
+        "tags": [
+          "admin-control-plane"
+        ]
+      }
+    },
+    "/api/admin/control-plane/jobs/{job_id}": {
+      "get": {
+        "operationId": "get_job_api_admin_control_plane_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Job Api Admin Control Plane Jobs  Job Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Job",
+        "tags": [
+          "admin-control-plane"
+        ]
+      }
+    },
+    "/api/admin/control-plane/overview": {
+      "get": {
+        "operationId": "overview_api_admin_control_plane_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Overview Api Admin Control Plane Overview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "admin-control-plane"
+        ]
+      }
+    },
+    "/api/admin/control-plane/pairing-codes": {
+      "post": {
+        "operationId": "create_pairing_code_api_admin_control_plane_pairing_codes_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/sub2gen__transport__admin__control_plane__PairingCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Create Pairing Code Api Admin Control Plane Pairing Codes Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Pairing Code",
+        "tags": [
+          "admin-control-plane"
+        ]
+      }
+    },
+    "/api/admin/control-plane/workers/{worker_id}": {
+      "delete": {
+        "operationId": "revoke_worker_api_admin_control_plane_workers__worker_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmMutation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Revoke Worker Api Admin Control Plane Workers  Worker Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke Worker",
+        "tags": [
+          "admin-control-plane"
+        ]
+      },
+      "patch": {
+        "operationId": "update_worker_api_admin_control_plane_workers__worker_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "title": "Authorization",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkerMutation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Update Worker Api Admin Control Plane Workers  Worker Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Worker",
+        "tags": [
+          "admin-control-plane"
+        ]
       }
     },
     "/api/admin/database/download": {
@@ -12886,7 +13300,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PairingCodeRequest"
+                "$ref": "#/components/schemas/sub2gen__transport__worker_protocol__PairingCodeRequest"
               }
             }
           },

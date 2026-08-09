@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom"
 import { Layout } from "../components/Layout"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs"
 import { TokenManagement } from "../features/admin/TokenManagement"
+import { ControlPlane } from "../features/admin/ControlPlane"
 import { SystemSettings } from "../features/admin/SystemSettings"
 import { RequestLogs } from "../features/admin/RequestLogs"
 import { CacheManagement } from "../features/admin/CacheManagement"
@@ -26,7 +27,7 @@ export default function Manage() {
     [searchParams]
   )
   const setTab = useCallback((v: string) => {
-    if (v === "tokens") setSearchParams({})
+    if (v === "platform") setSearchParams({})
     else setSearchParams({ tab: v })
   }, [setSearchParams])
   useEffect(() => {
@@ -68,12 +69,20 @@ export default function Manage() {
         <div className="border-b border-border mb-6 flex flex-wrap items-end gap-6">
           <TabsList className="flex h-auto w-full min-w-0 flex-1 flex-wrap justify-start rounded-none bg-transparent p-0 gap-x-6 gap-y-0">
             <TabsTrigger
+              value="platform"
+              className={cn(
+                "rounded-none border-b-2 border-transparent px-1 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
+              )}
+            >
+              Platform
+            </TabsTrigger>
+            <TabsTrigger
               value="tokens"
               className={cn(
                 "rounded-none border-b-2 border-transparent px-1 py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none"
               )}
             >
-              Token management
+              Flow accounts
             </TabsTrigger>
             <TabsTrigger
               value="apikeys"
@@ -159,6 +168,12 @@ export default function Manage() {
             Test page
           </Link>
         </div>
+
+        <TabsContent value="platform" className="mt-0 outline-hidden focus-visible:ring-0">
+          <div className="animate-in fade-in duration-300">
+            <ControlPlane />
+          </div>
+        </TabsContent>
 
         <TabsContent value="tokens" className="mt-0 outline-hidden focus-visible:ring-0">
           <div className="animate-in fade-in duration-300">

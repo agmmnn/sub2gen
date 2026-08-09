@@ -1,4 +1,5 @@
 export const MANAGE_TABS = [
+  "platform",
   "tokens",
   "apikeys",
   "settings",
@@ -15,5 +16,5 @@ export type ManageTab = (typeof MANAGE_TABS)[number]
 
 export function parseManageTab(raw: string | null): ManageTab {
   if (raw && (MANAGE_TABS as readonly string[]).includes(raw)) return raw as ManageTab
-  return "tokens"
+  return "platform"
 }

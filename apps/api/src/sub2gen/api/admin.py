@@ -5707,4 +5707,4 @@ router.include_router(
 # transport router. Handler dependencies move to AppContainer in Phase 7.
 from ..transport.admin import build_admin_router
 
-router = build_admin_router(router)
+router = build_admin_router(router, admin_dependency=verify_admin_token)

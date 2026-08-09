@@ -618,6 +618,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/control-plane/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Account */
+        patch: operations["update_account_api_admin_control_plane_accounts__account_id__patch"];
+        trace?: never;
+    };
+    "/api/admin/control-plane/jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Job */
+        get: operations["get_job_api_admin_control_plane_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/control-plane/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_api_admin_control_plane_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/control-plane/pairing-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Pairing Code */
+        post: operations["create_pairing_code_api_admin_control_plane_pairing_codes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/control-plane/workers/{worker_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Worker */
+        delete: operations["revoke_worker_api_admin_control_plane_workers__worker_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Worker */
+        patch: operations["update_worker_api_admin_control_plane_workers__worker_id__patch"];
+        trace?: never;
+    };
     "/api/admin/database/download": {
         parameters: {
             query?: never;
@@ -3163,6 +3249,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountMutation */
+        AccountMutation: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** AddTokenRequest */
         AddTokenRequest: {
             /**
@@ -3801,6 +3892,11 @@ export interface components {
             title?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** ConfirmMutation */
+        ConfirmMutation: {
+            /** Confirm */
+            confirm: string;
         };
         /** CreateManagedApiKeyRequest */
         CreateManagedApiKeyRequest: {
@@ -4480,14 +4576,6 @@ export interface components {
             /** Worker Id */
             worker_id: string;
         };
-        /** PairingCodeRequest */
-        PairingCodeRequest: {
-            /**
-             * Ttl Seconds
-             * @default 300
-             */
-            ttl_seconds: number;
-        };
         /** ProxyConfigRequest */
         ProxyConfigRequest: {
             /** Media Proxy Enabled */
@@ -4949,6 +5037,29 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WorkerMutation */
+        WorkerMutation: {
+            /** Capabilities */
+            capabilities?: string[] | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** PairingCodeRequest */
+        sub2gen__transport__admin__control_plane__PairingCodeRequest: {
+            /**
+             * Ttl Seconds
+             * @default 300
+             */
+            ttl_seconds: number;
+        };
+        /** PairingCodeRequest */
+        sub2gen__transport__worker_protocol__PairingCodeRequest: {
+            /**
+             * Ttl Seconds
+             * @default 300
+             */
+            ttl_seconds: number;
         };
     };
     responses: never;
@@ -6350,6 +6461,218 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_account_api_admin_control_plane_accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountMutation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_job_api_admin_control_plane_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_api_admin_control_plane_overview_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_pairing_code_api_admin_control_plane_pairing_codes_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["sub2gen__transport__admin__control_plane__PairingCodeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_worker_api_admin_control_plane_workers__worker_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmMutation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_worker_api_admin_control_plane_workers__worker_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string;
+            };
+            path: {
+                worker_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkerMutation"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
                 };
             };
             /** @description Validation Error */
@@ -10526,7 +10849,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PairingCodeRequest"];
+                "application/json": components["schemas"]["sub2gen__transport__worker_protocol__PairingCodeRequest"];
             };
         };
         responses: {

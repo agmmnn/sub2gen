@@ -483,6 +483,21 @@ class GenerationJobRepository:
             rows = await cursor.fetchall()
         return tuple(self._record(row) for row in rows)
 
+    async def list_recent(self, *, limit: int = 100) -> tuple[GenerationJobRecord, ...]:
+        bounded = max(1, min(limit, 500))
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT id, idempotency_key, api_key_id, request_id, job_kind, requested_model,
+                       status, provider_account_id, worker_id, resolved_execution_json,
+                       deadline_at, terminal_at, error_code, error_detail, created_at, updated_at
+                FROM generation_jobs ORDER BY created_at DESC, id DESC LIMIT ?
+                """,
+                (bounded,),
+            )
+            rows = await cursor.fetchall()
+        return tuple(self._record(row) for row in rows)
+
     async def _get(self, column: str, value: str) -> GenerationJobRecord | None:
         if column not in {"id", "idempotency_key"}:
             raise ValueError("unsupported job lookup column")
@@ -717,5 +732,51 @@ class GenerationArtifactRepository:
                 sha256=str(row[6]),
                 created_at=_timestamp(row[7]),
             )
+            for row in rows
+        )
+
+
+@dataclass(slots=True)
+class OperatorAuditRepository:
+    database: Any
+
+    async def record(
+        self,
+        *,
+        action: str,
+        target_type: str,
+        target_id: str,
+        detail: Mapping[str, Any] | None = None,
+    ) -> None:
+        async with self.database._connect(write=True) as connection:
+            await connection.execute(
+                """
+                INSERT INTO operator_audit_events (action, target_type, target_id, detail_json)
+                VALUES (?, ?, ?, ?)
+                """,
+                (action, target_type, target_id, _json_dump(detail or {})),
+            )
+            await connection.commit()
+
+    async def list_recent(self, *, limit: int = 100) -> tuple[dict[str, Any], ...]:
+        bounded = max(1, min(limit, 500))
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT id, action, target_type, target_id, detail_json, created_at
+                FROM operator_audit_events ORDER BY created_at DESC, id DESC LIMIT ?
+                """,
+                (bounded,),
+            )
+            rows = await cursor.fetchall()
+        return tuple(
+            {
+                "id": int(row[0]),
+                "action": str(row[1]),
+                "target_type": str(row[2]),
+                "target_id": str(row[3]),
+                "detail": _json_load(row[4], {}),
+                "created_at": _timestamp(row[5]),
+            }
             for row in rows
         )

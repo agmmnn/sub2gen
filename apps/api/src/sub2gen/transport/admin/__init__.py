@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from . import api_keys, auth, cache, geminigen, logs, projects, runway, settings, system, tokens, workers
+from .control_plane import build_control_plane_router
 
 
 FEATURES = (
@@ -22,7 +23,7 @@ FEATURES = (
 )
 
 
-def build_admin_router(legacy_router: APIRouter) -> APIRouter:
+def build_admin_router(legacy_router: APIRouter, *, admin_dependency) -> APIRouter:
     """Partition existing route objects by feature while preserving handler behavior."""
     for feature in FEATURES:
         feature.router.routes.clear()
@@ -35,4 +36,5 @@ def build_admin_router(legacy_router: APIRouter) -> APIRouter:
     aggregate = APIRouter()
     for feature in FEATURES:
         aggregate.include_router(feature.router)
+    aggregate.include_router(build_control_plane_router(admin_dependency))
     return aggregate

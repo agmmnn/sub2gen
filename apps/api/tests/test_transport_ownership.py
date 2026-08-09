@@ -16,6 +16,7 @@ from sub2gen.transport import (
 )
 from sub2gen.transport.admin import api_keys, auth as admin_auth, cache as admin_cache, logs
 from sub2gen.transport.admin import geminigen as admin_geminigen
+from sub2gen.transport.admin.control_plane import CONTROL_PLANE_PREFIX
 from sub2gen.transport.admin import projects as admin_projects
 from sub2gen.transport.admin import runway as admin_runway
 from sub2gen.transport.admin import settings, system, tokens, workers
@@ -79,9 +80,10 @@ def test_public_routes_do_not_expose_mutable_service_globals() -> None:
 def test_admin_routes_are_partitioned_once_by_feature() -> None:
     feature_paths = [path for router in ADMIN_ROUTERS for path in route_paths(router)]
     aggregate_paths = route_paths(admin.router)
+    control_plane_paths = [path for path in aggregate_paths if path.startswith(CONTROL_PLANE_PREFIX)]
 
-    assert len(feature_paths) == len(aggregate_paths)
-    assert sorted(feature_paths) == sorted(aggregate_paths)
+    assert len(feature_paths) + len(control_plane_paths) == len(aggregate_paths)
+    assert sorted(feature_paths + control_plane_paths) == sorted(aggregate_paths)
     assert "/api/tokens" in route_paths(tokens.router)
     assert "/api/admin/managed-apikeys" in route_paths(api_keys.router)
     assert "/api/admin/extension/workers" in route_paths(workers.router)
