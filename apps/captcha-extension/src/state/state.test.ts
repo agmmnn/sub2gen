@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { importGoogleAccount } from "./api"
 import { createAccountSyncState, reduceAccountSync } from "./account-sync"
-import { normalizeSettings } from "./storage"
+import { DEFAULT_SETTINGS, normalizeSettings } from "./storage"
 import { reduceWebSocketPhase } from "./websocket"
 import { buildWorkerSocketUrl, inferWorkerMode } from "./worker-mode"
 
@@ -40,6 +40,10 @@ describe("connection and account state machines", () => {
 })
 
 describe("settings and API boundaries", () => {
+  it("defaults to the local sub2gen WebSocket", () => {
+    expect(DEFAULT_SETTINGS.serverUrl).toBe("ws://localhost:8000/captcha_ws")
+  })
+
   it("normalizes public sockets and clamps persisted intervals", () => {
     const settings = normalizeSettings({
       serverUrl: "ws://api.example.test/captcha_ws",

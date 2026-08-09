@@ -12,7 +12,7 @@ export const WORKER_RECAPTCHA_SETTLE_DEFAULT_MS = 3000
 export const WORKER_RECAPTCHA_SETTLE_MAX_MS = 120000
 
 export const DEFAULT_SETTINGS = {
-  serverUrl: "wss://flow-api.prismacreative.online/captcha_ws",
+  serverUrl: "ws://localhost:8000/captcha_ws",
   connectionMode: "endUser" as WorkerMode,
   apiKey: "",
   captchaWorkerAuthKey: "",

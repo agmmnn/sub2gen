@@ -23,7 +23,7 @@ services:
       - ../../config/setting.toml:/app/config/setting.toml
     environment:
       - PYTHONUNBUFFERED=1
-      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-flow-api.prismacreative.online}
+      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-}
       - SUB2GEN_REDIS_URL=${SUB2GEN_REDIS_URL:-redis://redis:6379/0}
       - SUB2GEN_REDIS_MODE=${SUB2GEN_REDIS_MODE:-shadow}
       - SUB2GEN_DATABASE_BACKEND=${SUB2GEN_DATABASE_BACKEND:-sqlite}

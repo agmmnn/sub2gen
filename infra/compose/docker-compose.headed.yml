@@ -1,6 +1,6 @@
 # In-container headed browser (VNC optional) + agent gateway + Cloudflare Tunnel.
 #   docker compose -f infra/compose/docker-compose.headed.yml up -d --build
-# In Zero Trust, point admin-flow and flow-api hostnames to http://sub2gen-headed:8000
+# In Zero Trust, point the admin and API hostnames to http://sub2gen-headed:8000
 # Optional agent hostname can point to http://agent-gateway:9080 (for /ws/agents).
 
 services:
@@ -33,7 +33,7 @@ services:
       - VNC_PORT=${VNC_PORT:-5900}
       - NOVNC_PORT=${NOVNC_PORT:-6080}
       - VNC_PASSWORD=${VNC_PASSWORD:-}
-      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-flow-api.prismacreative.online}
+      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-}
       - SUB2GEN_REDIS_URL=${SUB2GEN_REDIS_URL:-redis://redis:6379/0}
       - SUB2GEN_REDIS_MODE=${SUB2GEN_REDIS_MODE:-shadow}
       - SUB2GEN_DATABASE_BACKEND=${SUB2GEN_DATABASE_BACKEND:-sqlite}

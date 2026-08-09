@@ -6,7 +6,7 @@ const CONNECTION_KEY = "sub2genMetadataConnection";
 const PREFERENCES_KEY = "sub2genMetadataPreferences";
 const RUNTIME_KEY = "sub2genMetadataRuntime";
 
-export const DEFAULT_BASE_URL = "https://flow-api.prismacreative.online";
+export const DEFAULT_BASE_URL = "http://localhost:8000";
 
 export const DEFAULT_RUNTIME: RuntimeState = {
   processing: false,

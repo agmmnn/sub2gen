@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { clearConnection, getConnection, saveConnection } from "./storage";
+import { clearConnection, DEFAULT_BASE_URL, getConnection, saveConnection } from "./storage";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("connection storage", () => {
+  it("defaults to the local sub2gen API", () => {
+    expect(DEFAULT_BASE_URL).toBe("http://localhost:8000");
+  });
+
   it("persists and disconnects without exposing provider credentials", async () => {
     const values: Record<string, unknown> = {};
     vi.stubGlobal("chrome", {

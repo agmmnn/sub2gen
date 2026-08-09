@@ -10,7 +10,7 @@ sub2gen can upload private database and persistent browser-profile backups to a 
 4. Create an OAuth client with application type **Web application**.
 5. Add this exact authorized redirect URI:
 
-   `https://admin-flow.prismacreative.online/api/admin/backups/google-drive/oauth/callback`
+   `http://localhost:8000/api/admin/backups/google-drive/oauth/callback`
 
 6. Configure these Railway variables on the sub2gen service:
 

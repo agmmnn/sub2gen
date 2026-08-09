@@ -4,9 +4,9 @@
 #
 # .env: TUNNEL_TOKEN (see .env.example), optional GATEWAY_*.
 #
-# Cloudflare Zero Trust → Tunnels → Public hostnames (same tunnel as admin-flow / flow-api), add e.g.:
+# Cloudflare Zero Trust → Tunnels → Public hostnames (same tunnel as the admin/API hosts), add e.g.:
 #   - https://agents.yourdomain.com  →  http://agent-gateway:9080  (WSS: /ws/agents)
-# flow-api + admin-flow still point to http://sub2gen:8000
+# The API and admin hostnames still point to http://sub2gen:8000
 #
 # Captcha: admin → remote_browser_base_url = http://agent-gateway:9080, key = GATEWAY_SUB2GEN_BEARER
 

@@ -5,8 +5,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("sub2gen Base URL policy", () => {
   it("normalizes HTTPS servers", () => {
-    expect(normalizeBaseUrl(" https://flow-api.example.com/ ")).toBe("https://flow-api.example.com");
-    expect(permissionOrigin("https://flow-api.example.com/base")).toBe("https://flow-api.example.com/*");
+    expect(normalizeBaseUrl(" https://api.example.com/ ")).toBe("https://api.example.com");
+    expect(permissionOrigin("https://api.example.com/base")).toBe("https://api.example.com/*");
   });
 
   it("permits local and RFC1918 HTTP development servers", () => {
