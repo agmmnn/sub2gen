@@ -17,7 +17,7 @@ import urllib.request
 from curl_cffi.requests import AsyncSession
 from ..core.logger import debug_logger
 from ..core.config import config, get_runtime_tmp_dir, get_yescaptcha_min_score
-from ..providers.google_flow import (
+from sub2gen_provider_google_flow import (
     FlowAuthResource,
     FlowImagesResource,
     FlowMediaResource,
@@ -122,6 +122,7 @@ class FlowClient:
         self.labs_base_url = config.flow_labs_base_url  # https://labs.google/fx/api
         self.api_base_url = config.flow_api_base_url    # https://aisandbox-pa.googleapis.com/v1
         self.timeout = config.flow_timeout
+        self.flow_max_retries = config.flow_max_retries
         # 缓存每个账号的 User-Agent
         self._user_agent_cache = {}
         # 当前请求链路绑定的浏览器指纹（基于 contextvar，避免并发串扰）

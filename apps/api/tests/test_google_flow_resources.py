@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from sub2gen.providers.google_flow import (
+from sub2gen_provider_google_flow import (
     FlowAuthResource,
     FlowImagesResource,
     FlowMediaResource,

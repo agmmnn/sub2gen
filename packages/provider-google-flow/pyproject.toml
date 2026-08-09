@@ -1,7 +1,7 @@
 [project]
 name = "sub2gen-provider-google-flow"
 version = "0.1.0"
-description = "Google Flow provider adapter for sub2gen"
+description = "Google Flow provider and reusable upstream resources for sub2gen"
 requires-python = ">=3.11"
 dependencies = ["sub2gen-provider-sdk"]
 

@@ -300,15 +300,16 @@ I/O remains on the single concrete nodriver worker rather than introducing a one
 adapter abstraction. CAPTCHA result and identity orchestration now lives in
 `workers/personal/captcha.py`, completing the personal/browser worker split.
 
-`providers/google_flow` now exposes a shared transport and explicit auth, projects,
-media, images, videos, and model resources. `FlowClient` composes these resources and
-keeps private implementation seams for the large image/video operations during the
-compatibility window; public capability calls no longer own resource selection.
+`packages/provider-google-flow` is the canonical home for the shared transport and
+explicit auth, projects, media, images, videos, and model resources. `FlowClient`
+composes the package resources and keeps application-owned token, CAPTCHA, and large
+image/video execution seams; public capability calls no longer own resource selection.
 
 `generation/pipelines.py` now provides explicit image and video streaming pipelines,
 while `generation/state.py` owns request-local outcome transitions. `GenerationHandler`
-remains the token/project/logging orchestrator and delegates capability execution to the
-appropriate pipeline.
+remains the token/project/logging orchestrator and delegates existing Flow capability
+execution to the appropriate pipeline. Provider-SDK executions use the small shared
+`ProviderExecutionService` and its single artifact commit boundary.
 
 `core/settings.py` now keeps the TOML/environment deployment seed immutable and records
 all database/runtime mutations in a distinct operational override layer while retaining

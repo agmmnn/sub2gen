@@ -27,6 +27,7 @@ from ..core.account_tiers import (
     supports_model_for_tier,
 )
 from .file_cache import FileCache
+from .provider_execution import ProviderArtifactCommitter, ProviderExecutionService
 from .extension_generation_service import ExtensionGenerationService
 from .flow_client import classify_recaptcha_upstream_failure
 
@@ -1118,9 +1119,19 @@ class GenerationHandler:
             db=db,
             cache_repository=cache_repository,
         )
+        self.provider_execution = ProviderExecutionService(ProviderArtifactCommitter(self.file_cache))
         self.extension_generation_service = ExtensionGenerationService()
         self.image_pipeline = ImageGenerationPipeline(self)
         self.video_pipeline = VideoGenerationPipeline(self)
+
+    async def execute_provider(self, provider, request, context, **commit_context):
+        """Run one already-resolved provider through the shared artifact lifecycle."""
+        return await self.provider_execution.execute(
+            provider,
+            request,
+            context,
+            **commit_context,
+        )
 
     def _create_generation_result(self) -> Dict[str, Any]:
         """????????????????"""

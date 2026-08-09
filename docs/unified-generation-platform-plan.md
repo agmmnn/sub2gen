@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 5 complete; Phase 6 (Google Flow orchestration cleanup) is next.
+Status: Phases 0 through 6 complete; Phase 7 (model routing and execution audit) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -583,14 +583,14 @@ Exit criteria:
 
 ### Phase 6: Google Flow provider packaging and orchestration cleanup
 
-- [ ] Move reusable Google Flow provider code into `packages/provider-google-flow`.
-- [ ] Expose Google Flow only through the `sub2gen` provider package/import path; do not
+- [x] Move reusable Google Flow provider code into `packages/provider-google-flow`.
+- [x] Expose Google Flow only through the `sub2gen` provider package/import path; do not
   recreate the removed application namespace.
-- [ ] Make `GenerationHandler` an orchestrator over provider execution and existing
+- [x] Make `GenerationHandler` an orchestrator over provider execution and existing
   image/video pipelines rather than a provider selector.
-- [ ] Keep project pinning, token selection, CAPTCHA, cache, logging, and streaming
+- [x] Keep project pinning, token selection, CAPTCHA, cache, logging, and streaming
   contracts unchanged.
-- [ ] Route provider artifacts through one artifact commit boundary.
+- [x] Route provider artifacts through one artifact commit boundary.
 
 Exit criteria:
 

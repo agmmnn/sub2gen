@@ -40,10 +40,11 @@ uv run python scripts/update_contract_snapshots.py
 - one shared `FileCache` owned by `GenerationHandler` and reused by those services;
 - API-key, Redis, backup, failed-payload, and lifecycle-task services.
 
-The container is explicit, but provider ownership is not yet uniform. The only current
-provider package is `providers/google_flow/`, and parts of it delegate back to private
-`FlowClient` methods. Runway and GeminiGen combine provider HTTP, persistence,
-capacity, task, cache, and normalization behavior in service modules.
+The container is explicit. Reusable Google Flow resources and its provider-SDK adapter
+live in `packages/provider-google-flow`; application-owned token, project, CAPTCHA,
+logging, and streaming orchestration remains in `FlowClient` and `GenerationHandler`.
+Runway and GeminiGen combine provider HTTP, persistence, capacity, task, cache, and
+normalization behavior in service modules.
 
 The separate `apps/agent-gateway` application exposes its own solve HTTP/WebSocket
 surface and has an in-memory connected-agent registry. It does not share a protocol

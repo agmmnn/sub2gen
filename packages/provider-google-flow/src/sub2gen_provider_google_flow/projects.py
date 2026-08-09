@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import asyncio
-
-from ...core.config import config
-from ...core.logger import debug_logger
+import logging
 from .base import FlowResource
 
 
 class FlowProjectsResource(FlowResource):
     async def create(self, session_token: str, title: str) -> str:
         payload = {"json": {"projectTitle": title, "toolName": "PINHOLE"}}
-        max_retries = self.client._resolve_generation_retry_budget(config.flow_max_retries)
+        max_retries = self.client._resolve_generation_retry_budget(self.client.flow_max_retries)
         timeout = max(self.client._get_control_plane_timeout(), min(self.client.timeout, 15))
         last_error: Exception | None = None
         for attempt in range(max_retries):
@@ -35,7 +33,7 @@ class FlowProjectsResource(FlowResource):
                     "网络超时" if self.client._is_timeout_error(error) else self.client._get_retry_reason(str(error))
                 )
                 if reason and attempt < max_retries - 1:
-                    debug_logger.log_warning(
+                    logging.getLogger("sub2gen.google_flow").warning(
                         f"[PROJECT] 创建项目失败，准备重试 ({attempt + 2}/{max_retries}) "
                         f"title={title!r}, reason={reason}: {error}"
                     )
