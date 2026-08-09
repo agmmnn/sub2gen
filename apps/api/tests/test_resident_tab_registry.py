@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flow2api.workers.personal import ResidentTabInfo, ResidentTabRegistry
+from sub2gen.workers.personal import ResidentTabInfo, ResidentTabRegistry
 
 
 def test_registry_owns_slot_identity_affinity_and_reservations() -> None:

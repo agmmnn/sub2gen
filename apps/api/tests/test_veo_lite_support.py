@@ -14,18 +14,18 @@ from unittest.mock import ANY, AsyncMock, patch
 from fastapi import HTTPException
 from PIL import Image
 
-import flow2api.api.routes as routes
-from flow2api.api.admin import _extract_log_job_id
-from flow2api.api.routes import _extract_async_delivery_fields
-from flow2api.core.account_tiers import (
+import sub2gen.api.routes as routes
+from sub2gen.api.admin import _extract_log_job_id
+from sub2gen.api.routes import _extract_async_delivery_fields
+from sub2gen.core.account_tiers import (
     PAYGATE_TIER_ONE,
     PAYGATE_TIER_TWO,
     is_native_4k_model,
 )
-from flow2api.core.config import config
-from flow2api.core.logger import debug_logger
-from flow2api.core.model_resolver import get_base_model_aliases, resolve_model_name
-from flow2api.core.models import (
+from sub2gen.core.config import config
+from sub2gen.core.logger import debug_logger
+from sub2gen.core.model_resolver import get_base_model_aliases, resolve_model_name
+from sub2gen.core.models import (
     ChatCompletionRequest,
     ChatMessage,
     GeminiContent,
@@ -34,9 +34,9 @@ from flow2api.core.models import (
     GeminiInlineData,
     GeminiPart,
 )
-from flow2api.services.file_cache import FileCache
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.generation_handler import MODEL_CONFIG, GenerationHandler, _needs_video_url_resolve
+from sub2gen.services.file_cache import FileCache
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.generation_handler import MODEL_CONFIG, GenerationHandler, _needs_video_url_resolve
 
 
 def fake_mp4_bytes(size: int = 2048) -> bytes:
@@ -1025,7 +1025,7 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                 async def __aexit__(self, exc_type, exc, tb):
                     return None
 
-            with patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
                 filename = await cache.download_and_cache(
                     "https://labs.google/fx/api/trpc/media.getMediaUrlRedirect?name=media-1",
                     "video",
@@ -1073,8 +1073,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FailingAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", FakeHttpxClient),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FailingAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", FakeHttpxClient),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")) as run_mock,
             ):
                 filename = await cache.download_and_cache(
@@ -1110,7 +1110,7 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                 "https://flow-content.google/video/media-1"
                 "?Expires=1781281902&Signature=abc"
             )
-            with patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
                 await cache.download_and_cache(
                     cdn_url,
                     "video",
@@ -1156,7 +1156,7 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                 "https://flow-content.google/video/media-1"
                 "?Expires=1781281902&Signature=abc"
             )
-            with patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
                 await cache.download_and_cache(cdn_url, "video")
 
             headers = fake_session.get.await_args.kwargs["headers"]
@@ -1200,7 +1200,7 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                 async def __aexit__(self, exc_type, exc, tb):
                     return None
 
-            with patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
                 filename = await cache.download_and_cache(cdn_url, "video")
 
             self.assertTrue(filename.endswith(".mp4"))
@@ -1228,8 +1228,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1257,8 +1257,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1286,8 +1286,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1318,7 +1318,7 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                 async def __aexit__(self, exc_type, exc, tb):
                     return None
 
-            with patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()):
                 returned_filename = await cache.download_and_cache(source_url, "video")
 
             self.assertEqual(returned_filename, filename)
@@ -1342,8 +1342,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1372,8 +1372,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1406,8 +1406,8 @@ class FileCacheVideoDownloadTests(unittest.IsolatedAsyncioTestCase):
                     return None
 
             with (
-                patch("flow2api.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
-                patch("flow2api.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.AsyncSession", return_value=FakeAsyncSession()),
+                patch("sub2gen.services.file_cache.httpx.AsyncClient", return_value=FakeAsyncSession()),
                 patch("subprocess.run", side_effect=FileNotFoundError("curl")),
             ):
                 with self.assertRaises(Exception) as ctx:
@@ -1759,7 +1759,7 @@ class VeoLiteFlowClientTests(unittest.IsolatedAsyncioTestCase):
             async def __aexit__(self, exc_type, exc, tb):
                 return None
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeAsyncSession()):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeAsyncSession()):
             resolved = await self.client.resolve_media_download_url(
                 media_id="media-1",
                 st="st-token",
@@ -1978,7 +1978,7 @@ class FileCacheSpaceRecoveryTests(unittest.IsolatedAsyncioTestCase):
             data_dir = root_path / "data"
             cache_dir.mkdir()
             data_dir.mkdir()
-            database = data_dir / "flow.db"
+            database = data_dir / "sub2gen.db"
             database.write_bytes(b"database")
             unrelated = cache_dir / "notes.txt"
             unrelated.write_bytes(b"keep")
@@ -2025,10 +2025,10 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
     async def test_emergency_prune_compacts_history_without_deleting_tokens(self):
         if os.name == "nt":
             self.skipTest("Windows keeps SQLite file handles longer than Railway/Linux")
-        from flow2api.main import _emergency_prune_sqlite_history
+        from sub2gen.main import _emergency_prune_sqlite_history
 
         with tempfile.TemporaryDirectory() as root:
-            db_path = Path(root) / "flow.db"
+            db_path = Path(root) / "sub2gen.db"
             with sqlite3.connect(db_path) as conn:
                 conn.execute("CREATE TABLE tokens (id INTEGER PRIMARY KEY, st TEXT)")
                 conn.execute("CREATE TABLE request_logs (id INTEGER PRIMARY KEY, request_body TEXT)")
@@ -2057,7 +2057,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(conn.execute("SELECT COUNT(*) FROM cache_files").fetchone()[0], 0)
 
     async def test_sqlite_full_reclaims_cache_and_retries_once(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(
@@ -2081,7 +2081,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
         cache.reclaim_cache_space.assert_awaited_once()
 
     async def test_sqlite_disk_io_error_reclaims_cache_and_retries_once(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(
@@ -2105,7 +2105,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
         cache.reclaim_cache_space.assert_awaited_once()
 
     async def test_config_seed_storage_error_retries_full_startup_branch(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(return_value=None),
@@ -2135,7 +2135,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
         cache.reclaim_cache_space.assert_awaited_once()
 
     async def test_migration_storage_error_retries_full_startup_branch(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(return_value=None),
@@ -2165,7 +2165,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
         cache.reclaim_cache_space.assert_awaited_once()
 
     async def test_unrecoverable_full_volume_has_concise_diagnostic(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(side_effect=sqlite3.OperationalError("database or disk is full"))
@@ -2188,7 +2188,7 @@ class StartupStorageRecoveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(database.init_db.await_count, 1)
 
     async def test_retry_recoverable_storage_failure_has_concise_diagnostic(self):
-        from flow2api.main import _init_database_with_storage_recovery
+        from sub2gen.main import _init_database_with_storage_recovery
 
         database = SimpleNamespace(
             init_db=AsyncMock(side_effect=sqlite3.OperationalError("disk I/O error"))
@@ -2593,7 +2593,7 @@ class NativeLiveRequestLogTests(unittest.IsolatedAsyncioTestCase):
         generation_result = handler._create_generation_result()
 
         with patch(
-            "flow2api.services.generation_handler.config",
+            "sub2gen.services.generation_handler.config",
             SimpleNamespace(max_poll_attempts=1, poll_interval=0),
         ):
             chunks = [

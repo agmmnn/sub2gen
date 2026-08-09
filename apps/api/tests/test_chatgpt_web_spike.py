@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from flow2api.spikes.chatgpt_web import (
+from sub2gen.spikes.chatgpt_web import (
     ChatGPTWebSpikeRequest,
     SpikeOutcome,
     inspect_chatgpt_web_backend,
@@ -120,7 +120,7 @@ async def test_success_is_web_only_isolates_reference_and_publishes_atomically(
 
     output = tmp_path / "published" / "result.png"
     result = await run_chatgpt_web_spike(
-        _request(cli, output, references=(reference,), project="Flow2API Assets")
+        _request(cli, output, references=(reference,), project="sub2gen Assets")
     )
 
     assert result.outcome is SpikeOutcome.SUCCESS

@@ -123,7 +123,7 @@ if [ "${ALLOW_DOCKER_HEADED_CAPTCHA:-true}" = "true" ] || [ "${ALLOW_DOCKER_HEAD
     esac
 fi
 
-echo "[entrypoint] starting flow2api (headed browser mode)"
+echo "[entrypoint] starting sub2gen (headed browser mode)"
 if [ -n "${BROWSER_EXECUTABLE_PATH:-}" ] && [ -x "${BROWSER_EXECUTABLE_PATH}" ]; then
     echo "[entrypoint] browser executable: ${BROWSER_EXECUTABLE_PATH}"
     "${BROWSER_EXECUTABLE_PATH}" --version || true
@@ -131,4 +131,4 @@ else
     echo "[entrypoint] warning: no valid browser executable found for personal/browser captcha" >&2
 fi
 
-exec flow2api
+exec sub2gen

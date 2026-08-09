@@ -3,7 +3,7 @@ import { getPreferences, getRuntimeState, saveRuntimeState } from "../storage";
 import type { ActivityPhase, GeneratedMetadata, ProcessingMode, RuntimeState } from "../types";
 import { addProcessingOverlay, applyPortfolioMetadata, applyUploadMetadata, assetImages, delay, detectAssetType, nextPageButton, openAsset } from "./dom";
 
-const JOB_KEY = "flow2MetadataJob";
+const JOB_KEY = "sub2genMetadataJob";
 
 interface JobState {
   active: boolean;
@@ -51,7 +51,7 @@ async function updateActivity(
 async function generate(image: HTMLImageElement, mode: ProcessingMode): Promise<GeneratedMetadata> {
   const response = await chrome.runtime.sendMessage({ action: "processImage", imageUrl: image.src, fileType: detectAssetType(mode) });
   if (!response?.success) {
-    const error = new Error(response?.error || "Flow2 metadata generation failed.");
+    const error = new Error(response?.error || "sub2gen metadata generation failed.");
     Object.assign(error, { fatal: Boolean(response?.isFatal), status: response?.status });
     throw error;
   }
@@ -222,7 +222,7 @@ export async function startProcessing(
       phase: stopped ? (stopAsError ? "error" : "paused") : "completed",
       message: stopped ? (stopMessage || "Run paused.") : `Complete: ${state.successes} of ${state.processed} assets updated.`,
     });
-    if (!stopped) void chrome.runtime.sendMessage({ type: "NOTIFY", title: "Flow2 Metadata", message: `Completed ${state.successes} of ${state.processed} images.` });
+    if (!stopped) void chrome.runtime.sendMessage({ type: "NOTIFY", title: "sub2gen Metadata", message: `Completed ${state.successes} of ${state.processed} images.` });
   } catch (error) {
     await updateRuntime({ processing: false, stopped: true, phase: "error", message: error instanceof Error ? error.message : "Processing failed." });
   } finally {

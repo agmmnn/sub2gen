@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  flow2api:
+  sub2gen:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile
-    image: flow2api-local:latest
-    container_name: flow2api-local
+    image: sub2gen-local:latest
+    container_name: sub2gen-local
     ports:
       - "38000:8000"
     volumes:
@@ -15,12 +15,12 @@ services:
       - ../../config/setting.toml:/app/config/setting.toml
     environment:
       - PYTHONUNBUFFERED=1
-      - FLOW2API_API_ONLY_HOST=${FLOW2API_API_ONLY_HOST:-}
-      - FLOW2API_DATABASE_BACKEND=${FLOW2API_DATABASE_BACKEND:-postgres}
-      - FLOW2API_DATABASE_URL=${FLOW2API_DATABASE_URL:-postgresql://flow2api:flow2api@postgres:5432/flow2api}
-      - FLOW2API_DB_SCHEMA=${FLOW2API_DB_SCHEMA:-flow2api}
-      - FLOW2API_REQUIRE_CUTOVER_MARKER=${FLOW2API_REQUIRE_CUTOVER_MARKER:-false}
-      - FLOW2API_REDIS_URL=${FLOW2API_REDIS_URL:-redis://redis:6379/0}
+      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-}
+      - SUB2GEN_DATABASE_BACKEND=${SUB2GEN_DATABASE_BACKEND:-postgres}
+      - SUB2GEN_DATABASE_URL=${SUB2GEN_DATABASE_URL:-postgresql://sub2gen:sub2gen@postgres:5432/sub2gen}
+      - SUB2GEN_DB_SCHEMA=${SUB2GEN_DB_SCHEMA:-sub2gen}
+      - SUB2GEN_REQUIRE_CUTOVER_MARKER=${SUB2GEN_REQUIRE_CUTOVER_MARKER:-false}
+      - SUB2GEN_REDIS_URL=${SUB2GEN_REDIS_URL:-redis://redis:6379/0}
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,15 +30,15 @@ services:
 
   postgres:
     image: postgres:16-alpine
-    container_name: flow2api-local-postgres
+    container_name: sub2gen-local-postgres
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-flow2api}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-flow2api}
-      - POSTGRES_DB=${POSTGRES_DB:-flow2api}
+      - POSTGRES_USER=${POSTGRES_USER:-sub2gen}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sub2gen}
+      - POSTGRES_DB=${POSTGRES_DB:-sub2gen}
     volumes:
-      - flow2api-local-postgres-data:/var/lib/postgresql/data
+      - sub2gen-local-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flow2api} -d ${POSTGRES_DB:-flow2api}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sub2gen} -d ${POSTGRES_DB:-sub2gen}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -46,10 +46,10 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: flow2api-local-redis
+    container_name: sub2gen-local-redis
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - flow2api-local-redis-data:/data
+      - sub2gen-local-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -58,5 +58,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  flow2api-local-postgres-data:
-  flow2api-local-redis-data:
+  sub2gen-local-postgres-data:
+  sub2gen-local-redis-data:

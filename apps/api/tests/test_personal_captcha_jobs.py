@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from flow2api.workers.personal import PersonalCaptchaJobs, ResidentTabInfo
+from sub2gen.workers.personal import PersonalCaptchaJobs, ResidentTabInfo
 
 
 class CaptchaWorker:

@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException, Response
 from starlette.requests import Request
 
-from flow2api import main as app_main
-from flow2api.api import admin
-from flow2api.core.config import Config
+from sub2gen import main as app_main
+from sub2gen.api import admin
+from sub2gen.core.config import Config
 
 
 def make_request(
@@ -98,8 +98,8 @@ class ConfigPathSafetyTests(unittest.TestCase):
             self.write_config(config_dir / "setting.toml")
 
             with (
-                patch("flow2api.core.config.REPO_ROOT", root),
-                patch.dict("os.environ", {"FLOW2API_API_KEY": "environment-key"}),
+                patch("sub2gen.core.config.REPO_ROOT", root),
+                patch.dict("os.environ", {"SUB2GEN_API_KEY": "environment-key"}),
             ):
                 loaded = Config.__new__(Config)._load_config()
 
@@ -113,7 +113,7 @@ class ConfigPathSafetyTests(unittest.TestCase):
             (config_dir / "setting.toml").mkdir()
             self.write_config(config_dir / "setting_example.toml", api_key="fallback-key")
 
-            with patch("flow2api.core.config.REPO_ROOT", root):
+            with patch("sub2gen.core.config.REPO_ROOT", root):
                 loaded = Config.__new__(Config)._load_config()
 
         self.assertEqual(loaded["global"]["api_key"], "fallback-key")
@@ -123,7 +123,7 @@ class ConfigPathSafetyTests(unittest.TestCase):
             root = Path(tempdir)
             (root / "config").mkdir()
 
-            with patch("flow2api.core.config.REPO_ROOT", root):
+            with patch("sub2gen.core.config.REPO_ROOT", root):
                 with self.assertRaisesRegex(FileNotFoundError, "Configuration file"):
                     Config.__new__(Config)._load_config()
 
@@ -136,7 +136,7 @@ class ConfigPathSafetyTests(unittest.TestCase):
             self.write_config(config_dir / "setting_example.toml")
 
             with (
-                patch("flow2api.core.config.REPO_ROOT", root),
+                patch("sub2gen.core.config.REPO_ROOT", root),
                 patch("builtins.open", side_effect=PermissionError("denied")),
             ):
                 with self.assertRaisesRegex(FileNotFoundError, "unreadable"):

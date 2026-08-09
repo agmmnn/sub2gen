@@ -1,4 +1,4 @@
-# Flow2API
+# sub2gen
 
 <div align="center">
 
@@ -27,6 +27,24 @@
 
 ## 🚀 Quick start
 
+### Breaking identity cutover
+
+`sub2gen` is the only supported project, package, command, environment-variable,
+JavaScript-scope, extension-storage, and container identity. There are no compatibility
+aliases for the former identity.
+
+The `0002_sub2gen_identity` database migration disables managed API keys created before
+the cutover because their plaintext secrets cannot be renamed. After the first upgraded
+startup, create a new `s2g_live_...` key in **API key manager**, reload the unpacked Chrome
+extensions, and save their connection again. The separately configured global API key is
+not a managed key and is unchanged.
+
+The SQLite file and encrypted-backup manifest also use the new identity. Stop the server
+before upgrading an existing checkout, rename `.runtime/data/flow.db` (and any matching
+`-wal`/`-shm` companions) to `.runtime/data/sub2gen.db`, then start the new command. Create
+a fresh Google Drive backup after the upgrade; pre-cutover backup archives are intentionally
+not accepted by the new backup format.
+
 ### Prerequisites
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) and [Bun](https://bun.sh/) for the shortest local setup. uv installs Python 3.11 when necessary.
@@ -34,7 +52,7 @@
 
 ### Repository layout
 
-- `apps/api/`: the installable `flow2api` Python package and backend tests
+- `apps/api/`: the installable `sub2gen` Python package and backend tests
 - `apps/admin-web/`: the React administration interface
 - `apps/captcha-extension/`: the Chrome CAPTCHA/account-sync worker
 - `apps/metadata-extension/`: the TypeScript metadata extension
@@ -44,7 +62,7 @@
 - `packages/extension-core/`: stable browser-independent extension transport/storage primitives
 - `.runtime/`: local databases, browser profiles, generated files, and cache data
 
-If you are upgrading a checkout created before this layout, stop Flow2API and
+If you are upgrading a checkout created before this layout, stop sub2gen and
 move the old local runtime directories once:
 
 ```bash
@@ -62,7 +80,7 @@ Flow now requires an additional CAPTCHA. You can solve it through a browser or a
 - The admin UI supports these YesCaptcha task types: `RecaptchaV3TaskProxyless`, `RecaptchaV3TaskProxylessM1`, `RecaptchaV3TaskProxylessM1S7`, and `RecaptchaV3TaskProxylessM1S9`. `M1S9` is currently recommended by default. S7 and S9 force `minScore` values of 0.7 and 0.9 respectively.
 - The default `infra/compose/docker-compose.yml` is intended for third-party solvers such as YesCaptcha, CapMonster, EzCaptcha, or CapSolver. For headed `browser` or `personal` solving inside Docker, use `infra/compose/docker-compose.headed.yml` below.
 - To test `remote_browser` mode locally, run the Node mock solver on the host. It verifies HTTP and authentication only and does not produce real reCAPTCHA tokens. See [`tools/remote-browser-mock/`](./tools/remote-browser-mock/).
-- For the production **Agent Gateway** (Flow2API over HTTP, with jobs delivered to user PCs over WebSocket), see [`apps/agent-gateway/src/flow2api_gateway/README.md`](./apps/agent-gateway/src/flow2api_gateway/README.md).
+- For the production **Agent Gateway** (sub2gen over HTTP, with jobs delivered to user PCs over WebSocket), see [`apps/agent-gateway/src/sub2gen_gateway/README.md`](./apps/agent-gateway/src/sub2gen_gateway/README.md).
 - For asynchronous submission and polling through `/v1/async/chat/completions` and `/v1/jobs/{job_id}`, see [`docs/async-polling.md`](./docs/async-polling.md).
 - Runway web-task integration is available through the admin `Runway` tab, `runway-*` models, and `/v1/runway/*` routes. See [`docs/runway.md`](./docs/runway.md). It includes a manifest-backed model registry, live feature sync, real Runway uploads/datasets, image/video/audio/upscale task builders, OpenAI-compatible dispatch, voices, estimates, cancel, async polling, and cache mirroring.
 - Production performance, Railway Redis, WebSocket events, and seven-day retention are documented in [`docs/performance-redis-rollout.md`](./docs/performance-redis-rollout.md). The PostgreSQL 16 bridge, migration, encrypted Google Drive backup, cutover, and rollback procedure is in [`docs/postgres-migration-runbook.md`](./docs/postgres-migration-runbook.md).
@@ -71,7 +89,7 @@ Flow now requires an additional CAPTCHA. You can solve it through a browser or a
 
 ### Chrome Extension per-key isolation setup
 
-When using captcha method `extension`, Flow2API keeps one global captcha mode but isolates end-user workers per managed API key.
+When using captcha method `extension`, sub2gen keeps one global captcha mode but isolates end-user workers per managed API key.
 
 1. Run `bun install --frozen-lockfile` and `bun run --cwd apps/captcha-extension build`, then load [`apps/captcha-extension/dist/`](./apps/captcha-extension/) as an unpacked Chrome extension.
 2. Create a managed API key in **API key manager**. Add `tokens:import` if this extension may add or refresh the Google account signed in to its Chrome profile.
@@ -89,8 +107,8 @@ If a managed key has no matching extension worker online, requests wait up to `e
 
 ```bash
 # Clone the project
-git clone https://github.com/agmmnn/flow2api.git
-cd flow2api
+git clone https://github.com/agmmnn/sub2gen.git
+cd sub2gen
 
 # Start the service
 docker compose -f infra/compose/docker-compose.yml up -d
@@ -135,47 +153,47 @@ Run [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/c
 
 1. In [Cloudflare Zero Trust](https://one.dash.cloudflare.com/), open **Networks** → **Tunnels**, create a named tunnel, and copy the **TUNNEL_TOKEN** from the `cloudflared` installation command.
 2. Configure two **Public hostnames** on the same tunnel (replace these examples with your own domains):
-   - **API only** (no admin UI or frontend): `https://flow-api.prismacreative.online` → `http://flow2api:8000`
-   - **Admin UI and frontend**: `https://admin-flow.prismacreative.online` → `http://flow2api:8000`
-   Docker resolves `flow2api` to the application container on the shared network. Do not use a host-mapped port such as `38000` as the tunnel origin.
-3. Run `cp .env.example .env` in the repository root and set `TUNNEL_TOKEN=...`. [`infra/compose/docker-compose.yml`](./infra/compose/docker-compose.yml) contains the main **flow2api** service. Merging [`infra/compose/docker-compose.agent.yml`](./infra/compose/docker-compose.agent.yml) adds **agent-gateway**, **redis**, and **cloudflared** on the same tunnel. Configure `agents.*` in Cloudflare to use `http://agent-gateway:9080`. `FLOW2API_API_ONLY_HOST` is defined on the `flow2api` service. On that hostname, `ApiOnlyHostMiddleware` exposes only OpenAI-compatible routes (`/v1/...`), Gemini-style routes (`/v1beta/models/...:generateContent`, `:streamGenerateContent`, `/models/...`), cache files under `/tmp`, `/openapi.json`, and `/health`. It blocks the web UI, `/api` administration routes, and `/assets`. Always use a different hostname such as `admin-flow.*` for the admin UI. Override it with `FLOW2API_API_ONLY_HOST=your-api-subdomain`. Do not run another `cloudflared` connector with the same tunnel token on the host.
-4. Start the merged stack with `docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.agent.yml up -d`. Add `--build` to build **agent-gateway**. To run only the local application without the tunnel or agent, use `docker compose -f infra/compose/docker-compose.yml up -d`. To build the main image from source, run `docker build -t flow2api:local -f infra/docker/Dockerfile .`, set the `flow2api` image in Compose to `flow2api:local`, and run `up`.
-5. Open the **admin-flow** hostname for administration and use the **flow-api** hostname as the OpenAI-compatible API base URL, for example `https://flow-api.prismacreative.online/v1/...`. See the [Agent Gateway runbook](./apps/agent-gateway/src/flow2api_gateway/README.md) for the public Agent Gateway.
+   - **API only** (no admin UI or frontend): `https://flow-api.prismacreative.online` → `http://sub2gen:8000`
+   - **Admin UI and frontend**: `https://admin-flow.prismacreative.online` → `http://sub2gen:8000`
+   Docker resolves `sub2gen` to the application container on the shared network. Do not use a host-mapped port such as `38000` as the tunnel origin.
+3. Run `cp .env.example .env` in the repository root and set `TUNNEL_TOKEN=...`. [`infra/compose/docker-compose.yml`](./infra/compose/docker-compose.yml) contains the main **sub2gen** service. Merging [`infra/compose/docker-compose.agent.yml`](./infra/compose/docker-compose.agent.yml) adds **agent-gateway**, **redis**, and **cloudflared** on the same tunnel. Configure `agents.*` in Cloudflare to use `http://agent-gateway:9080`. `SUB2GEN_API_ONLY_HOST` is defined on the `sub2gen` service. On that hostname, `ApiOnlyHostMiddleware` exposes only OpenAI-compatible routes (`/v1/...`), Gemini-style routes (`/v1beta/models/...:generateContent`, `:streamGenerateContent`, `/models/...`), cache files under `/tmp`, `/openapi.json`, and `/health`. It blocks the web UI, `/api` administration routes, and `/assets`. Always use a different hostname such as `admin-flow.*` for the admin UI. Override it with `SUB2GEN_API_ONLY_HOST=your-api-subdomain`. Do not run another `cloudflared` connector with the same tunnel token on the host.
+4. Start the merged stack with `docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.agent.yml up -d`. Add `--build` to build **agent-gateway**. To run only the local application without the tunnel or agent, use `docker compose -f infra/compose/docker-compose.yml up -d`. To build the main image from source, run `docker build -t sub2gen:local -f infra/docker/Dockerfile .`, set the `sub2gen` image in Compose to `sub2gen:local`, and run `up`.
+5. Open the **admin-flow** hostname for administration and use the **flow-api** hostname as the OpenAI-compatible API base URL, for example `https://flow-api.prismacreative.online/v1/...`. See the [Agent Gateway runbook](./apps/agent-gateway/src/sub2gen_gateway/README.md) for the public Agent Gateway.
 6. Set `[cache].base_url` in `config/setting.toml` to the public API URL, for example `base_url = "https://flow-api.prismacreative.online"`. See the comments in `config/setting_example.toml`.
-7. Configure `FLOW2API_API_ONLY_HOST` as an environment variable. The default is shown in the `flow2api` service in `infra/compose/docker-compose.yml`; Docker Compose reads the root `.env` file.
+7. Configure `SUB2GEN_API_ONLY_HOST` as an environment variable. The default is shown in the `sub2gen` service in `infra/compose/docker-compose.yml`; Docker Compose reads the root `.env` file.
 
-**If `/login` or another UI page remains accessible on the `flow-api` hostname:** the current image does not contain this repository's `ApiOnlyHostMiddleware`, usually because it is an older `ghcr.io/.../flow2api:latest` image. Build and deploy from this repository with `docker build -t flow2api:local -f infra/docker/Dockerfile .`, set the Compose service image to `flow2api:local`, and run `up -d` again. Confirm that the startup log contains `API-only host(s)`. The environment variable can also be set when running `uv run flow2api` directly. If the current image is deployed but the old page remains, disable aggressive HTML caching for that hostname or purge the Cloudflare cache.
+**If `/login` or another UI page remains accessible on the `flow-api` hostname:** build and deploy the current source with `docker build -t sub2gen:local -f infra/docker/Dockerfile .`, set the Compose service image to `sub2gen:local`, and run `up -d` again. Confirm that the startup log contains `API-only host(s)`. The environment variable can also be set when running `uv run sub2gen` directly. If the current image is deployed but the old page remains, disable aggressive HTML caching for that hostname or purge the Cloudflare cache.
 
-For headed CAPTCHA solving, use `infra/compose/docker-compose.headed.yml`, which already includes Cloudflare Tunnel and `flow2api-headed`:
+For headed CAPTCHA solving, use `infra/compose/docker-compose.headed.yml`, which already includes Cloudflare Tunnel and `sub2gen-headed`:
 
 ```bash
 docker compose -f infra/compose/docker-compose.headed.yml up -d
 ```
 
-In Zero Trust, set both public hostnames' origin to `http://flow2api-headed:8000`, matching the service name in `infra/compose/docker-compose.headed.yml`.
+In Zero Trust, set both public hostnames' origin to `http://sub2gen-headed:8000`, matching the service name in `infra/compose/docker-compose.headed.yml`.
 
 ### Option 2: Local deployment
 
 ```bash
 # Clone the project
-git clone https://github.com/agmmnn/flow2api.git
-cd flow2api
+git clone https://github.com/agmmnn/sub2gen.git
+cd sub2gen
 
 # Create/sync the environment and build the frontend
 uv run setup
 
-# Start Flow2API
-uv run flow2api
+# Start sub2gen
+uv run sub2gen
 ```
 
 `uv run setup` installs Python 3.11 if needed, creates `.venv`, installs the exact versions from `uv.lock`, installs the locked workspace dependencies with Bun, and builds the admin UI into `apps/api/static/`. Run it after cloning or when frontend dependencies change.
 
-`uv run flow2api` starts the backend without rebuilding the frontend. For development, update Python dependencies with `uv add`/`uv remove`, then commit both `pyproject.toml` and `uv.lock`.
+`uv run sub2gen` starts the backend without rebuilding the frontend. For development, update Python dependencies with `uv add`/`uv remove`, then commit both `pyproject.toml` and `uv.lock`.
 
 For upgrades, database adoption, compatibility guarantees, verification evidence,
 and rollback boundaries, see [`docs/architecture-migration-release.md`](./docs/architecture-migration-release.md).
 
-The proposed roadmap for evolving Flow2API into a unified, local-first generation
+The proposed roadmap for evolving sub2gen into a unified, local-first generation
 gateway is documented in
 [`docs/unified-generation-platform-plan.md`](./docs/unified-generation-platform-plan.md).
 Its Phase 0 baselines are the
@@ -632,7 +650,7 @@ Thanks to every contributor and user for their support.
 
 ## 📞 Contact
 
-- Report an issue: [GitHub Issues](https://github.com/TheSmallHanCat/flow2api/issues)
+- Report an issue: [GitHub Issues](https://github.com/agmmnn/sub2gen/issues)
 
 ---
 
@@ -640,4 +658,4 @@ Thanks to every contributor and user for their support.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=TheSmallHanCat/flow2api&type=date&legend=top-left)](https://www.star-history.com/#TheSmallHanCat/flow2api&type=date&legend=top-left)
+[![Star History Chart](https://api.star-history.com/svg?repos=agmmnn/sub2gen&type=date&legend=top-left)](https://www.star-history.com/#agmmnn/sub2gen&type=date&legend=top-left)

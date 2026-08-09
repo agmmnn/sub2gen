@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from flow2api.services.google_drive_backup import (
+from sub2gen.services.google_drive_backup import (
     GoogleDriveBackupError,
     GoogleDriveBackupService,
     _build_archive,
@@ -24,7 +24,7 @@ def _make_database(path: Path) -> None:
 
 
 def test_archive_preserves_profile_data_and_excludes_runtime_metrics(tmp_path):
-    database = tmp_path / "flow.db"
+    database = tmp_path / "sub2gen.db"
     _make_database(database)
     profiles = tmp_path / "browser_profiles"
     profile = profiles / "token-1"
@@ -50,7 +50,7 @@ def test_archive_preserves_profile_data_and_excludes_runtime_metrics(tmp_path):
     )
 
     names = {entry["path"] for entry in manifest["files"]}
-    assert "database/flow.db" in names
+    assert "database/sub2gen.db" in names
     assert "browser_profiles/token-1/Default/Cookies" in names
     assert "browser_profiles/token-1/Default/Cache" not in names
     assert all("BrowserMetrics" not in name for name in names)
@@ -75,7 +75,7 @@ def test_restore_rejects_archive_traversal(tmp_path):
 
 
 def test_restore_rejects_checksum_mismatch(tmp_path):
-    database = tmp_path / "flow.db"
+    database = tmp_path / "sub2gen.db"
     _make_database(database)
     profiles = tmp_path / "profiles"
     profiles.mkdir()
@@ -102,7 +102,7 @@ def test_restore_rejects_checksum_mismatch(tmp_path):
     altered = tmp_path / "altered.tar.gz"
     with tarfile.open(altered, "w:gz") as handle:
         handle.add(manifest_path, arcname="manifest.json")
-        handle.add(unpacked / "database/flow.db", arcname="database/flow.db")
+        handle.add(unpacked / "database/sub2gen.db", arcname="database/sub2gen.db")
 
     with pytest.raises(GoogleDriveBackupError, match="checksum"):
         _validate_and_extract_archive(altered, tmp_path / "restore")
@@ -137,8 +137,8 @@ async def test_postgres_restore_clears_maintenance_when_validation_fails_before_
         client=SimpleNamespace(set=AsyncMock()),
     )
 
-    with patch("flow2api.services.google_drive_backup.redis_runtime", redis), patch(
-        "flow2api.services.google_drive_backup._schedule_restore_restart"
+    with patch("sub2gen.services.google_drive_backup.redis_runtime", redis), patch(
+        "sub2gen.services.google_drive_backup._schedule_restore_restart"
     ) as schedule_restart:
         await service._run_postgres_restore("job-1", "selected")
 
@@ -173,11 +173,11 @@ async def test_postgres_restore_keeps_maintenance_until_rollback_restart(tmp_pat
         client=SimpleNamespace(set=AsyncMock()),
     )
 
-    with patch("flow2api.services.google_drive_backup.redis_runtime", redis), patch(
-        "flow2api.services.google_drive_backup.BrowserProfileService.get_existing_instance",
+    with patch("sub2gen.services.google_drive_backup.redis_runtime", redis), patch(
+        "sub2gen.services.google_drive_backup.BrowserProfileService.get_existing_instance",
         return_value=None,
     ), patch(
-        "flow2api.services.google_drive_backup._schedule_restore_restart"
+        "sub2gen.services.google_drive_backup._schedule_restore_restart"
     ) as schedule_restart:
         await service._run_postgres_restore("job-2", "selected")
 

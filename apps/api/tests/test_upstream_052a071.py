@@ -7,28 +7,28 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
-from flow2api.api import admin
-from flow2api.api.admin import AddTokenRequest, BrowserProfileTokenRequest, ImportTokenItem
-from flow2api.core.browser_runtime_status import (
+from sub2gen.api import admin
+from sub2gen.api.admin import AddTokenRequest, BrowserProfileTokenRequest, ImportTokenItem
+from sub2gen.core.browser_runtime_status import (
     finish_runtime_prepare,
     get_runtime_status,
     reset_runtime_prepare,
     start_runtime_prepare,
 )
-from flow2api.core.config import Config, DEFAULT_YESCAPTCHA_TASK_TYPE
-from flow2api.core.database import Database
-from flow2api.core.model_resolver import VIDEO_BASE_MODELS, resolve_model_name
-from flow2api.core.models import Token, TokenRefreshConfig
-from flow2api.services import browser_captcha_personal
-from flow2api.services.browser_captcha import TokenBrowser
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.generation_handler import MODEL_CONFIG
-from flow2api.services.protocol_login import (
+from sub2gen.core.config import Config, DEFAULT_YESCAPTCHA_TASK_TYPE
+from sub2gen.core.database import Database
+from sub2gen.core.model_resolver import VIDEO_BASE_MODELS, resolve_model_name
+from sub2gen.core.models import Token, TokenRefreshConfig
+from sub2gen.services import browser_captcha_personal
+from sub2gen.services.browser_captcha import TokenBrowser
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.generation_handler import MODEL_CONFIG
+from sub2gen.services.protocol_login import (
     _validate_redirect,
     normalize_proxy_url,
     parse_google_cookies,
 )
-from flow2api.services.token_manager import TokenManager
+from sub2gen.services.token_manager import TokenManager
 
 
 class Upstream052ConfigTests(unittest.TestCase):
@@ -84,7 +84,7 @@ class BrowserEnvironmentPatchTests(unittest.TestCase):
             browser = TokenBrowser(3, tmp)
             source = browser._build_browser_environment_patch_source()
         for marker in (
-            "__flow2apiBrowserEnvironmentV2",
+            "__sub2genBrowserEnvironmentV2",
             "hardwareConcurrency",
             "deviceMemory",
             "WebGLRenderingContext",
@@ -209,7 +209,7 @@ class ProtocolLoginUtilityTests(unittest.TestCase):
 class ProtocolRefreshDatabaseTests(unittest.IsolatedAsyncioTestCase):
     async def test_schema_persists_protocol_fields_and_global_config(self):
         with tempfile.TemporaryDirectory() as tmp:
-            db = Database(str(Path(tmp) / "flow.db"))
+            db = Database(str(Path(tmp) / "sub2gen.db"))
             await db.init_db()
             token = Token(
                 st="session-token",
@@ -298,7 +298,7 @@ class ProtocolRefreshManagerTests(unittest.IsolatedAsyncioTestCase):
 
         manager = TokenManager(db, flow_client)
         with patch(
-            "flow2api.services.protocol_login.protocol_loginer.login",
+            "sub2gen.services.protocol_login.protocol_loginer.login",
             new=AsyncMock(return_value={"success": True, "session_token": "new-st"}),
         ):
             await manager.run_protocol_refresh_once()

@@ -1,9 +1,9 @@
 import { normalizeMetadataResponse } from "./adapter";
 import { keywordTypesFor, normalizePlatforms } from "./preferences";
 import { expandCustomPrompt } from "./title";
-import type { Connection, Flow2MetadataResponse, GeneratedMetadata, Preferences, SessionResponse } from "./types";
+import type { Connection, Sub2GenMetadataResponse, GeneratedMetadata, Preferences, SessionResponse } from "./types";
 
-export class Flow2ApiError extends Error {
+export class Sub2GenApiError extends Error {
   constructor(message: string, public readonly status: number, public readonly retryAfter = 0) {
     super(message);
   }
@@ -29,20 +29,20 @@ async function requestJson<T>(url: string, init: RequestInit, attempts: number, 
       if (response.ok) return await response.json() as T;
       const retryAfter = Math.min(Number(response.headers.get("Retry-After") || 0), 60);
       const message = await errorMessage(response);
-      const error = new Flow2ApiError(message, response.status, retryAfter);
+      const error = new Sub2GenApiError(message, response.status, retryAfter);
       if (response.status !== 429 && response.status < 500) throw error;
       lastError = error;
       if (attempt + 1 < attempts) await delay((retryAfter || 2 ** attempt) * 1000);
     } catch (error) {
-      if (error instanceof Flow2ApiError && error.status < 500 && error.status !== 429) throw error;
+      if (error instanceof Sub2GenApiError && error.status < 500 && error.status !== 429) throw error;
       lastError = error;
       if (attempt + 1 < attempts) await delay(2 ** attempt * 1000);
     } finally {
       clearTimeout(timeout);
     }
   }
-  if (lastError instanceof Flow2ApiError) throw lastError;
-  throw new Flow2ApiError(lastError instanceof Error ? lastError.message : "Flow2 API request failed.", 0);
+  if (lastError instanceof Sub2GenApiError) throw lastError;
+  throw new Sub2GenApiError(lastError instanceof Error ? lastError.message : "sub2gen request failed.", 0);
 }
 
 const delay = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -58,8 +58,8 @@ export async function validateSession(baseUrl: string, apiKey: string): Promise<
     1,
     15_000,
   );
-  if (!session.active || session.service !== "flow2-metadata" || !session.capabilities?.includes("adobe:metadata")) {
-    throw new Flow2ApiError("This key cannot activate Flow2 Metadata.", 403);
+  if (!session.active || session.service !== "sub2gen-metadata" || !session.capabilities?.includes("adobe:metadata")) {
+    throw new Sub2GenApiError("This key cannot activate sub2gen Metadata.", 403);
   }
   return session;
 }
@@ -115,7 +115,7 @@ export async function generateMetadata(
     },
     dnaNoBgWorkflowActive: transparentBackground,
   };
-  const response = await requestJson<Flow2MetadataResponse>(
+  const response = await requestJson<Sub2GenMetadataResponse>(
     `${connection.baseUrl}/api/generate-metadata`,
     { method: "POST", headers: headers(connection.apiKey), body: JSON.stringify(body) },
     3,

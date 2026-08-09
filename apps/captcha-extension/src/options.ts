@@ -1,4 +1,4 @@
-import { normalizeWebSocketUrl } from "@flow2api/extension-core"
+import { normalizeWebSocketUrl } from "@sub2gen/extension-core"
 
 import {
   DEFAULT_SETTINGS,

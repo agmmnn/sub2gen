@@ -5,13 +5,13 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from flow2api.core.config import config
-from flow2api.services.browser_captcha_extension import (
+from sub2gen.core.config import config
+from sub2gen.services.browser_captcha_extension import (
     ExtensionCaptchaService,
     ExtensionConnection,
     normalize_extension_captcha_user_agent,
 )
-from flow2api.services.flow_client import FlowClient
+from sub2gen.services.flow_client import FlowClient
 
 
 PROVIDER_UA = (
@@ -159,8 +159,8 @@ class ApiCaptchaProviderResultTests(unittest.IsolatedAsyncioTestCase):
         client = FlowClient(proxy_manager=_FakeProxyManager())
         session = _FakeCaptchaSession()
         with (
-            patch("flow2api.services.flow_client.AsyncSession", return_value=session),
-            patch("flow2api.services.flow_client.config") as captcha_config,
+            patch("sub2gen.services.flow_client.AsyncSession", return_value=session),
+            patch("sub2gen.services.flow_client.config") as captcha_config,
             patch("asyncio.sleep", new=AsyncMock()),
         ):
             captcha_config.yescaptcha_api_key = "test-key"
@@ -252,7 +252,7 @@ class ApiCaptchaFingerprintTests(unittest.IsolatedAsyncioTestCase):
                 captured.update(kwargs)
                 return response
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
             await client._make_request("POST", "https://aisandbox-pa.googleapis.com/v1/test", json_data={})
         self.assertIsNone(captured["proxy"])
 
@@ -276,7 +276,7 @@ class ApiCaptchaFingerprintTests(unittest.IsolatedAsyncioTestCase):
                 captured.update(kwargs)
                 return response
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
             await client._make_request(
                 "POST",
                 "https://aisandbox-pa.googleapis.com/v1/test",
@@ -371,7 +371,7 @@ class ApiCaptchaFingerprintTests(unittest.IsolatedAsyncioTestCase):
                 captured.update(kwargs)
                 return response
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeFlowSession()):
             await client._make_request(
                 "POST",
                 "https://aisandbox-pa.googleapis.com/v1/test",

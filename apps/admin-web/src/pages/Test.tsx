@@ -416,7 +416,7 @@ export default function TestPage() {
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-full mb-4">
             <Beaker className="h-8 w-8 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Flow2API model test</h1>
+          <h1 className="text-3xl font-bold tracking-tight">sub2gen model test</h1>
           <p className="text-muted-foreground mt-2">Pick a model, enter a prompt, and run a streamed completion.</p>
         </div>
 

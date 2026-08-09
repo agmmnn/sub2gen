@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-from flow2api.core.config import config
-from flow2api.services.browser_captcha_extension import ExtensionCaptchaService
+from sub2gen.core.config import config
+from sub2gen.services.browser_captcha_extension import ExtensionCaptchaService
 
 
 CONTRACT_PATH = Path(__file__).parent / "contracts" / "extension-worker-registration.json"

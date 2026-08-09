@@ -1,5 +1,5 @@
 {
-  "name": "@flow2api/admin-web",
+  "name": "@sub2gen/admin-web",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@flow2api/api-contract": "workspace:*",
+    "@sub2gen/api-contract": "workspace:*",
     "@base-ui/react": "^1.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

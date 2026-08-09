@@ -1,4 +1,4 @@
-import { Flow2ApiError, generateMetadata, validateSession } from "./api";
+import { Sub2GenApiError, generateMetadata, validateSession } from "./api";
 import { ADOBE_UPLOADS_URLS } from "./adobe-url";
 import { applyTitleRules } from "./title";
 import { clearConnection, DEFAULT_RUNTIME, getConnection, getPreferences, invalidateConnection, saveConnection, saveRuntimeState } from "./storage";
@@ -55,7 +55,7 @@ async function connectionStatus(revalidate: boolean) {
       connected: false,
       baseUrl: connection.baseUrl,
       error: error instanceof Error ? error.message : "Connection validation failed.",
-      status: error instanceof Flow2ApiError ? error.status : 0,
+      status: error instanceof Sub2GenApiError ? error.status : 0,
     };
   }
 }
@@ -64,7 +64,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
   if (message.type === "VALIDATE_CONNECTION") {
     const baseUrl = normalizeBaseUrl(message.baseUrl || "");
     const apiKey = (message.apiKey || "").trim();
-    if (!apiKey) throw new Error("Enter a Flow2 API key.");
+    if (!apiKey) throw new Error("Enter a sub2gen key.");
     const session = await validateSession(baseUrl, apiKey);
     await saveConnection({ baseUrl, apiKey, keyLabel: session.keyLabel, validatedAt: Date.now() });
     return { success: true, connected: true, baseUrl, keyLabel: session.keyLabel };
@@ -80,7 +80,7 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
   if (message.action === "processImage") {
     const connection = await getConnection();
     if (!connection || !connection.validatedAt) {
-      return { success: false, error: "Connect a valid Flow2 API key before processing.", isFatal: true };
+      return { success: false, error: "Connect a valid sub2gen key before processing.", isFatal: true };
     }
     if (!message.imageUrl) return { success: false, error: "Adobe image URL is missing." };
     try {
@@ -89,22 +89,22 @@ async function handleMessage(message: ExtensionMessage): Promise<unknown> {
       data.title = applyTitleRules(data.title, preferences);
       return { success: true, data };
     } catch (error) {
-      if (error instanceof Flow2ApiError && (error.status === 401 || error.status === 403)) await invalidateConnection();
+      if (error instanceof Sub2GenApiError && (error.status === 401 || error.status === 403)) await invalidateConnection();
       return {
         success: false,
         error: error instanceof Error ? error.message : "Metadata generation failed.",
-        status: error instanceof Flow2ApiError ? error.status : 0,
-        retryAfter: error instanceof Flow2ApiError ? error.retryAfter : 0,
-        isFatal: error instanceof Flow2ApiError && (error.status === 401 || error.status === 403),
+        status: error instanceof Sub2GenApiError ? error.status : 0,
+        retryAfter: error instanceof Sub2GenApiError ? error.retryAfter : 0,
+        isFatal: error instanceof Sub2GenApiError && (error.status === 401 || error.status === 403),
       };
     }
   }
 
   if (message.type === "NOTIFY") {
-    await chrome.notifications.create(`flow2-metadata-${Date.now()}`, {
+    await chrome.notifications.create(`sub2gen-metadata-${Date.now()}`, {
       type: "basic",
       iconUrl: "icons/icon128.png",
-      title: message.title || "Flow2 Metadata",
+      title: message.title || "sub2gen Metadata",
       message: message.message || "",
     });
     return { success: true };
@@ -118,7 +118,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     .catch((error) => sendResponse({
       success: false,
       error: error instanceof Error ? error.message : "Unexpected extension error.",
-      status: error instanceof Flow2ApiError ? error.status : 0,
+      status: error instanceof Sub2GenApiError ? error.status : 0,
     }));
   return true;
 });

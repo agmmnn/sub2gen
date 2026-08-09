@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from flow2api.workers.personal import PersonalSessionRefreshJobs, ResidentTabInfo
+from sub2gen.workers.personal import PersonalSessionRefreshJobs, ResidentTabInfo
 
 
 async def no_sleep(_seconds: float) -> None:

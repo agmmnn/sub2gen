@@ -1,5 +1,5 @@
 // @ts-nocheck -- isolated page bridge; migration keeps the existing message contract intact.
-console.log("[Flow2API] Captcha Worker injected.");
+console.log("[sub2gen] Captcha Worker injected.");
 
 function getRecaptchaToken(action) {
     return new Promise((resolve, reject) => {
@@ -54,7 +54,7 @@ function getRecaptchaToken(action) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "get_token") {
-        console.log("[Flow2API] Generating token for action: " + message.action);
+        console.log("[sub2gen] Generating token for action: " + message.action);
         getRecaptchaToken(message.action)
             .then(token => sendResponse({status: "success", token: token}))
             .catch(err => sendResponse({status: "error", error: err.message}));

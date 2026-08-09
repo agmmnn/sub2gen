@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from flow2api.providers.google_flow import (
+from sub2gen.providers.google_flow import (
     FlowAuthResource,
     FlowImagesResource,
     FlowMediaResource,
@@ -13,7 +13,7 @@ from flow2api.providers.google_flow import (
     FlowTransport,
     FlowVideosResource,
 )
-from flow2api.services.flow_client import FlowClient
+from sub2gen.services.flow_client import FlowClient
 
 
 def test_flow_client_composes_capability_resources() -> None:

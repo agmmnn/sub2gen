@@ -51,7 +51,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="mt-6 text-4xl font-bold tracking-tight text-foreground">Flow2API</h2>
+          <h2 className="mt-6 text-4xl font-bold tracking-tight text-foreground">sub2gen</h2>
           <p className="mt-2 text-sm text-muted-foreground">Admin Console</p>
         </div>
 

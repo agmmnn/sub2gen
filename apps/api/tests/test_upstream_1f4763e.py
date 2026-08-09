@@ -5,9 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from flow2api.services.file_cache import FileCache
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.generation_handler import GenerationHandler
+from sub2gen.services.file_cache import FileCache
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.generation_handler import GenerationHandler
 
 
 def _valid_mp4_bytes() -> bytes:

@@ -4,14 +4,14 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from flow2api.core.config import (
+from sub2gen.core.config import (
     Config,
     get_runtime_data_dir,
     get_runtime_tmp_dir,
     get_yescaptcha_min_score,
     normalize_yescaptcha_task_type,
 )
-from flow2api.core.database import Database
+from sub2gen.core.database import Database
 
 
 class YesCaptchaTaskTypeTests(unittest.TestCase):
@@ -50,7 +50,7 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with patch.dict(
                 os.environ,
-                {"RAILWAY_VOLUME_MOUNT_PATH": tmp, "FLOW2API_TMP_DIR": ""},
+                {"RAILWAY_VOLUME_MOUNT_PATH": tmp, "SUB2GEN_TMP_DIR": ""},
                 clear=False,
             ):
                 self.assertEqual(get_runtime_data_dir(), Path(tmp) / "data")
@@ -60,7 +60,7 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as volume, tempfile.TemporaryDirectory() as staging:
             with patch.dict(
                 os.environ,
-                {"RAILWAY_VOLUME_MOUNT_PATH": volume, "FLOW2API_TMP_DIR": staging},
+                {"RAILWAY_VOLUME_MOUNT_PATH": volume, "SUB2GEN_TMP_DIR": staging},
                 clear=False,
             ):
                 self.assertEqual(get_runtime_data_dir(), Path(volume) / "data")
@@ -70,17 +70,17 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with patch.dict(os.environ, {"RAILWAY_VOLUME_MOUNT_PATH": tmp}, clear=False):
                 db = Database()
-                self.assertEqual(Path(db.db_path), Path(tmp) / "data" / "flow.db")
+                self.assertEqual(Path(db.db_path), Path(tmp) / "data" / "sub2gen.db")
                 self.assertTrue((Path(tmp) / "data").is_dir())
 
     def test_debug_env_overrides_config_values(self):
         env = {
-            "FLOW2API_DEBUG_ENABLED": "true",
-            "FLOW2API_DEBUG_LOG_REQUESTS": "false",
-            "FLOW2API_DEBUG_LOG_RESPONSES": "0",
-            "FLOW2API_DEBUG_MASK_TOKEN": "yes",
-            "FLOW2API_DEBUG_RECAPTCHA_TRACE": "on",
-            "FLOW2API_DEBUG_RECAPTCHA_CONSOLE": "off",
+            "SUB2GEN_DEBUG_ENABLED": "true",
+            "SUB2GEN_DEBUG_LOG_REQUESTS": "false",
+            "SUB2GEN_DEBUG_LOG_RESPONSES": "0",
+            "SUB2GEN_DEBUG_MASK_TOKEN": "yes",
+            "SUB2GEN_DEBUG_RECAPTCHA_TRACE": "on",
+            "SUB2GEN_DEBUG_RECAPTCHA_CONSOLE": "off",
         }
         with patch.dict(os.environ, env, clear=False):
             cfg = Config()
@@ -92,21 +92,21 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
             self.assertFalse(cfg.debug_recaptcha_console)
 
     def test_debug_env_wins_after_runtime_db_reload(self):
-        with patch.dict(os.environ, {"FLOW2API_DEBUG_ENABLED": "true"}, clear=False):
+        with patch.dict(os.environ, {"SUB2GEN_DEBUG_ENABLED": "true"}, clear=False):
             cfg = Config()
             cfg.set_debug_enabled(False)
             self.assertTrue(cfg.debug_enabled)
 
     def test_invalid_debug_env_bool_raises(self):
-        with patch.dict(os.environ, {"FLOW2API_DEBUG_ENABLED": "maybe"}, clear=False):
+        with patch.dict(os.environ, {"SUB2GEN_DEBUG_ENABLED": "maybe"}, clear=False):
             with self.assertRaises(ValueError):
                 Config()
 
     def test_admin_env_wins_after_runtime_db_reload(self):
         env = {
-            "FLOW2API_ADMIN_USERNAME": "railadmin",
-            "FLOW2API_ADMIN_PASSWORD": "rail-secret",
-            "FLOW2API_API_KEY": "rail-api-key",
+            "SUB2GEN_ADMIN_USERNAME": "railadmin",
+            "SUB2GEN_ADMIN_PASSWORD": "rail-secret",
+            "SUB2GEN_API_KEY": "rail-api-key",
         }
         with patch.dict(os.environ, env, clear=False):
             cfg = Config()
@@ -121,7 +121,7 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
     def test_cache_base_url_env_wins_after_runtime_db_reload(self):
         with patch.dict(
             os.environ,
-            {"FLOW2API_CACHE_BASE_URL": "https://flow-api.prismacreative.online/"},
+            {"SUB2GEN_CACHE_BASE_URL": "https://flow-api.prismacreative.online/"},
             clear=False,
         ):
             cfg = Config()
@@ -131,7 +131,7 @@ class RailwayRuntimeConfigTests(unittest.TestCase):
 
 class ApiOnlyHostRouteTests(unittest.TestCase):
     def test_api_only_host_allows_public_api_cache_and_extension_routes(self):
-        from flow2api.main import _path_allowed_on_api_only_host
+        from sub2gen.main import _path_allowed_on_api_only_host
 
         self.assertTrue(_path_allowed_on_api_only_host("/health"))
         self.assertTrue(_path_allowed_on_api_only_host("/v1/chat/completions"))
@@ -141,7 +141,7 @@ class ApiOnlyHostRouteTests(unittest.TestCase):
         self.assertTrue(_path_allowed_on_api_only_host("/captcha_ws"))
 
     def test_api_only_host_blocks_admin_ui_and_admin_api_routes(self):
-        from flow2api.main import _path_allowed_on_api_only_host
+        from sub2gen.main import _path_allowed_on_api_only_host
 
         self.assertFalse(_path_allowed_on_api_only_host("/"))
         self.assertFalse(_path_allowed_on_api_only_host("/login"))
@@ -150,17 +150,17 @@ class ApiOnlyHostRouteTests(unittest.TestCase):
 
 
 class RailwayFreshSeedTests(unittest.IsolatedAsyncioTestCase):
-    async def test_first_startup_config_rows_use_flow2api_env_seed_values(self):
+    async def test_first_startup_config_rows_use_sub2gen_env_seed_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = {
                 "RAILWAY_VOLUME_MOUNT_PATH": tmp,
-                "FLOW2API_ADMIN_USERNAME": "railadmin",
-                "FLOW2API_ADMIN_PASSWORD": "rail-secret",
-                "FLOW2API_API_KEY": "rail-api-key",
-                "FLOW2API_CAPTCHA_METHOD": "extension",
-                "FLOW2API_CACHE_BASE_URL": "https://flow-api.prismacreative.online",
-                "FLOW2API_DEBUG_ENABLED": "true",
-                "FLOW2API_DEBUG_LOG_REQUESTS": "false",
+                "SUB2GEN_ADMIN_USERNAME": "railadmin",
+                "SUB2GEN_ADMIN_PASSWORD": "rail-secret",
+                "SUB2GEN_API_KEY": "rail-api-key",
+                "SUB2GEN_CAPTCHA_METHOD": "extension",
+                "SUB2GEN_CACHE_BASE_URL": "https://flow-api.prismacreative.online",
+                "SUB2GEN_DEBUG_ENABLED": "true",
+                "SUB2GEN_DEBUG_LOG_REQUESTS": "false",
             }
             with patch.dict(os.environ, env, clear=False):
                 cfg = Config()

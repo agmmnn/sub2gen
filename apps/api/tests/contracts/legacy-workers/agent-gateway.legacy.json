@@ -2,9 +2,9 @@
   "fixture_version": 1,
   "dialect": "agent_gateway.legacy-unversioned",
   "sources": [
-    "apps/agent-gateway/src/flow2api_gateway/ws_agents.py",
-    "apps/agent-gateway/src/flow2api_gateway/state.py",
-    "apps/agent-gateway/src/flow2api_gateway/schemas.py"
+    "apps/agent-gateway/src/sub2gen_gateway/ws_agents.py",
+    "apps/agent-gateway/src/sub2gen_gateway/state.py",
+    "apps/agent-gateway/src/sub2gen_gateway/schemas.py"
   ],
   "codec": {
     "encoding": "utf-8 JSON text frames",

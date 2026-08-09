@@ -1,4 +1,4 @@
-import type { Flow2MetadataResponse, GeneratedMetadata } from "./types";
+import type { Sub2GenMetadataResponse, GeneratedMetadata } from "./types";
 
 export const FLOW2_TO_ADOBE_CATEGORY: Readonly<Record<number, string>> = {
   1: "10001", 2: "10092", 3: "10162", 4: "10209", 5: "10235", 6: "10255", 7: "10283",
@@ -13,11 +13,11 @@ function normalizeKeywords(value: unknown): string {
     : "";
 }
 
-export function normalizeMetadataResponse(response: Flow2MetadataResponse): GeneratedMetadata {
+export function normalizeMetadataResponse(response: Sub2GenMetadataResponse): GeneratedMetadata {
   const option = response?.optionA;
   const title = typeof option?.title === "string" ? option.title.trim() : "";
   const keywords = normalizeKeywords(option?.keywords);
-  if (!title || !keywords) throw new Error("Flow2 API returned empty or invalid metadata.");
+  if (!title || !keywords) throw new Error("sub2gen returned empty or invalid metadata.");
 
   const categoryId = Number(option?.categoryId);
   return {

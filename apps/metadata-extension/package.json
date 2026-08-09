@@ -1,5 +1,5 @@
 {
-  "name": "@flow2api/metadata-extension",
+  "name": "@sub2gen/metadata-extension",
   "version": "1.0.0",
   "private": true,
   "type": "module",

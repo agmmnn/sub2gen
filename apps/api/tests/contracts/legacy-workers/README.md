@@ -5,7 +5,7 @@ the canonical worker protocol. They are compatibility inputs, not the design for
 new protocol.
 
 Every WebSocket frame round-trips through the executable compatibility codecs in
-`flow2api.workers.extension.legacy_codec` and `flow2api_gateway.legacy_codec`. Current
+`sub2gen.workers.extension.legacy_codec` and `sub2gen_gateway.legacy_codec`. Current
 runtime handlers are intentionally unchanged; protocol v1 will consume these codecs at
 the compatibility boundary.
 

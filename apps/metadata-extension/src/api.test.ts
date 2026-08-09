@@ -4,10 +4,10 @@ import { DEFAULT_PREFERENCES } from "./storage";
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Flow2 API client", () => {
+describe("sub2gen client", () => {
   it("validates an extension session", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      active: true, service: "flow2-metadata", keyLabel: "team", capabilities: ["adobe:metadata"],
+      active: true, service: "sub2gen-metadata", keyLabel: "team", capabilities: ["adobe:metadata"],
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
     await expect(validateSession("https://api.example.test", "secret")).resolves.toMatchObject({ keyLabel: "team" });

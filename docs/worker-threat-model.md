@@ -3,7 +3,7 @@
 - Status: Phase 0 security baseline
 - Last reviewed: 2026-08-09
 
-This document defines the minimum security boundary for Flow2API's browser extension,
+This document defines the minimum security boundary for sub2gen's browser extension,
 local image worker, agent gateway, and future provider workers. It covers the planned
 canonical worker protocol as well as compatibility adapters for the current
 `/captcha_ws` and `/ws/agents` dialects.

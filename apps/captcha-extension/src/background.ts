@@ -1,5 +1,5 @@
 // @ts-nocheck -- legacy browser orchestration is typed incrementally through imported boundaries.
-import { webSocketUrlToHttpBase } from "@flow2api/extension-core"
+import { webSocketUrlToHttpBase } from "@sub2gen/extension-core"
 
 import { importGoogleAccount } from "./state/api"
 import { createAccountSyncState, reduceAccountSync } from "./state/account-sync"
@@ -27,7 +27,7 @@ let cachedInstanceId = null;
 let sessionRefreshTimeout = null;
 let accountSyncState = createAccountSyncState();
 
-const ACCOUNT_IMPORT_ALARM = "flow2api-account-import";
+const ACCOUNT_IMPORT_ALARM = "sub2gen-account-import";
 const GOOGLE_COOKIE_NAMES = [
     "SID",
     "HSID",
@@ -175,7 +175,7 @@ function persistCaptchaPersistence() {
         },
         () => {
             if (chrome.runtime.lastError) {
-                console.log("[Flow2API] persistCaptchaPersistence:", chrome.runtime.lastError.message);
+                console.log("[sub2gen] persistCaptchaPersistence:", chrome.runtime.lastError.message);
             }
         }
     );
@@ -478,7 +478,7 @@ function closeSocket() {
         try {
             ws.close();
         } catch (e) {
-            console.log("[Flow2API] Close socket error", e);
+            console.log("[sub2gen] Close socket error", e);
         }
         ws = null;
     }
@@ -522,7 +522,7 @@ function recordCapturedFlowSessionToken(sessionToken) {
     runtimeState.flowSessionTokenHistory = next;
     chrome.storage.local.set({ [FLOW_SESSION_TOKEN_HISTORY_KEY]: next }, () => {
         if (chrome.runtime.lastError) {
-            console.log("[Flow2API] flowSessionTokenHistory persist failed:", chrome.runtime.lastError.message);
+            console.log("[sub2gen] flowSessionTokenHistory persist failed:", chrome.runtime.lastError.message);
         }
     });
 }
@@ -633,7 +633,7 @@ async function closeWorkerTabIfAny() {
     try {
         await chrome.tabs.remove(id);
     } catch (e) {
-        console.log("[Flow2API] closeWorkerTabIfAny:", e);
+        console.log("[sub2gen] closeWorkerTabIfAny:", e);
     }
     runtimeState.workerTabId = null;
     persistWorkerTabId(null);
@@ -673,7 +673,7 @@ function resetExtensionToDefaults(done) {
                         [STORAGE_RECENT_GENERATION_JOBS]: [],
                     },
                     () => {
-                        console.log("[Flow2API] Extension reset to defaults.");
+                        console.log("[sub2gen] Extension reset to defaults.");
                         pushEvent("reset", "Extension reset to defaults and reconnect started");
                         connectWS()
                             .then(() => {
@@ -801,7 +801,7 @@ async function generateTokenInFreshTab(action, pageUrl) {
     const url = normalizeWorkerPageUrl(pageUrl);
     let newTabId = null;
     try {
-        console.log("[Flow2API] Opening fresh Labs tab for captcha:", url);
+        console.log("[sub2gen] Opening fresh Labs tab for captcha:", url);
         const newTab = await chrome.tabs.create({ url, active: false });
         newTabId = newTab.id;
 
@@ -823,9 +823,9 @@ async function generateTokenInFreshTab(action, pageUrl) {
         if (newTabId) {
             try {
                 await chrome.tabs.remove(newTabId);
-                console.log("[Flow2API] Closed temporary token tab.");
+                console.log("[sub2gen] Closed temporary token tab.");
             } catch (e) {
-                console.log("[Flow2API] Error closing tab:", e);
+                console.log("[sub2gen] Error closing tab:", e);
             }
         }
     }
@@ -944,7 +944,7 @@ async function ensurePersistentWorkerTab(settings) {
         }
     }
 
-    console.log("[Flow2API] Creating persistent worker tab:", pageUrl);
+    console.log("[sub2gen] Creating persistent worker tab:", pageUrl);
     const newTab = await chrome.tabs.create({ url: pageUrl, active: false });
     tabId = newTab.id;
     runtimeState.workerTabId = tabId;
@@ -990,7 +990,7 @@ async function generateTokenForCaptcha(action) {
 
 /**
  * Page-origin fetch to aisandbox from https://labs.google/* is CORS-restricted.
- * The server only allows a small set of request headers on preflight. Flow2API's
+ * The server only allows a small set of request headers on preflight. sub2gen's
  * server-side client adds custom x-browser-* headers for curl_cffi; those must not
  * be forwarded into fetch() or the OPTIONS preflight fails (no ACAO / wrong ACAH).
  */
@@ -1287,7 +1287,7 @@ async function connectWS() {
 
     socket.onopen = () => {
         if (socket !== ws) return;
-        console.log("[Flow2API] Background connected to WebSocket", url.toString());
+        console.log("[sub2gen] Background connected to WebSocket", url.toString());
         runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "open" });
         pushEvent("connect_open", "WebSocket connected");
         socket.send(JSON.stringify(buildRegistrationMessage(mode, settings.clientLabel, instanceId)));
@@ -1334,13 +1334,13 @@ async function connectWS() {
             if (ackStatus === "error") {
                 runtimeState.lastError = ackError || "register_failed";
                 pushEvent("register_ack", `Register failed: ${ackError || "unknown"}`, "error");
-                console.log("[Flow2API] Register ack error:", ackError || "unknown");
+                console.log("[sub2gen] Register ack error:", ackError || "unknown");
                 stopWorkerSessionRefreshScheduler();
             } else {
                 runtimeState.lastError = "";
                 pushEvent("register_ack", "Register successful");
                 console.log(
-                    "[Flow2API] Registered managed_api_key_id=",
+                    "[sub2gen] Registered managed_api_key_id=",
                     runtimeState.managedApiKeyId || "-",
                     "captcha_worker_id=",
                     runtimeState.captchaWorkerId || "-",
@@ -1358,39 +1358,39 @@ async function connectWS() {
 
         if (data.type === "captcha_upstream_verdict") {
             tokenQueue = tokenQueue.then(() => handleCaptchaUpstreamVerdict(data)).catch(err => {
-                console.error("[Flow2API] captcha_upstream_verdict error:", err);
+                console.error("[sub2gen] captcha_upstream_verdict error:", err);
             });
             return;
         }
 
         if (data.type === "get_token") {
             tokenQueue = tokenQueue.then(() => handleGetToken(data)).catch(err => {
-                console.error("[Flow2API] Queue Error:", err);
+                console.error("[sub2gen] Queue Error:", err);
             });
             return;
         }
         if (data.type === "submit_generation") {
             tokenQueue = tokenQueue.then(() => handleGenerationRequest(data, "submit_generation")).catch(err => {
-                console.error("[Flow2API] submit_generation queue error:", err);
+                console.error("[sub2gen] submit_generation queue error:", err);
             });
             return;
         }
         if (data.type === "poll_generation") {
             tokenQueue = tokenQueue.then(() => handleGenerationRequest(data, "poll_generation")).catch(err => {
-                console.error("[Flow2API] poll_generation queue error:", err);
+                console.error("[sub2gen] poll_generation queue error:", err);
             });
             return;
         }
         if (data.type === "refresh_st") {
             tokenQueue = tokenQueue.then(() => handleRefreshSessionToken(data)).catch(err => {
-                console.error("[Flow2API] refresh_st queue error:", err);
+                console.error("[sub2gen] refresh_st queue error:", err);
             });
         }
     };
 
     socket.onclose = () => {
         if (socket !== ws) return;
-        console.log("[Flow2API] WebSocket Closed. Reconnecting in 2s...");
+        console.log("[sub2gen] WebSocket Closed. Reconnecting in 2s...");
         runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "close" });
         stopWorkerSessionRefreshScheduler();
         pushEvent("connect_close", "WebSocket closed, reconnect scheduled", "warn");
@@ -1402,7 +1402,7 @@ async function connectWS() {
 
     socket.onerror = (e) => {
         if (socket !== ws) return;
-        console.log("[Flow2API] WebSocket Error", e);
+        console.log("[sub2gen] WebSocket Error", e);
         runtimeState.wsStatus = reduceWebSocketPhase(runtimeState.wsStatus, { type: "error" });
         runtimeState.lastError = "websocket_error";
         pushEvent("connect_error", "WebSocket transport error", "error");
@@ -1480,7 +1480,7 @@ async function warmupLabsForSessionRefresh() {
             try {
                 await chrome.tabs.remove(newTabId);
             } catch (e) {
-                console.log("[Flow2API] Session warmup tab close error:", e);
+                console.log("[sub2gen] Session warmup tab close error:", e);
             }
         }
     }
@@ -1521,7 +1521,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
         changes.refreshTokenId ||
         changes.connectionMode
     ) {
-        console.log("[Flow2API] Extension settings changed, reconnecting WebSocket...");
+        console.log("[sub2gen] Extension settings changed, reconnecting WebSocket...");
         pushEvent("settings_changed", "Settings changed, reconnecting");
         closeSocket();
         connectWS();

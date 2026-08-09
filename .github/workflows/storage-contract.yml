@@ -14,13 +14,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: flow2api
-          POSTGRES_PASSWORD: flow2api
-          POSTGRES_DB: flow2api
+          POSTGRES_USER: sub2gen
+          POSTGRES_PASSWORD: sub2gen
+          POSTGRES_DB: sub2gen
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U flow2api -d flow2api"
+          --health-cmd "pg_isready -U sub2gen -d sub2gen"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
@@ -35,10 +35,10 @@ jobs:
           --health-retries 12
 
     env:
-      FLOW2API_TEST_POSTGRES_URL: postgresql://flow2api:flow2api@127.0.0.1:5432/flow2api
-      FLOW2API_REDIS_URL: redis://127.0.0.1:6379/15
-      FLOW2API_TEST_REDIS_URL: redis://127.0.0.1:6379/15
-      FLOW2API_REDIS_MODE: required
+      SUB2GEN_TEST_POSTGRES_URL: postgresql://sub2gen:sub2gen@127.0.0.1:5432/sub2gen
+      SUB2GEN_REDIS_URL: redis://127.0.0.1:6379/15
+      SUB2GEN_TEST_REDIS_URL: redis://127.0.0.1:6379/15
+      SUB2GEN_REDIS_MODE: required
 
     steps:
       - uses: actions/checkout@v4

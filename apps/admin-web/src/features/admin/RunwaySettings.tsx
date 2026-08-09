@@ -941,7 +941,7 @@ export function RunwaySettings({ active }: { active: boolean }) {
                 <div>
                   <Label>Team / workspace</Label>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Load the teams available to this Runway account, then choose which one Flow2API should use.
+                    Load the teams available to this Runway account, then choose which one sub2gen should use.
                   </div>
                 </div>
                 <Button
@@ -984,7 +984,7 @@ export function RunwaySettings({ active }: { active: boolean }) {
                 </div>
               ) : (
                 <div className="text-xs text-muted-foreground">
-                  No teams loaded yet. If you do not load teams, Flow2API will fall back to the ID decoded from the JWT.
+                  No teams loaded yet. If you do not load teams, sub2gen will fall back to the ID decoded from the JWT.
                 </div>
               )}
               <div className="grid gap-3 md:grid-cols-2">

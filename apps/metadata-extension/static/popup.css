@@ -1343,7 +1343,7 @@ body[data-phase="error"] .action-dock .primary-button {
   box-shadow: 0 10px 24px color-mix(in srgb, var(--red) 18%, transparent);
 }
 
-.flow2-processing-indicator {
+.sub2gen-processing-indicator {
   position: absolute;
   z-index: 9999;
   inset: 6px;

@@ -9,7 +9,7 @@ import TestPage from "./pages/Test"
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="flow2api-ui-theme">
+    <ThemeProvider defaultTheme="system" storageKey="sub2gen-ui-theme">
       <AuthProvider>
         <BrowserRouter>
           <Routes>

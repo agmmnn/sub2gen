@@ -23,7 +23,7 @@ describe("current-run activity", () => {
   });
 
   it("does not retain URLs, bearer values, or managed keys in activity copy", () => {
-    expect(sanitizeActivityMessage("Failed at https://api.example.test Bearer secret f2a_live_abc123"))
+    expect(sanitizeActivityMessage("Failed at https://api.example.test Bearer secret s2g_live_abc123"))
       .toBe("Failed at remote service authentication token API key");
   });
 

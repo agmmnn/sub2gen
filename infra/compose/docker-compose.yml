@@ -1,21 +1,20 @@
-# Flow2API app only. For Cloudflare Tunnel + agent gateway, merge:
+# sub2gen app only. For Cloudflare Tunnel + agent gateway, merge:
 #   docker compose -f infra/compose/docker-compose.yml -f infra/compose/docker-compose.agent.yml up -d
 #
 # Headed:           docker compose -f infra/compose/docker-compose.headed.yml up -d
 # Local + frontend: docker compose -f infra/compose/docker-compose.local.yml up -d
 # WARP:             docker compose -f infra/compose/docker-compose.proxy.yml up -d
 #
-# flow2api is built from this repo (Vite `apps/admin-web/` → `/app/apps/api/static`). Prebuilt
-# `ghcr.io/.../flow2api:latest` is often the older static admin; use the build below for the current UI.
-# To force upstream image only: remove `build:` and set `image: ghcr.io/thesmallhancat/flow2api:latest`.
+# sub2gen is built from this repo (Vite `apps/admin-web/` → `/app/apps/api/static`).
+# To use a published image, remove `build:` and set `image: ghcr.io/agmmnn/sub2gen:latest`.
 
 services:
-  flow2api:
+  sub2gen:
     build:
       context: ../..
       dockerfile: infra/docker/Dockerfile
-    image: flow2api:local
-    container_name: flow2api
+    image: sub2gen:local
+    container_name: sub2gen
     ports:
       - "38000:8000"
     volumes:
@@ -24,13 +23,13 @@ services:
       - ../../config/setting.toml:/app/config/setting.toml
     environment:
       - PYTHONUNBUFFERED=1
-      - FLOW2API_API_ONLY_HOST=${FLOW2API_API_ONLY_HOST:-flow-api.prismacreative.online}
-      - FLOW2API_REDIS_URL=${FLOW2API_REDIS_URL:-redis://redis:6379/0}
-      - FLOW2API_REDIS_MODE=${FLOW2API_REDIS_MODE:-shadow}
-      - FLOW2API_DATABASE_BACKEND=${FLOW2API_DATABASE_BACKEND:-sqlite}
-      - FLOW2API_DATABASE_URL=${FLOW2API_DATABASE_URL:-}
-      - FLOW2API_DB_SCHEMA=${FLOW2API_DB_SCHEMA:-flow2api}
-      - FLOW2API_REQUIRE_CUTOVER_MARKER=${FLOW2API_REQUIRE_CUTOVER_MARKER:-true}
+      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-flow-api.prismacreative.online}
+      - SUB2GEN_REDIS_URL=${SUB2GEN_REDIS_URL:-redis://redis:6379/0}
+      - SUB2GEN_REDIS_MODE=${SUB2GEN_REDIS_MODE:-shadow}
+      - SUB2GEN_DATABASE_BACKEND=${SUB2GEN_DATABASE_BACKEND:-sqlite}
+      - SUB2GEN_DATABASE_URL=${SUB2GEN_DATABASE_URL:-}
+      - SUB2GEN_DB_SCHEMA=${SUB2GEN_DB_SCHEMA:-sub2gen}
+      - SUB2GEN_REQUIRE_CUTOVER_MARKER=${SUB2GEN_REQUIRE_CUTOVER_MARKER:-true}
     restart: unless-stopped
     depends_on:
       redis:
@@ -38,11 +37,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: flow2api-redis
+    container_name: sub2gen-redis
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "384mb", "--maxmemory-policy", "noeviction"]
     mem_limit: 512m
     volumes:
-      - flow2api-redis-data:/data
+      - sub2gen-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -52,13 +51,13 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: flow2api-cloudflared
+    container_name: sub2gen-cloudflared
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     depends_on:
-      - flow2api
+      - sub2gen
     restart: unless-stopped
 
 volumes:
-  flow2api-redis-data:
+  sub2gen-redis-data:

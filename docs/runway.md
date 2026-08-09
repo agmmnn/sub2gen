@@ -1,6 +1,6 @@
 # Runway Integration
 
-Flow2API can route `runway-*` models to Runway web tasks while keeping Flow/Veo models on the existing Flow pipeline. The integration uses the Runway web-account task flow captured from the app, not the official API-secret flow.
+sub2gen can route `runway-*` models to Runway web tasks while keeping Flow/Veo models on the existing Flow pipeline. The integration uses the Runway web-account task flow captured from the app, not the official API-secret flow.
 
 ## Admin Setup
 
@@ -56,21 +56,21 @@ List models:
 
 ```bash
 curl http://localhost:8000/v1/runway/models \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY"
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY"
 ```
 
 List TTS voices:
 
 ```bash
 curl http://localhost:8000/v1/runway/voices \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY"
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY"
 ```
 
-Upload media to Runway and mirror it into Flow2API cache:
+Upload media to Runway and mirror it into sub2gen cache:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runway/uploads \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -F "file=@reference.png" \
   -F "role=first_frame"
 ```
@@ -81,7 +81,7 @@ Create an image task:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runway/tasks \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "runway-nano-banana-2",
@@ -96,7 +96,7 @@ Create an image-to-video task with a first frame:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runway/tasks \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "runway-gen45-video",
@@ -117,7 +117,7 @@ Create TTS audio:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runway/tasks \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "runway-text-to-speech",
@@ -130,7 +130,7 @@ Estimate credits:
 
 ```bash
 curl -X POST http://localhost:8000/v1/runway/estimate \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"runway-gen45-video","prompt":"A wide desert shot","duration":5}'
 ```
@@ -139,15 +139,15 @@ Poll or cancel:
 
 ```bash
 curl http://localhost:8000/v1/runway/tasks/runway-20260530-120000-abcd1234 \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY"
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY"
 
 curl -X POST http://localhost:8000/v1/runway/tasks/runway-20260530-120000-abcd1234/cancel \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY"
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY"
 ```
 
 ## Media Roles
 
-Use `media[].role` to tell Flow2API how to place uploaded assets in the Runway payload:
+Use `media[].role` to tell sub2gen how to place uploaded assets in the Runway payload:
 
 - `reference_image`
 - `first_frame`
@@ -167,7 +167,7 @@ Runway models appear in `/v1/models` only when Runway is globally enabled and th
 
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "runway-gen45-video",
@@ -185,7 +185,7 @@ Async OpenAI-compatible calls are also supported:
 
 ```bash
 curl -X POST http://localhost:8000/v1/async/chat/completions \
-  -H "Authorization: Bearer $FLOW2API_MANAGED_KEY" \
+  -H "Authorization: Bearer $SUB2GEN_MANAGED_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "runway-nano-banana-2",
@@ -200,7 +200,7 @@ Poll with `/v1/jobs/{job_id}`.
 Runway task responses include:
 
 - `raw_artifact_urls`: upstream Runway artifact links
-- `cached_artifact_urls`: Flow2API `/api/cache/blob/...` links when cache output is enabled
+- `cached_artifact_urls`: sub2gen `/api/cache/blob/...` links when cache output is enabled
 - `result_urls`: cached URLs first, raw URLs as fallback
 
-Flow2API keeps the raw Runway URLs in task state even when caching is enabled.
+sub2gen keeps the raw Runway URLs in task state even when caching is enabled.

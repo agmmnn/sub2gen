@@ -1,33 +1,33 @@
 # Redis performance rollout
 
-During the PostgreSQL bridge, Flow2API can use SQLite or PostgreSQL for durable relational data. Redis remains responsible only for short-lived hot state, atomic limits, progress, maintenance coordination, events, and queued persistence. PostgreSQL cutover is documented separately in `postgres-migration-runbook.md`.
+During the PostgreSQL bridge, sub2gen can use SQLite or PostgreSQL for durable relational data. Redis remains responsible only for short-lived hot state, atomic limits, progress, maintenance coordination, events, and queued persistence. PostgreSQL cutover is documented separately in `postgres-migration-runbook.md`.
 
-> Do not enable required mode or retention before Redis has a valid state marker and a verified pre-change Google Drive backup exists. Run only one Flow2API replica; browser profiles and runtime coordination remain local.
+> Do not enable required mode or retention before Redis has a valid state marker and a verified pre-change Google Drive backup exists. Run only one sub2gen replica; browser profiles and runtime coordination remain local.
 
 ## Quick start
 
 Deploy the code in shadow mode first:
 
 ```bash
-FLOW2API_REDIS_URL="${{Redis.REDIS_URL}}"
-FLOW2API_REDIS_MODE=shadow
-FLOW2API_RETENTION_ENABLED=false
-FLOW2API_DEBUG_ENABLED=false
-FLOW2API_DEBUG_PAYLOAD_LOGGING=false
+SUB2GEN_REDIS_URL="${{Redis.REDIS_URL}}"
+SUB2GEN_REDIS_MODE=shadow
+SUB2GEN_RETENTION_ENABLED=false
+SUB2GEN_DEBUG_ENABLED=false
+SUB2GEN_DEBUG_PAYLOAD_LOGGING=false
 ```
 
 Initialize a new Redis service explicitly from a Railway shell:
 
 ```bash
-uv run python -m flow2api.scripts.redis_state init
-uv run python -m flow2api.scripts.redis_state status
+uv run python -m sub2gen.scripts.redis_state init
+uv run python -m sub2gen.scripts.redis_state status
 ```
 
 The application never creates a missing marker during startup. A missing or mismatched marker keeps Redis unavailable so a lost Redis volume cannot silently reset rate limits.
 
 ## Provision Railway Redis
 
-Create a Redis 7 service in the same Railway project and production environment as Flow2API. Use private networking and attach a persistent volume at `/data`. Railway's template may provision a newer major release; pin the service source to `redis:7-alpine` before required mode. The production service currently resolves that tag to Redis 7.4.x.
+Create a Redis 7 service in the same Railway project and production environment as sub2gen. Use private networking and attach a persistent volume at `/data`. Railway's template may provision a newer major release; pin the service source to `redis:7-alpine` before required mode. The production service currently resolves that tag to Redis 7.4.x.
 
 Configure the Redis server with:
 
@@ -41,38 +41,38 @@ Set these flags in the durable Railway start command, not only through `CONFIG S
 redis-server --dir /data --appendonly yes --appendfsync everysec --maxmemory 384mb --maxmemory-policy noeviction --requirepass "$REDIS_PASSWORD"
 ```
 
-Allocate 512 MB RAM. In Railway, set the Flow2API reference variable exactly as:
+Allocate 512 MB RAM. In Railway, set the sub2gen reference variable exactly as:
 
 ```text
-FLOW2API_REDIS_URL=${{Redis.REDIS_URL}}
+SUB2GEN_REDIS_URL=${{Redis.REDIS_URL}}
 ```
 
 On the Railway Hobby plan, scheduled Railway volume backups are unavailable. Keep AOF enabled, retain the fail-closed state marker, and use the documented PostgreSQL/Google Drive backup path for durable relational data. After provisioning, verify the effective Redis runtime configuration:
 
 ```bash
-redis-cli -u "$FLOW2API_REDIS_URL" CONFIG GET appendonly
-redis-cli -u "$FLOW2API_REDIS_URL" CONFIG GET appendfsync
-redis-cli -u "$FLOW2API_REDIS_URL" CONFIG GET maxmemory
-redis-cli -u "$FLOW2API_REDIS_URL" CONFIG GET maxmemory-policy
+redis-cli -u "$SUB2GEN_REDIS_URL" CONFIG GET appendonly
+redis-cli -u "$SUB2GEN_REDIS_URL" CONFIG GET appendfsync
+redis-cli -u "$SUB2GEN_REDIS_URL" CONFIG GET maxmemory
+redis-cli -u "$SUB2GEN_REDIS_URL" CONFIG GET maxmemory-policy
 ```
 
 Expected values are `yes`, `everysec`, `402653184`, and `noeviction`.
 
 Do not attempt to enable Railway backup schedules on Hobby. AOF improves Redis restart durability but is not an independent backup; the state marker deliberately keeps protected work unavailable after a lost/reset Redis volume until an operator explicitly restores or initializes it.
 
-## Configure Flow2API
+## Configure sub2gen
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `FLOW2API_REDIS_URL` | For shadow/required | Empty | Railway private Redis URL |
-| `FLOW2API_REDIS_MODE` | No | `shadow` when URL exists, otherwise `off` | `off`, `shadow`, or `required` rollout state |
-| `FLOW2API_SQLITE_READ_POOL_SIZE` | No | `3` | WAL-aware persistent read connections |
-| `FLOW2API_RETENTION_ENABLED` | No | `false` | Enables bounded seven-day cleanup after maintenance |
-| `FLOW2API_FAILED_LOG_PREFIX` | No | `flow2api/logs` | Private Spaces prefix for compressed failures |
-| `FLOW2API_FAILED_LOG_QUEUE_SIZE` | No | `100` | Bounded asynchronous payload queue |
-| `FLOW2API_FAILED_LOG_PENDING_MAX_BYTES` | No | `67108864` | Bounded in-flight payload memory |
-| `FLOW2API_DEBUG_PAYLOAD_LOGGING` | No | Disabled on Railway | Opt-in request/response diagnostics |
-| `FLOW2API_SYNC_DEBUG_LOGGING` | No | `false` | Emergency opt-in synchronous logging |
+| `SUB2GEN_REDIS_URL` | For shadow/required | Empty | Railway private Redis URL |
+| `SUB2GEN_REDIS_MODE` | No | `shadow` when URL exists, otherwise `off` | `off`, `shadow`, or `required` rollout state |
+| `SUB2GEN_SQLITE_READ_POOL_SIZE` | No | `3` | WAL-aware persistent read connections |
+| `SUB2GEN_RETENTION_ENABLED` | No | `false` | Enables bounded seven-day cleanup after maintenance |
+| `SUB2GEN_FAILED_LOG_PREFIX` | No | `sub2gen/logs` | Private Spaces prefix for compressed failures |
+| `SUB2GEN_FAILED_LOG_QUEUE_SIZE` | No | `100` | Bounded asynchronous payload queue |
+| `SUB2GEN_FAILED_LOG_PENDING_MAX_BYTES` | No | `67108864` | Bounded in-flight payload memory |
+| `SUB2GEN_DEBUG_PAYLOAD_LOGGING` | No | Disabled on Railway | Opt-in request/response diagnostics |
+| `SUB2GEN_SYNC_DEBUG_LOGGING` | No | `false` | Emergency opt-in synchronous logging |
 
 Modes behave as follows:
 
@@ -90,9 +90,9 @@ flowchart LR
     A --> R["Redis hot state"]
     R -->|"auth cache, RPM/RPH, presence"| A
     A --> G["Generation services"]
-    G -->|"progress + summary events"| S["flow2api:events"]
+    G -->|"progress + summary events"| S["sub2gen:events"]
     S --> W["WebSocket dashboard"]
-    S --> P["flow2api-persist consumer"]
+    S --> P["sub2gen-persist consumer"]
     P -->|"batched audit and usage writes"| Q["Durable DB (SQLite bridge / PostgreSQL after cutover)"]
     G -->|"success summary"| Q
     G -->|"failed payload queue"| Z["gzip + redaction worker"]
@@ -104,12 +104,12 @@ Redis keys use these lifetimes:
 
 | Data | Key or stream | Lifetime |
 | --- | --- | --- |
-| Auth and assignment cache | `flow2api:auth:*` | 60 seconds, immediate admin invalidation |
-| Rate configuration | `flow2api:rate-config:*` | 60 seconds |
-| RPM/RPH counters | `flow2api:rate:*` | Current minute/hour plus five seconds |
-| Presence | `flow2api:presence:*` | 120 seconds |
-| Progress | `flow2api:progress:*` | Refreshed during work; 24 hours after the last update |
-| Events | `flow2api:events` | Approximate maximum 100,000 entries |
+| Auth and assignment cache | `sub2gen:auth:*` | 60 seconds, immediate admin invalidation |
+| Rate configuration | `sub2gen:rate-config:*` | 60 seconds |
+| RPM/RPH counters | `sub2gen:rate:*` | Current minute/hour plus five seconds |
+| Presence | `sub2gen:presence:*` | 120 seconds |
+| Progress | `sub2gen:progress:*` | Refreshed during work; 24 hours after the last update |
+| Events | `sub2gen:events` | Approximate maximum 100,000 entries |
 
 ## Verify shadow mode
 
@@ -127,7 +127,7 @@ Open the Request logs dashboard and confirm that new rows and progress arrive wi
 Run the five-minute, 50-connection control-plane benchmark from a host near the origin and again from Pakistan/Asia:
 
 ```bash
-uv run python -m flow2api.scripts.load_control_plane \
+uv run python -m sub2gen.scripts.load_control_plane \
   --base-url https://YOUR_HOST \
   --path /health \
   --duration 300 \
@@ -135,14 +135,14 @@ uv run python -m flow2api.scripts.load_control_plane \
   --target-p95-ms 100
 ```
 
-For protected generation, point the staging upstream configuration at the approved mock, pass a JSON body with `--body`, add `--method POST --bearer "$FLOW2API_TEST_KEY"`, and set the expected status. Never run a generation load test against the live upstream.
+For protected generation, point the staging upstream configuration at the approved mock, pass a JSON body with `--body`, add `--method POST --bearer "$SUB2GEN_TEST_KEY"`, and set the expected status. Never run a generation load test against the live upstream.
 
 ## Enter required mode
 
 After shadow verification:
 
 ```text
-FLOW2API_REDIS_MODE=required
+SUB2GEN_REDIS_MODE=required
 ```
 
 Redeploy and validate the outage policy in staging by temporarily stopping Redis:
@@ -154,11 +154,11 @@ Redeploy and validate the outage policy in staging by temporarily stopping Redis
 
 ## Run the maintenance window
 
-Stop the Flow2API service before running compaction. The command creates and verifies a Google Drive `pre-change-7d` backup first, applies cleanup in batches of 500, checks protected row counts and foreign keys, runs `VACUUM INTO`, verifies the compact file, and atomically swaps it into place.
+Stop the sub2gen service before running compaction. The command creates and verifies a Google Drive `pre-change-7d` backup first, applies cleanup in batches of 500, checks protected row counts and foreign keys, runs `VACUUM INTO`, verifies the compact file, and atomically swaps it into place.
 
 ```bash
-uv run python -m flow2api.scripts.compact_sqlite \
-  --database /app/storage/data/flow.db \
+uv run python -m sub2gen.scripts.compact_sqlite \
+  --database /app/storage/data/sub2gen.db \
   --days 7 \
   --confirm COMPACT
 ```
@@ -168,7 +168,7 @@ The tool aborts if Google Drive is disconnected, the backup fails, free volume s
 After the command succeeds:
 
 1. Create and verify an encrypted Google Drive pre-change database backup.
-2. Set `FLOW2API_RETENTION_ENABLED=true`.
+2. Set `SUB2GEN_RETENTION_ENABLED=true`.
 3. Restart one replica and inspect `/health`.
 4. Run smoke/load checks before reopening submissions.
 

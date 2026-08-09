@@ -35,6 +35,7 @@ type ManagedApiKey = {
   is_online: boolean
   created_at?: string | null
   account_ids: number[]
+  requires_rotation?: boolean
   can_reveal_plaintext?: number
   adobe_cloning_enabled?: number | boolean
   adobe_metadata_enabled?: number | boolean
@@ -717,7 +718,12 @@ export function ApiKeyManagement() {
                         </Badge>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{k.key_prefix}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs">{k.key_prefix}</span>
+                        {k.requires_rotation ? <Badge variant="destructive">Replace key</Badge> : null}
+                      </div>
+                    </TableCell>
                     <TableCell>{k.account_ids.length}</TableCell>
                     <TableCell className="text-xs">{k.last_used_at || "-"}</TableCell>
                     <TableCell>

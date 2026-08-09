@@ -2,8 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from flow2api.core.config import config
-from flow2api.services.flow_client import FlowClient
+from sub2gen.core.config import config
+from sub2gen.services.flow_client import FlowClient
 
 
 JPEG_BYTES = b"\xff\xd8\xff" + b"0" * 16
@@ -175,7 +175,7 @@ class FlowClientBrowserIdentityTests(unittest.IsolatedAsyncioTestCase):
         previous_method = config.captcha_method
         try:
             config.set_captcha_method("personal")
-            with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeAsyncSession()):
+            with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeAsyncSession()):
                 await client._make_request("POST", "https://example.test/api", json_data={})
         finally:
             config.set_captcha_method(previous_method)

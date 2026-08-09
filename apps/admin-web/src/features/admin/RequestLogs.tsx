@@ -79,7 +79,7 @@ export function RequestLogs() {
     let refreshTimer: number | null = null
     let stopped = false
     let reconnectDelay = 500
-    const cursorKey = "flow2api.admin.events.cursor"
+    const cursorKey = "sub2gen.admin.events.cursor"
 
     const scheduleRefresh = () => {
       if (document.visibilityState !== "visible" || refreshTimer !== null) return
@@ -224,7 +224,7 @@ export function RequestLogs() {
 
   const cancelGeminiGenLog = async (log: LogListItem) => {
     if (!token) return
-    if (!confirm("Cancel this GeminiGen job locally and release its Flow2API slot?")) return
+    if (!confirm("Cancel this GeminiGen job locally and release its sub2gen slot?")) return
     try {
       const r = await adminFetch(`/api/logs/${log.id}/geminigen/cancel`, token, { method: "POST" })
       const d = await r?.json().catch(() => null)

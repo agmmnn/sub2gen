@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Flow2 Metadata</title>
+    <title>sub2gen Metadata</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
@@ -11,7 +11,7 @@
       <header class="app-header">
         <div class="brand-mark" aria-hidden="true"><img src="icons/icon48.png" alt="" /></div>
         <div class="brand-copy">
-          <h1>Flow2 Metadata</h1>
+          <h1>sub2gen Metadata</h1>
           <p>Adobe Stock control desk</p>
         </div>
         <div id="headerConnection" class="header-connection" hidden>
@@ -26,7 +26,7 @@
             <span></span><span></span><span></span><i></i>
           </div>
           <p class="eyebrow">Secure connection</p>
-          <h2 id="connectionTitle">Connect your Flow2 workspace</h2>
+          <h2 id="connectionTitle">Connect your sub2gen workspace</h2>
           <p class="lede">Validate a managed API key before metadata can leave this extension.</p>
 
           <form id="connectionForm" class="connection-form">
@@ -35,7 +35,7 @@
 
             <label for="apiKey">Managed API key</label>
             <div class="password-field">
-              <input id="apiKey" type="password" autocomplete="off" placeholder="f2a_live_…" />
+              <input id="apiKey" type="password" autocomplete="off" placeholder="s2g_live_…" />
               <button id="toggleApiKey" type="button" class="icon-button" aria-label="Show API key" aria-pressed="false">
                 <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
               </button>
@@ -58,7 +58,7 @@
 
         <section id="appView" class="workspace" hidden>
           <div class="connection-strip">
-            <span>Flow2 connected</span>
+            <span>sub2gen connected</span>
             <div>
               <button id="editConnection" class="text-button">Edit</button>
               <button id="disconnectButton" class="text-button danger-text">Disconnect</button>
@@ -100,7 +100,7 @@
                 <span id="successRate">0% success</span>
               </div>
               <ol id="activityList" class="activity-list" aria-label="Asset processing activity"></ol>
-              <p id="activityEmpty" class="activity-empty">Asset requests will appear here as the run moves through Flow2.</p>
+              <p id="activityEmpty" class="activity-empty">Asset requests will appear here as the run moves through sub2gen.</p>
             </div>
           </section>
 
@@ -167,7 +167,7 @@
                     <label for="descriptionMax">Maximum<input id="descriptionMax" type="number" min="0" max="500" inputmode="numeric" /></label>
                   </div>
                   <div id="descriptionRangeRail" class="range-rail" aria-hidden="true"><i></i><i></i></div>
-                  <p class="field-hint">Forwarded to Flow2; Adobe Uploads has no description field.</p>
+                  <p class="field-hint">Forwarded to sub2gen; Adobe Uploads has no description field.</p>
                 </div>
               </section>
 
@@ -209,7 +209,7 @@
                   <input id="includeCategory" type="checkbox" /><i aria-hidden="true"></i>
                 </label>
                 <label class="switch-row compact" for="includeReleases">
-                  <span><strong>Include release guidance</strong><small>Ask Flow2 to consider model and property releases.</small></span>
+                  <span><strong>Include release guidance</strong><small>Ask sub2gen to consider model and property releases.</small></span>
                   <input id="includeReleases" type="checkbox" /><i aria-hidden="true"></i>
                 </label>
                 <label class="switch-row compact" for="transparentBackground">

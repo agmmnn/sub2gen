@@ -6,7 +6,7 @@ export function sanitizeActivityMessage(message: string): string {
   return message
     .replace(/https?:\/\/\S+/gi, "remote service")
     .replace(/\bBearer\s+\S+/gi, "authentication token")
-    .replace(/\bf2a_[A-Za-z0-9_-]+\b/g, "API key")
+    .replace(/\bs2g_[A-Za-z0-9_-]+\b/g, "API key")
     .slice(0, 120);
 }
 

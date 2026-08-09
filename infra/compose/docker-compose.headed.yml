@@ -1,10 +1,10 @@
 # In-container headed browser (VNC optional) + agent gateway + Cloudflare Tunnel.
 #   docker compose -f infra/compose/docker-compose.headed.yml up -d --build
-# In Zero Trust, point admin-flow and flow-api hostnames to http://flow2api-headed:8000
+# In Zero Trust, point admin-flow and flow-api hostnames to http://sub2gen-headed:8000
 # Optional agent hostname can point to http://agent-gateway:9080 (for /ws/agents).
 
 services:
-  flow2api-headed:
+  sub2gen-headed:
     init: true
     env_file:
       - ../../.env
@@ -13,8 +13,8 @@ services:
       dockerfile: infra/docker/Dockerfile.headed
       args:
         VITE_NOVNC_URL: ${VITE_NOVNC_URL:-}
-    image: flow2api:headed
-    container_name: flow2api-headed
+    image: sub2gen:headed
+    container_name: sub2gen-headed
     ports:
       - "${FRONTEND_PORT:-8000}:8000"
       - "${VNC_HOST_PORT:-5900}:${VNC_PORT:-5900}"
@@ -33,13 +33,13 @@ services:
       - VNC_PORT=${VNC_PORT:-5900}
       - NOVNC_PORT=${NOVNC_PORT:-6080}
       - VNC_PASSWORD=${VNC_PASSWORD:-}
-      - FLOW2API_API_ONLY_HOST=${FLOW2API_API_ONLY_HOST:-flow-api.prismacreative.online}
-      - FLOW2API_REDIS_URL=${FLOW2API_REDIS_URL:-redis://redis:6379/0}
-      - FLOW2API_REDIS_MODE=${FLOW2API_REDIS_MODE:-shadow}
-      - FLOW2API_DATABASE_BACKEND=${FLOW2API_DATABASE_BACKEND:-sqlite}
-      - FLOW2API_DATABASE_URL=${FLOW2API_DATABASE_URL:-}
-      - FLOW2API_DB_SCHEMA=${FLOW2API_DB_SCHEMA:-flow2api}
-      - FLOW2API_REQUIRE_CUTOVER_MARKER=${FLOW2API_REQUIRE_CUTOVER_MARKER:-true}
+      - SUB2GEN_API_ONLY_HOST=${SUB2GEN_API_ONLY_HOST:-flow-api.prismacreative.online}
+      - SUB2GEN_REDIS_URL=${SUB2GEN_REDIS_URL:-redis://redis:6379/0}
+      - SUB2GEN_REDIS_MODE=${SUB2GEN_REDIS_MODE:-shadow}
+      - SUB2GEN_DATABASE_BACKEND=${SUB2GEN_DATABASE_BACKEND:-sqlite}
+      - SUB2GEN_DATABASE_URL=${SUB2GEN_DATABASE_URL:-}
+      - SUB2GEN_DB_SCHEMA=${SUB2GEN_DB_SCHEMA:-sub2gen}
+      - SUB2GEN_REQUIRE_CUTOVER_MARKER=${SUB2GEN_REQUIRE_CUTOVER_MARKER:-true}
     shm_size: ${SHM_SIZE:-2gb}
     restart: unless-stopped
     depends_on:
@@ -54,7 +54,7 @@ services:
     ports:
       - "9080:9080"
     environment:
-      - GATEWAY_FLOW2API_BEARER=${GATEWAY_FLOW2API_BEARER:-change-me-match-flow2api}
+      - GATEWAY_SUB2GEN_BEARER=${GATEWAY_SUB2GEN_BEARER:-change-me-match-sub2gen}
       - GATEWAY_AGENT_DEVICE_TOKEN=${GATEWAY_AGENT_DEVICE_TOKEN:-change-me-device-secret}
       - GATEWAY_AGENT_AUTH_MODE=${GATEWAY_AGENT_AUTH_MODE:-keygen}
       - KEYGEN_VERIFY_MODE=${KEYGEN_VERIFY_MODE:-introspection}
@@ -74,7 +74,7 @@ services:
     command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "384mb", "--maxmemory-policy", "noeviction"]
     mem_limit: 512m
     volumes:
-      - flow2api-headed-redis-data:/data
+      - sub2gen-headed-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -84,14 +84,14 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: flow2api-headed-cloudflared
+    container_name: sub2gen-headed-cloudflared
     command: tunnel run
     environment:
       TUNNEL_TOKEN: ${TUNNEL_TOKEN}
     depends_on:
-      - flow2api-headed
+      - sub2gen-headed
       - agent-gateway
     restart: unless-stopped
 
 volumes:
-  flow2api-headed-redis-data:
+  sub2gen-headed-redis-data:

@@ -33,7 +33,7 @@ export function connectionPresentation(state: Record<string, unknown>): StatusPr
   const error = String(state.lastRegisterError || state.lastError || "").trim()
 
   if (socket === "open" && register === "ok") {
-    return { tone: "positive", label: "Connected", detail: "Ready for Flow2API jobs" }
+    return { tone: "positive", label: "Connected", detail: "Ready for sub2gen jobs" }
   }
   if (socket === "connecting" || register === "pending") {
     return { tone: "warning", label: "Connecting", detail: "This usually takes a few seconds" }
@@ -42,7 +42,7 @@ export function connectionPresentation(state: Record<string, unknown>): StatusPr
     return { tone: "negative", label: "Authentication failed", detail: error || "Check your key" }
   }
   if (socket === "error" || socket === "closed") {
-    return { tone: "negative", label: "Disconnected", detail: error || "Reconnect to Flow2API" }
+    return { tone: "negative", label: "Disconnected", detail: error || "Reconnect to sub2gen" }
   }
   return { tone: "neutral", label: "Not connected", detail: "Complete connection settings" }
 }

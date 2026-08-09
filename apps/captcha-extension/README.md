@@ -1,4 +1,4 @@
-# Flow2API Worker extension
+# sub2gen Worker extension
 
 This Chrome Manifest V3 extension can connect as an end-user, CAPTCHA, or
 token-bound refresh worker. End-user mode can also import and periodically sync
@@ -50,4 +50,4 @@ current-account synchronization.
 Extension-specific state is split into storage, REST API, WebSocket,
 account-sync, and worker-mode modules under `src/state/`. Only stable,
 Chrome-independent JSON request, URL, and storage adapters are shared through
-`@flow2api/extension-core`.
+`@sub2gen/extension-core`.

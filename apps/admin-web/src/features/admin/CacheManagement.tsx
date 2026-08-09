@@ -329,11 +329,11 @@ export function CacheManagement({ active }: { active: boolean }) {
                     </SelectContent>
                   </Select>
                   {cacheDeliveryMode === "cdn" ? (
-                    <p className="mt-1 text-xs text-amber-600">Public CDN objects bypass Flow2API API-key checks and can be downloaded by anyone with the URL.</p>
+                    <p className="mt-1 text-xs text-amber-600">Public CDN objects bypass sub2gen API-key checks and can be downloaded by anyone with the URL.</p>
                   ) : null}
                   <div className="mt-2 rounded border bg-muted/30 p-2 text-xs text-muted-foreground">
                     <p>Region: {doStatus?.region || "not configured"} · Bucket: {doStatus?.bucket || "not configured"}</p>
-                    <p>Prefix: {doStatus?.prefix || "flow2api/cache"}</p>
+                    <p>Prefix: {doStatus?.prefix || "sub2gen/cache"}</p>
                     <p>Credentials: {doStatus?.configured ? "configured" : "missing"} · Runtime: {doStatus?.healthy ? "healthy" : "not active"}</p>
                   </div>
                   <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => void testProvider()} disabled={busy}>Test connection</Button>

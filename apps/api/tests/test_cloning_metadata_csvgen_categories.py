@@ -11,11 +11,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from flow2api.api.routes import extension_metadata_session
-from flow2api.core.api_key_manager import ApiKeyManager, AuthContext
-from flow2api.core.models import MetadataSettingsRequest
-from flow2api.core.route_log_sanitize import dumps_for_request_log, sanitize_for_request_log
-from flow2api.services import cloning_metadata_service as cms
+from sub2gen.api.routes import extension_metadata_session
+from sub2gen.core.api_key_manager import ApiKeyManager, AuthContext
+from sub2gen.core.models import MetadataSettingsRequest
+from sub2gen.core.route_log_sanitize import dumps_for_request_log, sanitize_for_request_log
+from sub2gen.services import cloning_metadata_service as cms
 
 
 class TestRouteLogImagePreviewSanitize(unittest.TestCase):
@@ -91,16 +91,16 @@ class TestCsvgenPostIncludesCategories(unittest.IsolatedAsyncioTestCase):
         self._session_cm = outer
 
         self._cfg = SimpleNamespace(
-            flow2api_metadata_backend="csvgen",
-            flow2api_metadata_provider_order="",
-            flow2api_metadata_enabled_providers="",
-            flow2api_metadata_provider_retry_count=1,
-            flow2api_metadata_primary_model="",
-            flow2api_metadata_model="gemini-2.5-flash",
-            flow2api_metadata_enabled_models="",
-            flow2api_metadata_fallback_models="",
-            flow2api_csvgen_cookie="session=fake",
-            flow2api_csvgen_api_keys="",
+            sub2gen_metadata_backend="csvgen",
+            sub2gen_metadata_provider_order="",
+            sub2gen_metadata_enabled_providers="",
+            sub2gen_metadata_provider_retry_count=1,
+            sub2gen_metadata_primary_model="",
+            sub2gen_metadata_model="gemini-2.5-flash",
+            sub2gen_metadata_enabled_models="",
+            sub2gen_metadata_fallback_models="",
+            sub2gen_csvgen_cookie="session=fake",
+            sub2gen_csvgen_api_keys="",
         )
 
     async def test_categories_present_when_include_category_and_adobe(self):
@@ -227,14 +227,14 @@ class TestMetadataImageMimeHandling(unittest.IsolatedAsyncioTestCase):
             return_value={"metadataSets": [{"title": "Yellow tray cutout", "keywords": ["tray"], "description": ""}]}
         )
         cfg = SimpleNamespace(
-            flow2api_metadata_backend="gemini_native",
-            flow2api_metadata_provider_order="",
-            flow2api_metadata_enabled_providers="",
-            flow2api_metadata_provider_retry_count=0,
-            flow2api_metadata_primary_model="gemini-2.5-flash",
-            flow2api_metadata_model="gemini-2.5-flash",
-            flow2api_metadata_enabled_models="",
-            flow2api_metadata_fallback_models="",
+            sub2gen_metadata_backend="gemini_native",
+            sub2gen_metadata_provider_order="",
+            sub2gen_metadata_enabled_providers="",
+            sub2gen_metadata_provider_retry_count=0,
+            sub2gen_metadata_primary_model="gemini-2.5-flash",
+            sub2gen_metadata_model="gemini-2.5-flash",
+            sub2gen_metadata_enabled_models="",
+            sub2gen_metadata_fallback_models="",
         )
         with patch.object(cms, "app_config", cfg):
             svc = cms.CloningMetadataService(llm_chain=llm)
@@ -261,14 +261,14 @@ class TestMetadataImageMimeHandling(unittest.IsolatedAsyncioTestCase):
             return_value={"metadataSets": [{"title": "Yellow tray cutout", "keywords": ["tray"], "description": ""}]}
         )
         cfg = SimpleNamespace(
-            flow2api_metadata_backend="gemini_native",
-            flow2api_metadata_provider_order="",
-            flow2api_metadata_enabled_providers="",
-            flow2api_metadata_provider_retry_count=0,
-            flow2api_metadata_primary_model="gemini-2.5-flash",
-            flow2api_metadata_model="gemini-2.5-flash",
-            flow2api_metadata_enabled_models="",
-            flow2api_metadata_fallback_models="",
+            sub2gen_metadata_backend="gemini_native",
+            sub2gen_metadata_provider_order="",
+            sub2gen_metadata_enabled_providers="",
+            sub2gen_metadata_provider_retry_count=0,
+            sub2gen_metadata_primary_model="gemini-2.5-flash",
+            sub2gen_metadata_model="gemini-2.5-flash",
+            sub2gen_metadata_enabled_models="",
+            sub2gen_metadata_fallback_models="",
         )
         with patch.object(cms, "app_config", cfg):
             svc = cms.CloningMetadataService(llm_chain=llm)
@@ -290,14 +290,14 @@ class TestMetadataImageMimeHandling(unittest.IsolatedAsyncioTestCase):
 class TestMetadataProviderRouting(unittest.IsolatedAsyncioTestCase):
     def _cfg(self):
         return SimpleNamespace(
-            flow2api_metadata_backend="gemini_native",
-            flow2api_metadata_provider_order="openrouter,cloudflare,gemini_native",
-            flow2api_metadata_enabled_providers="openrouter",
-            flow2api_metadata_provider_retry_count=0,
-            flow2api_metadata_primary_model="openrouter/auto",
-            flow2api_metadata_model="openrouter/auto",
-            flow2api_metadata_enabled_models="",
-            flow2api_metadata_fallback_models="",
+            sub2gen_metadata_backend="gemini_native",
+            sub2gen_metadata_provider_order="openrouter,cloudflare,gemini_native",
+            sub2gen_metadata_enabled_providers="openrouter",
+            sub2gen_metadata_provider_retry_count=0,
+            sub2gen_metadata_primary_model="openrouter/auto",
+            sub2gen_metadata_model="openrouter/auto",
+            sub2gen_metadata_enabled_models="",
+            sub2gen_metadata_fallback_models="",
         )
 
     async def test_without_explicit_backend_uses_enabled_provider_order(self):
@@ -340,11 +340,11 @@ class TestMetadataProviderRouting(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(llm.invoke_model_json.await_args.kwargs["provider"], "cloudflare")
 
 
-class TestFlow2MetadataExtensionContract(unittest.TestCase):
+class TestSub2GenMetadataExtensionContract(unittest.TestCase):
     def test_metadata_scoped_managed_key_activates(self):
         context = AuthContext(7, "stock-team", False, set(), {"adobe:metadata"})
         result = asyncio.run(extension_metadata_session(context))
-        self.assertEqual(result["service"], "flow2-metadata")
+        self.assertEqual(result["service"], "sub2gen-metadata")
         self.assertEqual(result["keyLabel"], "stock-team")
         self.assertEqual(result["capabilities"], ["adobe:metadata"])
 
@@ -370,7 +370,7 @@ class TestFlow2MetadataExtensionContract(unittest.TestCase):
         self.assertIn("Adobe asset type: vector illustration", prompt)
 
 
-class _Flow2MetadataAuthDatabase:
+class _Sub2GenMetadataAuthDatabase:
     def __init__(self, row):
         self.row = row
 
@@ -387,23 +387,23 @@ class _Flow2MetadataAuthDatabase:
         return None
 
 
-class TestFlow2MetadataAuthentication(unittest.TestCase):
+class TestSub2GenMetadataAuthentication(unittest.TestCase):
     def test_missing_invalid_disabled_and_expired_keys_are_rejected(self):
         endpoint = "/api/extension/metadata-session"
-        manager = ApiKeyManager(_Flow2MetadataAuthDatabase(None), lambda: "")
+        manager = ApiKeyManager(_Sub2GenMetadataAuthDatabase(None), lambda: "")
         with self.assertRaisesRegex(PermissionError, "Missing API key"):
             asyncio.run(manager.authenticate(None, endpoint=endpoint))
         with self.assertRaisesRegex(PermissionError, "Invalid API key"):
             asyncio.run(manager.authenticate("wrong", endpoint=endpoint))
 
         disabled = ApiKeyManager(
-            _Flow2MetadataAuthDatabase({"id": 4, "is_active": False, "scopes": "adobe:metadata"}), lambda: ""
+            _Sub2GenMetadataAuthDatabase({"id": 4, "is_active": False, "scopes": "adobe:metadata"}), lambda: ""
         )
         with self.assertRaisesRegex(PermissionError, "disabled"):
-            asyncio.run(disabled.authenticate("key", endpoint=endpoint))
+            asyncio.run(disabled.authenticate("s2g_live_disabled", endpoint=endpoint))
 
         expired = ApiKeyManager(
-            _Flow2MetadataAuthDatabase({
+            _Sub2GenMetadataAuthDatabase({
                 "id": 4,
                 "is_active": True,
                 "scopes": "adobe:metadata",
@@ -413,7 +413,7 @@ class TestFlow2MetadataAuthentication(unittest.TestCase):
             lambda: "",
         )
         with self.assertRaisesRegex(PermissionError, "expired"):
-            asyncio.run(expired.authenticate("key", endpoint=endpoint))
+            asyncio.run(expired.authenticate("s2g_live_expired", endpoint=endpoint))
 
 
 if __name__ == "__main__":

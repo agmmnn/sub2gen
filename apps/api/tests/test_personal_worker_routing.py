@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from flow2api.workers.personal import PersonalWorkerRouting
+from sub2gen.workers.personal import PersonalWorkerRouting
 
 
 class Worker:
@@ -24,7 +24,7 @@ class Worker:
         self._legacy_lock = asyncio.Lock()
         self._tab_build_lock = asyncio.Lock()
         self._initialized = initialized
-        self.browser = SimpleNamespace(stopped=not live, _flow2api_runtime_disconnected=False) if initialized else None
+        self.browser = SimpleNamespace(stopped=not live, _sub2gen_runtime_disconnected=False) if initialized else None
         self._fresh_profile_restart_pending = restart_pending
         self._fresh_profile_restart_task = None
         self._cooldown = cooldown

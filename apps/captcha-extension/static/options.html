@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flow2API Worker Settings</title>
+    <title>sub2gen Worker Settings</title>
     <link rel="stylesheet" href="ui.css" />
   </head>
   <body>
@@ -12,7 +12,7 @@
         <header class="settings-header">
           <div>
             <h1 class="settings-heading">Worker settings</h1>
-            <p class="settings-intro">Connect this Chrome profile to Flow2API. Most controls now live in the extension popup.</p>
+            <p class="settings-intro">Connect this Chrome profile to sub2gen. Most controls now live in the extension popup.</p>
           </div>
           <div class="settings-header-actions">
             <a class="button button-secondary" href="diagnostics.html">View diagnostics</a>
@@ -31,7 +31,7 @@
             </div>
             <div class="card-content">
               <label class="field">
-                <span class="field-label">Flow2API WebSocket URL</span>
+                <span class="field-label">sub2gen WebSocket URL</span>
                 <input class="input" id="serverUrl" type="url" autocomplete="url" spellcheck="false" placeholder="ws://localhost:8000/captcha_ws" />
                 <span class="field-hint">Use <strong>ws://</strong> locally and <strong>wss://</strong> for a public server.</span>
               </label>
@@ -54,7 +54,7 @@
                   </label>
                   <label class="field">
                     <span class="field-label">Managed API key</span>
-                    <input class="input" id="apiKey" type="password" autocomplete="off" placeholder="f2a_live_…" />
+                    <input class="input" id="apiKey" type="password" autocomplete="off" placeholder="s2g_live_…" />
                   </label>
                 </div>
                 <p class="field-hint">Use a managed key with <strong>tokens:import</strong> when this profile should import or sync its Google account.</p>
@@ -72,7 +72,7 @@
                 <label class="field">
                   <span class="field-label">Token ID</span>
                   <input class="input" id="refreshTokenId" type="number" min="1" inputmode="numeric" placeholder="2" />
-                  <span class="field-hint">The token ID shown in Flow2API’s token list. This mode cannot solve CAPTCHA.</span>
+                  <span class="field-hint">The token ID shown in sub2gen’s token list. This mode cannot solve CAPTCHA.</span>
                 </label>
               </div>
             </div>

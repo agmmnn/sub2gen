@@ -16,7 +16,7 @@ export function normalizeBaseUrl(raw: string): string {
   try {
     url = new URL(raw.trim());
   } catch {
-    throw new Error("Enter a valid Flow2 API URL.");
+    throw new Error("Enter a valid sub2gen URL.");
   }
   if (url.username || url.password || url.search || url.hash) {
     throw new Error("The Base URL cannot contain credentials, a query, or a fragment.");

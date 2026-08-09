@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from flow2api.core.database_runtime import DatabaseSettings
-from flow2api.core.models import GeminiGenTask, Project, RequestLog, RunwayTask, Task, Token
-from flow2api.core.postgres_database import PostgresDatabase
-from flow2api.persistence.repositories import Repositories
-from flow2api.services.postgres_backup import (
+from sub2gen.core.database_runtime import DatabaseSettings
+from sub2gen.core.models import GeminiGenTask, Project, RequestLog, RunwayTask, Task, Token
+from sub2gen.core.postgres_database import PostgresDatabase
+from sub2gen.persistence.repositories import Repositories
+from sub2gen.services.postgres_backup import (
     create_postgres_archive,
     database_row_counts,
     decrypt_and_extract_postgres_archive,
@@ -20,22 +20,22 @@ from flow2api.services.postgres_backup import (
 )
 
 
-POSTGRES_URL = os.environ.get("FLOW2API_TEST_POSTGRES_URL") or os.environ.get("DATABASE_PUBLIC_URL")
-REDIS_URL = os.environ.get("FLOW2API_TEST_REDIS_URL") or os.environ.get("FLOW2API_REDIS_URL")
+POSTGRES_URL = os.environ.get("SUB2GEN_TEST_POSTGRES_URL") or os.environ.get("DATABASE_PUBLIC_URL")
+REDIS_URL = os.environ.get("SUB2GEN_TEST_REDIS_URL") or os.environ.get("SUB2GEN_REDIS_URL")
 STORAGE_CONTRACT = json.loads((Path(__file__).parent / "contracts" / "storage-state.json").read_text(encoding="utf-8"))
 
 
 pytestmark = pytest.mark.skipif(
     not POSTGRES_URL,
-    reason="FLOW2API_TEST_POSTGRES_URL is not configured",
+    reason="SUB2GEN_TEST_POSTGRES_URL is not configured",
 )
 
 
 @pytest.mark.asyncio
 async def test_postgres_storage_contract_roundtrip(monkeypatch):
-    schema = f"flow2api_test_{uuid.uuid4().hex[:10]}"
-    monkeypatch.setenv("FLOW2API_DB_SCHEMA", schema)
-    monkeypatch.setenv("FLOW2API_REQUIRE_CUTOVER_MARKER", "false")
+    schema = f"sub2gen_test_{uuid.uuid4().hex[:10]}"
+    monkeypatch.setenv("SUB2GEN_DB_SCHEMA", schema)
+    monkeypatch.setenv("SUB2GEN_REQUIRE_CUTOVER_MARKER", "false")
     settings = DatabaseSettings.from_env(backend="postgres", url=POSTGRES_URL)
     database = PostgresDatabase(settings=settings)
     await database.init_db()
@@ -286,7 +286,7 @@ async def test_postgres_storage_contract_roundtrip(monkeypatch):
         health = await database.health_snapshot()
         assert health["database_backend"] == "postgres"
         assert health["database_ready"] is True
-        assert health["database_revision"] == "0001"
+        assert health["database_revision"] == "0002"
         row_counts = await database_row_counts(database)
         assert row_counts["tokens"] == 1
         assert row_counts["runway_tasks"] == 1
@@ -309,12 +309,12 @@ async def test_postgres_storage_contract_roundtrip(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_postgres_16_encrypted_dump_restore_roundtrip(monkeypatch, tmp_path):
-    schema = f"flow2api_backup_test_{uuid.uuid4().hex[:10]}"
-    monkeypatch.setenv("FLOW2API_DB_SCHEMA", schema)
-    monkeypatch.setenv("FLOW2API_REQUIRE_CUTOVER_MARKER", "false")
-    monkeypatch.setenv("FLOW2API_BACKUP_ACTIVE_KEY_ID", "ci-test")
+    schema = f"sub2gen_backup_test_{uuid.uuid4().hex[:10]}"
+    monkeypatch.setenv("SUB2GEN_DB_SCHEMA", schema)
+    monkeypatch.setenv("SUB2GEN_REQUIRE_CUTOVER_MARKER", "false")
+    monkeypatch.setenv("SUB2GEN_BACKUP_ACTIVE_KEY_ID", "ci-test")
     monkeypatch.setenv(
-        "FLOW2API_BACKUP_KEYS_JSON",
+        "SUB2GEN_BACKUP_KEYS_JSON",
         json.dumps({"ci-test": base64.b64encode(os.urandom(32)).decode("ascii")}),
     )
     settings = DatabaseSettings.from_env(backend="postgres", url=POSTGRES_URL)
@@ -326,7 +326,7 @@ async def test_postgres_16_encrypted_dump_restore_roundtrip(monkeypatch, tmp_pat
         (profiles / "token-1" / "Default").mkdir(parents=True)
         (profiles / "token-1" / "Default" / "Cookies").write_bytes(b"profile-data")
         working = tmp_path / "create"
-        encrypted = tmp_path / "backup.f2a"
+        encrypted = tmp_path / "backup.s2g"
         manifest = await create_postgres_archive(
             database,
             profiles,
@@ -344,7 +344,7 @@ async def test_postgres_16_encrypted_dump_restore_roundtrip(monkeypatch, tmp_pat
             encrypted,
             tmp_path / "restore",
         )
-        await restore_postgres_dump(database, extracted / "database" / "flow2api.dump")
+        await restore_postgres_dump(database, extracted / "database" / "sub2gen.dump")
         await verify_restored_row_counts(database, restored_manifest["row_counts"])
         restored = await database.get_token(token_id)
         assert restored is not None
@@ -364,9 +364,9 @@ async def test_postgres_16_encrypted_dump_restore_roundtrip(monkeypatch, tmp_pat
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not REDIS_URL, reason="FLOW2API_TEST_REDIS_URL is not configured")
+@pytest.mark.skipif(not REDIS_URL, reason="SUB2GEN_TEST_REDIS_URL is not configured")
 async def test_real_redis_atomic_limits_and_maintenance_marker():
-    from flow2api.services.redis_runtime import RedisRuntime
+    from sub2gen.services.redis_runtime import RedisRuntime
 
     runtime = RedisRuntime(url=REDIS_URL, mode="required")
     await runtime.initialize_state(force=True)

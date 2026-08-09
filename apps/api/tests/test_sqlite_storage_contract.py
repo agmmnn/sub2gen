@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from flow2api.core.database import Database
-from flow2api.core.models import Project, Token
+from sub2gen.core.database import Database
+from sub2gen.core.models import Project, Token
 
 
 CONTRACT = json.loads(
@@ -17,7 +17,7 @@ CONTRACT = json.loads(
 
 @pytest.mark.asyncio
 async def test_sqlite_repository_state_contract(tmp_path: Path) -> None:
-    database = Database(str(tmp_path / "flow.db"))
+    database = Database(str(tmp_path / "sub2gen.db"))
     await database.init_db()
     try:
         token_id = await database.add_token(

@@ -48,4 +48,4 @@ COPY --from=frontend-builder /app/apps/admin-web/dist /app/apps/api/static
 
 EXPOSE 8000
 
-CMD ["flow2api"]
+CMD ["sub2gen"]

@@ -3,15 +3,15 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from flow2api.core.config import Config, DEFAULT_YESCAPTCHA_TASK_TYPE
-from flow2api.services.browser_captcha_personal import (
+from sub2gen.core.config import Config, DEFAULT_YESCAPTCHA_TASK_TYPE
+from sub2gen.services.browser_captcha_personal import (
     BrowserCaptchaService,
     TokenPoolLease,
     _PersonalBrowserPoolService,
     set_cached_session_cookies,
 )
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.generation_handler import GenerationHandler
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.generation_handler import GenerationHandler
 
 
 class UpstreamE6ConfigTests(unittest.TestCase):
@@ -125,7 +125,7 @@ class FlowRequestIdentityIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 captured.update(kwargs)
                 return response
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=FakeSession()):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=FakeSession()):
             await client._make_request(
                 "POST",
                 "https://labs.google/fx/api/test",

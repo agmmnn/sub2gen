@@ -1,5 +1,5 @@
 {
-  "name": "flow2api-workspace",
+  "name": "sub2gen-workspace",
   "private": true,
   "packageManager": "bun@1.3.14",
   "workspaces": [
@@ -10,7 +10,7 @@
     "packages/extension-core"
   ],
   "scripts": {
-    "build": "bun run --filter '@flow2api/*' build",
-    "check": "bun run --filter '@flow2api/*' check"
+    "build": "bun run --filter '@sub2gen/*' build",
+    "check": "bun run --filter '@sub2gen/*' check"
   }
 }

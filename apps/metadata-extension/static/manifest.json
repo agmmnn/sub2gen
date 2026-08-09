@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Flow2 Metadata",
+  "name": "sub2gen Metadata",
   "version": "1.0.0",
-  "description": "Generate and apply Adobe Stock metadata through Flow2 API.",
+  "description": "Generate and apply Adobe Stock metadata through sub2gen.",
   "permissions": [
     "activeTab",
     "declarativeContent",

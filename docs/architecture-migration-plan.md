@@ -1,12 +1,12 @@
-# Flow2API Architecture Migration Plan
+# sub2gen Architecture Migration Plan
 
 Status: complete; Phases 1-11 passed their recorded exit criteria.
 
-This plan restructures Flow2API as a modular monolith in a monorepo. It avoids a full rewrite, preserves existing API contracts, and keeps these commands working throughout the migration:
+This plan restructures sub2gen as a modular monolith in a monorepo. It avoids a full rewrite, preserves existing API contracts, and keeps these commands working throughout the migration:
 
 ```bash
 uv run setup
-uv run flow2api
+uv run sub2gen
 ```
 
 ## Goals
@@ -36,15 +36,15 @@ uv run flow2api
 5. Never commit real tokens, cookies, signed URLs, or CAPTCHA payloads.
 6. Back up existing databases before migration tests.
 7. Treat the Git history rewrite as a destructive operation requiring explicit confirmation immediately before execution.
-8. Rewrite only `agmmnn/flow2api`; never push rewritten refs to the `upstream` or `original` remotes.
+8. Rewrite only `agmmnn/sub2gen`; never push rewritten refs to the `upstream` or `original` remotes.
 
 ## Target repository layout
 
 ```text
-flow2api/
+sub2gen/
 ├── apps/
 │   ├── api/
-│   │   ├── src/flow2api/
+│   │   ├── src/sub2gen/
 │   │   ├── tests/
 │   │   └── pyproject.toml
 │   ├── admin-web/
@@ -70,7 +70,7 @@ The exact placement of Python packaging metadata will be validated during the la
 ## Target backend boundaries
 
 ```text
-flow2api/
+sub2gen/
 ├── bootstrap/
 │   ├── app.py
 │   ├── container.py
@@ -160,12 +160,12 @@ Exit criteria:
 This is one migration phase but may use several reviewable commits.
 
 - [x] Move files without behavioral changes.
-- [x] Rename the Python import package from `src` to `flow2api`.
+- [x] Rename the Python import package from `src` to `sub2gen`.
 - [x] Introduce the `apps/`, `packages/`, and `infra/` layout.
 - [x] Add a root Bun workspace for the web application and extensions.
 - [x] Rewrite Python and TypeScript imports.
 - [x] Update all Dockerfiles, Compose files, CI workflows, scripts, and documentation.
-- [x] Keep `uv run setup` and `uv run flow2api` unchanged from the user's perspective.
+- [x] Keep `uv run setup` and `uv run sub2gen` unchanged from the user's perspective.
 
 Exit criteria:
 
@@ -367,6 +367,6 @@ Implementation will proceed one phase at a time. At the end of each phase:
 
 1. Run the phase-specific verification suite.
 2. Review the diff for unrelated changes.
-3. Confirm `uv run setup` and `uv run flow2api` still work when applicable.
+3. Confirm `uv run setup` and `uv run sub2gen` still work when applicable.
 4. Commit and push the completed phase to `main` only after verification.
 5. Update this document's checklist and record any deviations from the plan.

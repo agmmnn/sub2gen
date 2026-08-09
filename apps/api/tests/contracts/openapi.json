@@ -2198,303 +2198,6 @@
             ],
             "title": "Extension Generation Fallback Mode"
           },
-          "flow2api_cloning_backend": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Backend"
-          },
-          "flow2api_cloning_cloudflare_account_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Cloudflare Account Id"
-          },
-          "flow2api_cloning_cloudflare_api_token": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Cloudflare Api Token"
-          },
-          "flow2api_cloning_enabled_providers": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Enabled Providers"
-          },
-          "flow2api_cloning_gemini_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Gemini Api Keys"
-          },
-          "flow2api_cloning_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Model"
-          },
-          "flow2api_cloning_openai_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Openai Api Keys"
-          },
-          "flow2api_cloning_openrouter_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Openrouter Api Keys"
-          },
-          "flow2api_cloning_provider_order": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Provider Order"
-          },
-          "flow2api_cloning_provider_retry_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Provider Retry Count"
-          },
-          "flow2api_cloning_third_party_gemini_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Third Party Gemini Api Keys"
-          },
-          "flow2api_cloning_third_party_gemini_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Cloning Third Party Gemini Base Url"
-          },
-          "flow2api_csvgen_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Csvgen Api Keys"
-          },
-          "flow2api_csvgen_cookie": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Csvgen Cookie"
-          },
-          "flow2api_gemini_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Gemini Api Keys"
-          },
-          "flow2api_metadata_backend": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Backend"
-          },
-          "flow2api_metadata_enabled_models": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Enabled Models"
-          },
-          "flow2api_metadata_enabled_providers": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Enabled Providers"
-          },
-          "flow2api_metadata_fallback_models": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Fallback Models"
-          },
-          "flow2api_metadata_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Model"
-          },
-          "flow2api_metadata_primary_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Primary Model"
-          },
-          "flow2api_metadata_provider_order": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Provider Order"
-          },
-          "flow2api_metadata_provider_retry_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Metadata Provider Retry Count"
-          },
-          "flow2api_openai_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Openai Api Keys"
-          },
-          "flow2api_openrouter_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Openrouter Api Keys"
-          },
-          "flow2api_third_party_gemini_api_keys": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Third Party Gemini Api Keys"
-          },
-          "flow2api_third_party_gemini_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Flow2Api Third Party Gemini Base Url"
-          },
           "image_timeout": {
             "anyOf": [
               {
@@ -2527,6 +2230,303 @@
               }
             ],
             "title": "Metadata System Prompt"
+          },
+          "sub2gen_cloning_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Backend"
+          },
+          "sub2gen_cloning_cloudflare_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Cloudflare Account Id"
+          },
+          "sub2gen_cloning_cloudflare_api_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Cloudflare Api Token"
+          },
+          "sub2gen_cloning_enabled_providers": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Enabled Providers"
+          },
+          "sub2gen_cloning_gemini_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Gemini Api Keys"
+          },
+          "sub2gen_cloning_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Model"
+          },
+          "sub2gen_cloning_openai_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Openai Api Keys"
+          },
+          "sub2gen_cloning_openrouter_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Openrouter Api Keys"
+          },
+          "sub2gen_cloning_provider_order": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Provider Order"
+          },
+          "sub2gen_cloning_provider_retry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Provider Retry Count"
+          },
+          "sub2gen_cloning_third_party_gemini_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Third Party Gemini Api Keys"
+          },
+          "sub2gen_cloning_third_party_gemini_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Cloning Third Party Gemini Base Url"
+          },
+          "sub2gen_csvgen_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Csvgen Api Keys"
+          },
+          "sub2gen_csvgen_cookie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Csvgen Cookie"
+          },
+          "sub2gen_gemini_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Gemini Api Keys"
+          },
+          "sub2gen_metadata_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Backend"
+          },
+          "sub2gen_metadata_enabled_models": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Enabled Models"
+          },
+          "sub2gen_metadata_enabled_providers": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Enabled Providers"
+          },
+          "sub2gen_metadata_fallback_models": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Fallback Models"
+          },
+          "sub2gen_metadata_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Model"
+          },
+          "sub2gen_metadata_primary_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Primary Model"
+          },
+          "sub2gen_metadata_provider_order": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Provider Order"
+          },
+          "sub2gen_metadata_provider_retry_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Metadata Provider Retry Count"
+          },
+          "sub2gen_openai_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Openai Api Keys"
+          },
+          "sub2gen_openrouter_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Openrouter Api Keys"
+          },
+          "sub2gen_third_party_gemini_api_keys": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Third Party Gemini Api Keys"
+          },
+          "sub2gen_third_party_gemini_base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub2Gen Third Party Gemini Base Url"
           },
           "task_tracker_cookies": {
             "anyOf": [
@@ -4592,7 +4592,7 @@
   },
   "info": {
     "description": "OpenAI-compatible API for Google VideoFX (Veo)",
-    "title": "Flow2API",
+    "title": "sub2gen",
     "version": "1.0.0"
   },
   "openapi": "3.1.0",
@@ -6608,7 +6608,7 @@
     },
     "/api/admin/database/download": {
       "get": {
-        "description": "Download a consistent snapshot of the current flow.db SQLite database.",
+        "description": "Download a consistent snapshot of the current sub2gen.db SQLite database.",
         "operationId": "download_sqlite_database_api_admin_database_download_get",
         "parameters": [
           {
@@ -6646,7 +6646,7 @@
     },
     "/api/admin/database/restore": {
       "post": {
-        "description": "Restore flow.db from an uploaded SQLite file.",
+        "description": "Restore sub2gen.db from an uploaded SQLite file.",
         "operationId": "restore_sqlite_database_api_admin_database_restore_post",
         "parameters": [
           {
@@ -10136,7 +10136,7 @@
     },
     "/api/extension/metadata-session": {
       "get": {
-        "description": "Validate that a managed key may activate the Flow2 Metadata extension.",
+        "description": "Validate that a managed key may activate the sub2gen Metadata extension.",
         "operationId": "extension_metadata_session_api_extension_metadata_session_get",
         "parameters": [
           {
@@ -12536,7 +12536,7 @@
     },
     "/metrics": {
       "get": {
-        "description": "Prometheus metrics endpoint for the main Flow2API service.",
+        "description": "Prometheus metrics endpoint for the main sub2gen service.",
         "operationId": "metrics_metrics_get",
         "responses": {
           "200": {

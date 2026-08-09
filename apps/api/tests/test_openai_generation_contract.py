@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, patch
 from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 
-from flow2api.api import routes
-from flow2api.core.api_key_manager import AuthContext
-from flow2api.core.models import ChatCompletionRequest, ChatMessage
+from sub2gen.api import routes
+from sub2gen.core.api_key_manager import AuthContext
+from sub2gen.core.models import ChatCompletionRequest, ChatMessage
 
 
 MODEL = "gemini-3.0-pro-image-landscape"
@@ -63,8 +63,8 @@ def make_raw_request() -> Request:
             "path": "/v1/chat/completions",
             "raw_path": b"/v1/chat/completions",
             "query_string": b"",
-            "headers": [(b"host", b"flow2api.test")],
-            "server": ("flow2api.test", 443),
+            "headers": [(b"host", b"sub2gen.test")],
+            "server": ("sub2gen.test", 443),
             "client": ("127.0.0.1", 12345),
         }
     )
@@ -133,7 +133,7 @@ def test_chat_completion_non_stream_contract() -> None:
             "prompt": "Characterization prompt",
             "images": None,
             "stream": False,
-            "base_url_override": "https://flow2api.test",
+            "base_url_override": "https://sub2gen.test",
             "allowed_token_ids": {7},
             "selection_context": {
                 "allowlist_filter_reason_type": "project_pin",

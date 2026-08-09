@@ -7,16 +7,16 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from flow2api.api import routes
-from flow2api.core.api_key_manager import ApiKeyManager
-from flow2api.core.database import Database
-from flow2api.main import _path_allowed_on_api_only_host
+from sub2gen.api import routes
+from sub2gen.core.api_key_manager import ApiKeyManager
+from sub2gen.core.database import Database
+from sub2gen.main import _path_allowed_on_api_only_host
 
 
 class TestPresenceDatabase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.db_path = str(Path(self.tempdir.name) / "flow.db")
+        self.db_path = str(Path(self.tempdir.name) / "sub2gen.db")
         self.db = Database(self.db_path)
         await self.db.init_db()
         async with self.db._connect(write=True) as conn:
@@ -25,7 +25,7 @@ class TestPresenceDatabase(unittest.IsolatedAsyncioTestCase):
             await conn.execute(
                 """
                 INSERT INTO api_keys (client_id, label, key_prefix, key_hash, scopes)
-                VALUES (?, 'Desktop user', 'f2a_live_test', 'hash', 'models:read')
+                VALUES (?, 'Desktop user', 's2g_live_test', 'hash', 'models:read')
                 """,
                 (client_id,),
             )
@@ -82,7 +82,7 @@ class TestPresenceDatabase(unittest.IsolatedAsyncioTestCase):
             );
             INSERT INTO api_clients (name) VALUES ('Existing');
             INSERT INTO api_keys (client_id, label, key_prefix, key_hash)
-            VALUES (1, 'Kept', 'f2a_kept', 'kept-hash');
+            VALUES (1, 'Kept', 's2g_kept', 'kept-hash');
             """
         )
         conn.commit()
@@ -143,7 +143,10 @@ class TestPresenceEndpoint(unittest.TestCase):
             "scopes": "models:read",
             "expires_at": None,
         })
-        response = client.post("/api/client/presence", headers={"Authorization": "Bearer managed"})
+        response = client.post(
+            "/api/client/presence",
+            headers={"Authorization": "Bearer s2g_live_test"},
+        )
         self.assertEqual(response.status_code, 204)
         self.assertEqual(database.presence_key_ids, [7])
 

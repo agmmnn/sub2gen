@@ -1,5 +1,5 @@
 {
-  "name": "@flow2api/api-contract",
+  "name": "@sub2gen/api-contract",
   "private": true,
   "version": "0.1.0",
   "type": "module",

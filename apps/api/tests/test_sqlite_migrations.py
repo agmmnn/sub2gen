@@ -5,8 +5,8 @@ import sqlite3
 import aiosqlite
 import pytest
 
-from flow2api.core.database import Database
-from flow2api.persistence.migrations.sqlite import (
+from sub2gen.core.database import Database
+from sub2gen.persistence.migrations.sqlite import (
     SQLiteMigrationError,
     discover_sqlite_migrations,
     prepare_sqlite_migrations,
@@ -22,9 +22,9 @@ async def test_fresh_sqlite_database_applies_checksummed_baseline(tmp_path) -> N
         tracker = await connection.execute_fetchall("SELECT revision, checksum FROM schema_migrations")
         tables = await connection.execute_fetchall("SELECT name FROM sqlite_master WHERE type = 'table'")
 
-    migration = discover_sqlite_migrations()[-1]
+    migrations = discover_sqlite_migrations()
     assert state == "fresh"
-    assert tracker == [(migration.revision, migration.checksum)]
+    assert tracker == [(migration.revision, migration.checksum) for migration in migrations]
     assert {row[0] for row in tables} >= {"tokens", "projects", "schema_migrations"}
 
 
@@ -53,10 +53,8 @@ async def test_compatible_existing_sqlite_schema_is_validated_before_stamp(tmp_p
 
     assert revision == discover_sqlite_migrations()[-1].revision
     assert tracker == [
-        (
-            discover_sqlite_migrations()[-1].revision,
-            discover_sqlite_migrations()[-1].checksum,
-        )
+        (migration.revision, migration.checksum)
+        for migration in discover_sqlite_migrations()
     ]
 
 
@@ -82,5 +80,43 @@ async def test_database_startup_records_sqlite_revision(tmp_path) -> None:
         tracker = connection.execute("SELECT revision FROM schema_migrations ORDER BY revision").fetchall()
 
     assert database.database_revision == discover_sqlite_migrations()[-1].revision
-    assert tracker == [(database.database_revision,)]
+    assert tracker == [(migration.revision,) for migration in discover_sqlite_migrations()]
     assert (await database.health_snapshot())["database_revision"] == database.database_revision
+
+
+@pytest.mark.asyncio
+async def test_identity_migration_disables_old_managed_key_prefixes(tmp_path) -> None:
+    path = tmp_path / "identity.db"
+    async with aiosqlite.connect(path) as connection:
+        migrations = discover_sqlite_migrations()
+        baseline = migrations[0]
+        await connection.executescript(baseline.sql_text)
+        await connection.execute(
+            """
+            CREATE TABLE schema_migrations (
+                revision TEXT PRIMARY KEY,
+                checksum TEXT NOT NULL,
+                applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await connection.execute(
+            "INSERT INTO schema_migrations (revision, checksum) VALUES (?, ?)",
+            (baseline.revision, baseline.checksum),
+        )
+        await connection.execute("INSERT INTO api_clients (name) VALUES ('Identity test')")
+        await connection.execute(
+            """
+            INSERT INTO api_keys (client_id, label, key_prefix, key_hash, is_active)
+            VALUES (1, 'old', 'old_live_example', 'old-hash', 1),
+                   (1, 'current', 's2g_live_example', 'current-hash', 1)
+            """
+        )
+        await connection.commit()
+
+        assert await prepare_sqlite_migrations(connection) == "current"
+        rows = await connection.execute_fetchall(
+            "SELECT label, is_active FROM api_keys ORDER BY label"
+        )
+
+    assert rows == [("current", 1), ("old", 0)]

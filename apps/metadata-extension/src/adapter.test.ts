@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FLOW2_TO_ADOBE_CATEGORY, normalizeMetadataResponse } from "./adapter";
 
-describe("Flow2 metadata response adapter", () => {
+describe("sub2gen metadata response adapter", () => {
   it("contains every Adobe category mapping", () => {
     expect(Object.keys(FLOW2_TO_ADOBE_CATEGORY)).toHaveLength(21);
     expect(FLOW2_TO_ADOBE_CATEGORY[1]).toBe("10001");

@@ -2,10 +2,10 @@
   "fixture_version": 1,
   "dialect": "captcha_ws.legacy-unversioned",
   "sources": [
-    "apps/api/src/flow2api/services/browser_captcha_extension.py",
-    "apps/api/src/flow2api/workers/extension/captcha.py",
-    "apps/api/src/flow2api/workers/extension/refresh.py",
-    "apps/api/src/flow2api/workers/extension/generation.py",
+    "apps/api/src/sub2gen/services/browser_captcha_extension.py",
+    "apps/api/src/sub2gen/workers/extension/captcha.py",
+    "apps/api/src/sub2gen/workers/extension/refresh.py",
+    "apps/api/src/sub2gen/workers/extension/generation.py",
     "apps/captcha-extension/src/background.ts"
   ],
   "codec": {

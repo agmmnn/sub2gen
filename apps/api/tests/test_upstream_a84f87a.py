@@ -4,15 +4,15 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from flow2api.core.models import Token
-from flow2api.services.browser_captcha_personal import (
+from sub2gen.core.models import Token
+from sub2gen.services.browser_captcha_personal import (
     BrowserCaptchaService,
     ResidentTabInfo,
     clear_cached_session_cookies,
     set_cached_session_cookies,
 )
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.token_manager import TokenManager
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.token_manager import TokenManager
 
 
 def make_token(**overrides):

@@ -1,5 +1,5 @@
 {
-  "name": "@flow2api/extension-core",
+  "name": "@sub2gen/extension-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",

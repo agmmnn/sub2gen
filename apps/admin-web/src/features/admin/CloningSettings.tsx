@@ -68,8 +68,8 @@ export function CloningSettings({ active }: { active: boolean }) {
     if (gatewayIds.length) setGatewayModels(gatewayIds)
     if (!resp.ok || !resp.data?.success || !resp.data.config) return
     const c = resp.data.config
-    const legacyBackend = String(c.flow2api_cloning_backend || "gemini_native").trim() || "gemini_native"
-    const orderFromConfig = String(c.flow2api_cloning_provider_order || "")
+    const legacyBackend = String(c.sub2gen_cloning_backend || "gemini_native").trim() || "gemini_native"
+    const orderFromConfig = String(c.sub2gen_cloning_provider_order || "")
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean)
@@ -80,7 +80,7 @@ export function CloningSettings({ active }: { active: boolean }) {
       ...configuredOrder.filter((provider) => provider !== "cliproxy"),
       ...CLONING_BACKENDS.filter((provider) => provider !== "cliproxy" && !configuredOrder.includes(provider)),
     ]
-    const enabledFromConfig = String(c.flow2api_cloning_enabled_providers || "")
+    const enabledFromConfig = String(c.sub2gen_cloning_enabled_providers || "")
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean)
@@ -88,24 +88,24 @@ export function CloningSettings({ active }: { active: boolean }) {
     const normalizedEnabled = enabledFromConfig.length ? enabledFromConfig : [legacyBackend]
     const selectedProvider = normalizedOrder.find((p) => normalizedEnabled.includes(p)) || normalizedOrder[0] || "gemini_native"
     const presets = selectedProvider === "cliproxy" ? gatewayIds : (PRESET_MODELS[selectedProvider] || [])
-    let modelStr = String(c.flow2api_cloning_model || "").trim()
+    let modelStr = String(c.sub2gen_cloning_model || "").trim()
     if (!modelStr) {
       modelStr = presets[0] || "gemini-2.5-flash"
     }
     setProviderOrder(normalizedOrder)
     setEnabledProviders(normalizedEnabled)
     setProviderRetryCount(
-      Math.max(0, Math.min(5, Number(c.flow2api_cloning_provider_retry_count ?? 1) || 1))
+      Math.max(0, Math.min(5, Number(c.sub2gen_cloning_provider_retry_count ?? 1) || 1))
     )
     setModel(modelStr)
 
-    setGeminiKeys(String(c.flow2api_cloning_gemini_api_keys || ""))
-    setOpenaiKeys(String(c.flow2api_cloning_openai_api_keys || ""))
-    setThirdPartyKeys(String(c.flow2api_cloning_third_party_gemini_api_keys || ""))
-    setThirdPartyBaseUrl(String(c.flow2api_cloning_third_party_gemini_base_url || ""))
-    setOpenrouterKeys(String(c.flow2api_cloning_openrouter_api_keys || ""))
-    setCloudflareAccountId(String(c.flow2api_cloning_cloudflare_account_id || ""))
-    setCloudflareApiToken(String(c.flow2api_cloning_cloudflare_api_token || ""))
+    setGeminiKeys(String(c.sub2gen_cloning_gemini_api_keys || ""))
+    setOpenaiKeys(String(c.sub2gen_cloning_openai_api_keys || ""))
+    setThirdPartyKeys(String(c.sub2gen_cloning_third_party_gemini_api_keys || ""))
+    setThirdPartyBaseUrl(String(c.sub2gen_cloning_third_party_gemini_base_url || ""))
+    setOpenrouterKeys(String(c.sub2gen_cloning_openrouter_api_keys || ""))
+    setCloudflareAccountId(String(c.sub2gen_cloning_cloudflare_account_id || ""))
+    setCloudflareApiToken(String(c.sub2gen_cloning_cloudflare_api_token || ""))
   }, [token, active])
 
   const selectedProvider = useMemo(
@@ -166,22 +166,22 @@ export function CloningSettings({ active }: { active: boolean }) {
         method: "POST",
         headers: {
           // Same URL as GET load; this header lets you spot the save in DevTools → Headers.
-          "X-Flow2API-Client-Operation": "save-cloning-settings",
+          "X-Sub2Gen-Client-Operation": "save-cloning-settings",
         },
         body: JSON.stringify({
-          flow2api_cloning_backend: selectedProvider,
-          flow2api_cloning_provider_order: providerOrder.join(","),
-          flow2api_cloning_enabled_providers: enabledProviders.join(","),
-          flow2api_cloning_provider_retry_count: providerRetryCount,
-          flow2api_cloning_model: modelOut,
+          sub2gen_cloning_backend: selectedProvider,
+          sub2gen_cloning_provider_order: providerOrder.join(","),
+          sub2gen_cloning_enabled_providers: enabledProviders.join(","),
+          sub2gen_cloning_provider_retry_count: providerRetryCount,
+          sub2gen_cloning_model: modelOut,
 
-          flow2api_cloning_gemini_api_keys: geminiKeys,
-          flow2api_cloning_openai_api_keys: openaiKeys,
-          flow2api_cloning_third_party_gemini_api_keys: thirdPartyKeys,
-          flow2api_cloning_third_party_gemini_base_url: thirdPartyBaseUrl,
-          flow2api_cloning_openrouter_api_keys: openrouterKeys,
-          flow2api_cloning_cloudflare_account_id: cloudflareAccountId,
-          flow2api_cloning_cloudflare_api_token: cloudflareApiToken,
+          sub2gen_cloning_gemini_api_keys: geminiKeys,
+          sub2gen_cloning_openai_api_keys: openaiKeys,
+          sub2gen_cloning_third_party_gemini_api_keys: thirdPartyKeys,
+          sub2gen_cloning_third_party_gemini_base_url: thirdPartyBaseUrl,
+          sub2gen_cloning_openrouter_api_keys: openrouterKeys,
+          sub2gen_cloning_cloudflare_account_id: cloudflareAccountId,
+          sub2gen_cloning_cloudflare_api_token: cloudflareApiToken,
         }),
       })
       if (!r) {
@@ -327,35 +327,35 @@ export function CloningSettings({ active }: { active: boolean }) {
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium">Google Gemini</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CLONING_GEMINI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CLONING_GEMINI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="AIzaSy..., AIzaSy..." value={geminiKeys} onChange={(e) => setGeminiKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">OpenAI</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CLONING_OPENAI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CLONING_OPENAI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="sk-proj-..., sk-proj-..." value={openaiKeys} onChange={(e) => setOpenaiKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">OpenRouter</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CLONING_OPENROUTER_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CLONING_OPENROUTER_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="sk-or-v1-..., sk-or-v1-..." value={openrouterKeys} onChange={(e) => setOpenrouterKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Third-Party Gemini</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CLONING_THIRD_PARTY_GEMINI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CLONING_THIRD_PARTY_GEMINI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="Key1, Key2..." value={thirdPartyKeys} onChange={(e) => setThirdPartyKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium text-muted-foreground text-xs pl-8">↳ Base URL</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CLONING_THIRD_PARTY_GEMINI_BASE_URL</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CLONING_THIRD_PARTY_GEMINI_BASE_URL</TableCell>
                   <TableCell>
                     <Input className="font-mono text-xs h-8 bg-muted/20" placeholder="https://..." value={thirdPartyBaseUrl} onChange={(e) => setThirdPartyBaseUrl(e.target.value)} />
                   </TableCell>

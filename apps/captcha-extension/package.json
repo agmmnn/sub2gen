@@ -1,5 +1,5 @@
 {
-  "name": "@flow2api/captcha-extension",
+  "name": "@sub2gen/captcha-extension",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@flow2api/extension-core": "workspace:*"
+    "@sub2gen/extension-core": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.32",

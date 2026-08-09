@@ -5,8 +5,8 @@ from typing import Any, cast
 
 from fastapi import WebSocket
 
-from flow2api.workers.extension.models import ExtensionConnection
-from flow2api.workers.extension.routing import ExtensionWorkerRouting
+from sub2gen.workers.extension.models import ExtensionConnection
+from sub2gen.workers.extension.routing import ExtensionWorkerRouting
 
 
 def connection(session_id: str) -> ExtensionConnection:

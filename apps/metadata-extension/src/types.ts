@@ -69,7 +69,7 @@ export interface MetadataOption {
   categoryId?: unknown;
 }
 
-export interface Flow2MetadataResponse {
+export interface Sub2GenMetadataResponse {
   optionA?: MetadataOption;
   optionB?: MetadataOption;
 }
@@ -82,7 +82,7 @@ export interface GeneratedMetadata {
 
 export interface SessionResponse {
   active: boolean;
-  service: "flow2-metadata";
+  service: "sub2gen-metadata";
   keyLabel: string;
   capabilities: string[];
 }

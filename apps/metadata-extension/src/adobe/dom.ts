@@ -252,7 +252,7 @@ export function addProcessingOverlay(image: HTMLImageElement, index: number, tot
   if (!container) return () => undefined;
   container.style.position = "relative";
   const overlay = document.createElement("div");
-  overlay.className = "flow2-metadata-processing";
+  overlay.className = "sub2gen-metadata-processing";
   overlay.textContent = `Processing ${index + 1} of ${total}`;
   Object.assign(overlay.style, {
     position: "absolute", inset: "5px", zIndex: "9999", display: "grid", placeContent: "center",

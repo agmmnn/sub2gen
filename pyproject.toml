@@ -1,7 +1,7 @@
 [project]
-name = "flow2api"
+name = "sub2gen"
 version = "0.1.0"
-description = "OpenAI-compatible API service for Google Flow"
+description = "Unified local API for browser-backed image and video generation providers"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -28,9 +28,9 @@ dependencies = [
 ]
 
 [project.scripts]
-setup = "flow2api.local_runner:setup"
-flow2api = "flow2api.cli:main"
-flow2api-chatgpt-spike = "flow2api.spikes.chatgpt_web:main"
+setup = "sub2gen.local_runner:setup"
+sub2gen = "sub2gen.cli:main"
+sub2gen-chatgpt-spike = "sub2gen.spikes.chatgpt_web:main"
 
 [dependency-groups]
 dev = [
@@ -54,10 +54,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["apps/api/src", "apps/agent-gateway/src"]
-include = ["flow2api*", "flow2api_gateway*"]
+include = ["sub2gen*", "sub2gen_gateway*"]
 
 [tool.setuptools.package-data]
-flow2api = ["migrations/**/*.sql", "services/*.csv"]
+sub2gen = ["migrations/**/*.sql", "services/*.csv"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

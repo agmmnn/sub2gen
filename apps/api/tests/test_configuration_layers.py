@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from flow2api.core.config import Config
-from flow2api.core.settings import DeploymentSettings, OperationalSettings
+from sub2gen.core.config import Config
+from sub2gen.core.settings import DeploymentSettings, OperationalSettings
 
 
 def test_deployment_seed_is_immutable_and_operational_values_are_tracked() -> None:

@@ -3,7 +3,7 @@ import {
   readStorage,
   type ExtensionStorageArea,
   type StorageRecord,
-} from "@flow2api/extension-core"
+} from "@sub2gen/extension-core"
 
 import { inferWorkerMode, type WorkerMode } from "./worker-mode"
 

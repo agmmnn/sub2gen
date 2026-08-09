@@ -660,7 +660,7 @@ export function SystemSettings({ active }: { active: boolean }) {
   const restoreDatabase = async () => {
     if (!token) return
     if (!dbRestoreFile) {
-      toast.error("Choose a flow.db file first")
+      toast.error("Choose a sub2gen.db file first")
       return
     }
     if (!confirm("Replace the server database with this file? A backup will be created first.")) return
@@ -669,7 +669,7 @@ export function SystemSettings({ active }: { active: boolean }) {
     setDbRestoreResult("")
     try {
       const body = new FormData()
-      body.append("database", dbRestoreFile, dbRestoreFile.name || "flow.db")
+      body.append("database", dbRestoreFile, dbRestoreFile.name || "sub2gen.db")
       const r = await adminFetch("/api/admin/database/restore", token, {
         method: "POST",
         body,
@@ -1067,7 +1067,7 @@ export function SystemSettings({ active }: { active: boolean }) {
           <div className="space-y-2">
             <Label>Current database</Label>
             <p className="text-xs text-muted-foreground">
-              Download a fresh flow.db snapshot for backup or migration to another server.
+              Download a fresh sub2gen.db snapshot for backup or migration to another server.
             </p>
             <Button variant="secondary" onClick={downloadDatabase} disabled={dbDownloadBusy || dbRestoreBusy}>
               {dbDownloadBusy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
@@ -1138,8 +1138,8 @@ export function SystemSettings({ active }: { active: boolean }) {
 
           {!driveStatus?.oauth_configured ? (
             <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-              Configure FLOW2API_GOOGLE_DRIVE_CLIENT_ID, FLOW2API_GOOGLE_DRIVE_CLIENT_SECRET, and
-              FLOW2API_GOOGLE_DRIVE_REDIRECT_URI in Railway before connecting.
+              Configure SUB2GEN_GOOGLE_DRIVE_CLIENT_ID, SUB2GEN_GOOGLE_DRIVE_CLIENT_SECRET, and
+              SUB2GEN_GOOGLE_DRIVE_REDIRECT_URI in Railway before connecting.
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
@@ -1149,7 +1149,7 @@ export function SystemSettings({ active }: { active: boolean }) {
           </p>
           {driveStatus?.database_backend === "postgres" && !driveStatus.encryption_configured ? (
             <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-              Configure FLOW2API_BACKUP_ACTIVE_KEY_ID and FLOW2API_BACKUP_KEYS_JSON before creating PostgreSQL backups.
+              Configure SUB2GEN_BACKUP_ACTIVE_KEY_ID and SUB2GEN_BACKUP_KEYS_JSON before creating PostgreSQL backups.
             </p>
           ) : null}
 

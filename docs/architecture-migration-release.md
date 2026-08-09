@@ -5,7 +5,7 @@ Report date: 2026-08-08
 This report closes the modular-monolith migration described in
 [`architecture-migration-plan.md`](./architecture-migration-plan.md). It covers
 compatibility, installation and upgrade evidence, operational checks, and the
-rollback boundary for existing Flow2API installations.
+rollback boundary for existing sub2gen installations.
 
 ## Compatibility summary
 
@@ -13,13 +13,13 @@ The supported user entry points remain:
 
 ```bash
 uv run setup
-uv run flow2api
+uv run sub2gen
 ```
 
 Existing HTTP paths, OpenAI/Gemini request shapes, WebSocket worker messages,
 SQLite runtime data, PostgreSQL schema adoption, and extension modes retain
 characterization coverage. The Python distribution and import package are both
-named `flow2api`; source code now lives under `apps/api/src/flow2api`.
+named `sub2gen`; source code now lives under `apps/api/src/sub2gen`.
 
 Intentional operator-facing changes:
 
@@ -84,14 +84,14 @@ frontend output successfully ran `uv run setup`. uv installed Python 3.11.14,
 created the virtual environment, installed the locked backend, Bun installed the
 locked workspaces, and the build created `apps/api/static/index.html`.
 
-The clean clone then started with `uv run flow2api`. `GET /health`,
+The clean clone then started with `uv run sub2gen`. `GET /health`,
 `GET /openapi.json`, and `GET /` returned 200; the OpenAPI document exposed 158
 paths and the admin HTML loaded from the generated static output.
 
 ### Existing SQLite upgrade
 
 The upgrade test used SQLite's online backup command to copy the repository's
-actual pre-migration `.runtime/data/flow.db`. The source had no
+actual pre-migration `.runtime/data/sub2gen.db`. The source had no
 `schema_migrations` table. `Database.check_and_migrate_db()` adopted and stamped
 revision `0001`; the copy retained 1 token and 4 projects and returned `ok` from
 `PRAGMA integrity_check`.
@@ -106,20 +106,15 @@ The `Build and Push Docker Image` workflow builds both
 `infra/docker/Dockerfile` and `infra/docker/Dockerfile.headed` for linux/amd64
 and linux/arm64. The `Quality` workflow runs all backend and Bun workspace gates,
 and the storage workflow runs PostgreSQL 16 plus Redis contracts. Compose files
-are rendered by the infrastructure job. Refer to the latest successful `main`
-runs in GitHub Actions as the authoritative container-build evidence:
-
-- [Quality run](https://github.com/agmmnn/flow2api/actions/runs/31265586026)
-- [PostgreSQL and Redis storage run](https://github.com/agmmnn/flow2api/actions/runs/31265586037)
-- [standard and headed Docker build run](https://github.com/agmmnn/flow2api/actions/runs/31265586049)
-
-All three linked runs completed successfully. The Docker matrix published both
-variants for linux/amd64 and linux/arm64.
+are rendered by the infrastructure job. Historical pre-rename CI evidence remains
+associated with the corresponding commits; new runs are published in the standalone
+`agmmnn/sub2gen` repository. The Docker matrix covers both variants for linux/amd64
+and linux/arm64.
 
 ## Upgrade procedure
 
-1. Record the deployed Git commit and stop all Flow2API writers.
-2. Back up `.runtime/data/flow.db` together with its `-wal` and `-shm`
+1. Record the deployed Git commit and stop all sub2gen writers.
+2. Back up `.runtime/data/sub2gen.db` together with its `-wal` and `-shm`
    sidecars, or use SQLite's online backup command. PostgreSQL operators should
    use the encrypted backup workflow or PostgreSQL 16 `pg_dump`.
 3. Keep the backup outside the checkout/runtime volume and verify it.
@@ -128,7 +123,7 @@ variants for linux/amd64 and linux/arm64.
    `.runtime/` as documented in the main README. Never overwrite an existing
    `.runtime/data` directory.
 6. Run `uv run setup`.
-7. Start with `uv run flow2api` and inspect startup migration output.
+7. Start with `uv run sub2gen` and inspect startup migration output.
 8. Verify `/health`, login, token/project counts, and one credentialed request.
 9. Rebuild and reload `apps/captcha-extension/dist/` when using the extension.
 

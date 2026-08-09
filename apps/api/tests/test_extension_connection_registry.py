@@ -5,8 +5,8 @@ from typing import Any, cast
 import pytest
 from fastapi import WebSocket
 
-from flow2api.workers.extension.models import ExtensionConnection
-from flow2api.workers.extension.registry import ExtensionConnectionRegistry
+from sub2gen.workers.extension.models import ExtensionConnection
+from sub2gen.workers.extension.registry import ExtensionConnectionRegistry
 
 
 class FakeWebSocket:

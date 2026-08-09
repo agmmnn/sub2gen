@@ -81,12 +81,12 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
     const c = resp.data.config
     
     // Check if csvgen is currently active for metadata
-    const legacyBackend = String(c.flow2api_metadata_backend || "gemini_native").trim()
+    const legacyBackend = String(c.sub2gen_metadata_backend || "gemini_native").trim()
     const isCsvgenOnly = legacyBackend === "csvgen"
     setUseCsvgenOnly(isCsvgenOnly)
 
     // Load global provider order (metadata is canonical; market keys are not persisted by API yet)
-    const orderFromConfig = String(c.flow2api_market_provider_order || c.flow2api_metadata_provider_order || "")
+    const orderFromConfig = String(c.sub2gen_market_provider_order || c.sub2gen_metadata_provider_order || "")
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean)
@@ -100,9 +100,9 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
     ]
     
     const enabledFromConfig = String(
-      c.flow2api_market_enabled_providers ||
-        c.flow2api_metadata_enabled_providers ||
-        c.flow2api_cloning_enabled_providers ||
+      c.sub2gen_market_enabled_providers ||
+        c.sub2gen_metadata_enabled_providers ||
+        c.sub2gen_cloning_enabled_providers ||
         "",
     )
       .split(",")
@@ -115,16 +115,16 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
     setProviderOrder(normalizedOrder)
     setEnabledProviders(normalizedEnabledProviders)
     const retryRaw =
-      c.flow2api_market_provider_retry_count ??
-      c.flow2api_metadata_provider_retry_count ??
-      c.flow2api_cloning_provider_retry_count
+      c.sub2gen_market_provider_retry_count ??
+      c.sub2gen_metadata_provider_retry_count ??
+      c.sub2gen_cloning_provider_retry_count
     setProviderRetryCount(Math.max(0, Math.min(5, Number(retryRaw) || 1)))
     
     // Model configuration
-    const configuredEnabledRaw = String(c.flow2api_market_enabled_models || c.flow2api_metadata_enabled_models || "").trim()
-    const configuredPrimary = String(c.flow2api_market_primary_model || c.flow2api_metadata_primary_model || "").trim()
-    const configuredFallbackRaw = String(c.flow2api_market_fallback_models || c.flow2api_metadata_fallback_models || "").trim()
-    const legacyModel = String(c.flow2api_market_model || c.flow2api_metadata_model || "gemini-2.5-flash").trim() || "gemini-2.5-flash"
+    const configuredEnabledRaw = String(c.sub2gen_market_enabled_models || c.sub2gen_metadata_enabled_models || "").trim()
+    const configuredPrimary = String(c.sub2gen_market_primary_model || c.sub2gen_metadata_primary_model || "").trim()
+    const configuredFallbackRaw = String(c.sub2gen_market_fallback_models || c.sub2gen_metadata_fallback_models || "").trim()
+    const legacyModel = String(c.sub2gen_market_model || c.sub2gen_metadata_model || "gemini-2.5-flash").trim() || "gemini-2.5-flash"
     const enabled = (configuredEnabledRaw ? configuredEnabledRaw.split(",") : [])
       .map((m) => m.trim())
       .filter(Boolean)
@@ -137,14 +137,14 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
     setPrimaryModel(primary)
     setModel(primary)
     
-    setCsvgenCookie(String(c.flow2api_csvgen_cookie || ""))
-    setCsvgenApiKeys(String(c.flow2api_csvgen_api_keys || ""))
+    setCsvgenCookie(String(c.sub2gen_csvgen_cookie || ""))
+    setCsvgenApiKeys(String(c.sub2gen_csvgen_api_keys || ""))
 
-    setGeminiKeys(String(c.flow2api_gemini_api_keys || ""))
-    setOpenaiKeys(String(c.flow2api_openai_api_keys || ""))
-    setThirdPartyKeys(String(c.flow2api_third_party_gemini_api_keys || ""))
-    setThirdPartyBaseUrl(String(c.flow2api_third_party_gemini_base_url || ""))
-    setOpenrouterKeys(String(c.flow2api_openrouter_api_keys || ""))
+    setGeminiKeys(String(c.sub2gen_gemini_api_keys || ""))
+    setOpenaiKeys(String(c.sub2gen_openai_api_keys || ""))
+    setThirdPartyKeys(String(c.sub2gen_third_party_gemini_api_keys || ""))
+    setThirdPartyBaseUrl(String(c.sub2gen_third_party_gemini_base_url || ""))
+    setOpenrouterKeys(String(c.sub2gen_openrouter_api_keys || ""))
     setCloudflareAccountId(String(c.cloudflare_account_id || ""))
     setCloudflareApiToken(String(c.cloudflare_api_token || ""))
   }, [token, active])
@@ -245,44 +245,44 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
         method: "POST",
         body: JSON.stringify({
           // Metadata overrides if any
-          flow2api_metadata_backend: metadataProvider,
-          flow2api_metadata_provider_order: providerOrder.join(","),
-          flow2api_metadata_enabled_providers: enabledProviders.join(","),
-          flow2api_metadata_provider_retry_count: providerRetryCount,
-          flow2api_metadata_model: metadataModel,
-          flow2api_metadata_enabled_models: enabledModels.join(","),
-          flow2api_metadata_primary_model: primaryModel,
-          flow2api_metadata_fallback_models: fallbackModels.join(","),
+          sub2gen_metadata_backend: metadataProvider,
+          sub2gen_metadata_provider_order: providerOrder.join(","),
+          sub2gen_metadata_enabled_providers: enabledProviders.join(","),
+          sub2gen_metadata_provider_retry_count: providerRetryCount,
+          sub2gen_metadata_model: metadataModel,
+          sub2gen_metadata_enabled_models: enabledModels.join(","),
+          sub2gen_metadata_primary_model: primaryModel,
+          sub2gen_metadata_fallback_models: fallbackModels.join(","),
 
           // Cloning (same routing as metadata for this screen)
-          flow2api_cloning_backend: selectedProvider,
-          flow2api_cloning_provider_order: providerOrder.join(","),
-          flow2api_cloning_enabled_providers: enabledProviders.join(","),
-          flow2api_cloning_provider_retry_count: providerRetryCount,
-          flow2api_cloning_model: model,
+          sub2gen_cloning_backend: selectedProvider,
+          sub2gen_cloning_provider_order: providerOrder.join(","),
+          sub2gen_cloning_enabled_providers: enabledProviders.join(","),
+          sub2gen_cloning_provider_retry_count: providerRetryCount,
+          sub2gen_cloning_model: model,
 
           // CSVGen specific keys
-          flow2api_csvgen_cookie: csvgenCookie,
-          flow2api_csvgen_api_keys: csvgenApiKeys,
+          sub2gen_csvgen_cookie: csvgenCookie,
+          sub2gen_csvgen_api_keys: csvgenApiKeys,
 
           // Global API Keys
-          flow2api_gemini_api_keys: geminiKeys,
-          flow2api_openai_api_keys: openaiKeys,
-          flow2api_openrouter_api_keys: openrouterKeys,
-          flow2api_third_party_gemini_api_keys: thirdPartyKeys,
-          flow2api_third_party_gemini_base_url: thirdPartyBaseUrl,
+          sub2gen_gemini_api_keys: geminiKeys,
+          sub2gen_openai_api_keys: openaiKeys,
+          sub2gen_openrouter_api_keys: openrouterKeys,
+          sub2gen_third_party_gemini_api_keys: thirdPartyKeys,
+          sub2gen_third_party_gemini_base_url: thirdPartyBaseUrl,
           cloudflare_account_id: cloudflareAccountId,
           cloudflare_api_token: cloudflareApiToken,
           
           // Also set the specific keys requested by the original APIs (e.g., Cloning uses specific gemini keys)
           // To unify them, we simply copy the global keys into the specialized ones so legacy APIs keep working.
-          flow2api_cloning_gemini_api_keys: geminiKeys,
-          flow2api_cloning_openai_api_keys: openaiKeys,
-          flow2api_cloning_third_party_gemini_api_keys: thirdPartyKeys,
-          flow2api_cloning_third_party_gemini_base_url: thirdPartyBaseUrl,
-          flow2api_cloning_openrouter_api_keys: openrouterKeys,
-          flow2api_cloning_cloudflare_account_id: cloudflareAccountId,
-          flow2api_cloning_cloudflare_api_token: cloudflareApiToken,
+          sub2gen_cloning_gemini_api_keys: geminiKeys,
+          sub2gen_cloning_openai_api_keys: openaiKeys,
+          sub2gen_cloning_third_party_gemini_api_keys: thirdPartyKeys,
+          sub2gen_cloning_third_party_gemini_base_url: thirdPartyBaseUrl,
+          sub2gen_cloning_openrouter_api_keys: openrouterKeys,
+          sub2gen_cloning_cloudflare_account_id: cloudflareAccountId,
+          sub2gen_cloning_cloudflare_api_token: cloudflareApiToken,
           
         }),
       })
@@ -433,35 +433,35 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium">Google Gemini</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_GEMINI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_GEMINI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="AIzaSy..., AIzaSy..." value={geminiKeys} onChange={(e) => setGeminiKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">OpenAI</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_OPENAI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_OPENAI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="sk-proj-..., sk-proj-..." value={openaiKeys} onChange={(e) => setOpenaiKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">OpenRouter</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_OPENROUTER_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_OPENROUTER_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="sk-or-v1-..., sk-or-v1-..." value={openrouterKeys} onChange={(e) => setOpenrouterKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Third-Party Gemini</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_THIRD_PARTY_GEMINI_API_KEYS</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_THIRD_PARTY_GEMINI_API_KEYS</TableCell>
                   <TableCell>
                     <Textarea className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y" placeholder="Key1, Key2..." value={thirdPartyKeys} onChange={(e) => setThirdPartyKeys(e.target.value)} />
                   </TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium text-muted-foreground text-xs pl-8">↳ Base URL</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_THIRD_PARTY_GEMINI_BASE_URL</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_THIRD_PARTY_GEMINI_BASE_URL</TableCell>
                   <TableCell>
                     <Input className="font-mono text-xs h-8 bg-muted/20" placeholder="https://..." value={thirdPartyBaseUrl} onChange={(e) => setThirdPartyBaseUrl(e.target.value)} />
                   </TableCell>
@@ -484,14 +484,14 @@ export function AdobeConfigurations({ active }: { active: boolean }) {
                   <>
                     <TableRow className="bg-primary/5">
                       <TableCell className="font-medium text-primary">CSVGEN</TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CSVGEN_COOKIE</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CSVGEN_COOKIE</TableCell>
                       <TableCell>
                         <Input className="font-mono text-xs h-8 bg-muted/20" placeholder="Cookie string..." value={csvgenCookie} onChange={(e) => setCsvgenCookie(e.target.value)} />
                       </TableCell>
                     </TableRow>
                     <TableRow className="bg-primary/5">
                       <TableCell className="font-medium text-primary text-xs pl-8">↳ Native API keys</TableCell>
-                      <TableCell className="text-muted-foreground font-mono text-[11px]">FLOW2API_CSVGEN_API_KEYS</TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-[11px]">SUB2GEN_CSVGEN_API_KEYS</TableCell>
                       <TableCell>
                         <Textarea
                           className="font-mono text-xs min-h-[60px] bg-muted/20 resize-y"

@@ -7,15 +7,15 @@ from types import SimpleNamespace
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from flow2api.api import routes
-from flow2api.core.api_key_manager import ApiKeyManager
-from flow2api.core.database import Database
+from sub2gen.api import routes
+from sub2gen.core.api_key_manager import ApiKeyManager
+from sub2gen.core.database import Database
 
 
 class GeminiGenCapacityDatabaseTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.db = Database(str(Path(self.tempdir.name) / "flow.db"))
+        self.db = Database(str(Path(self.tempdir.name) / "sub2gen.db"))
         await self.db.init_db()
 
     async def asyncTearDown(self):
@@ -124,7 +124,7 @@ class GeminiGenCapacityEndpointTests(unittest.TestCase):
     def test_endpoint_returns_aggregate_totals_only(self):
         response = self._client("geminigen:generate").get(
             "/v1/generation-capacity",
-            headers={"Authorization": "Bearer managed"},
+            headers={"Authorization": "Bearer s2g_live_test"},
         )
 
         self.assertEqual(response.status_code, 200)
@@ -145,7 +145,7 @@ class GeminiGenCapacityEndpointTests(unittest.TestCase):
     def test_endpoint_requires_geminigen_scope(self):
         response = self._client("models:read").get(
             "/v1/generation-capacity",
-            headers={"Authorization": "Bearer managed"},
+            headers={"Authorization": "Bearer s2g_live_test"},
         )
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["detail"], "Missing scope: geminigen:generate")

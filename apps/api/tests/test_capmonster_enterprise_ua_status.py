@@ -5,11 +5,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from flow2api.api import admin
-from flow2api.core.config import config
-from flow2api.core.database import Database
-from flow2api.services.flow_client import FlowClient
-from flow2api.services.generation_handler import GenerationHandler
+from sub2gen.api import admin
+from sub2gen.core.config import config
+from sub2gen.core.database import Database
+from sub2gen.services.flow_client import FlowClient
+from sub2gen.services.generation_handler import GenerationHandler
 
 
 class _FakeResponse:
@@ -72,7 +72,7 @@ class CaptchaConfigTestCase(unittest.IsolatedAsyncioTestCase):
         )
         client = FlowClient(proxy_manager=None, db=None)
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=session):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=session):
             result = await client._get_api_captcha_token("capmonster", "project-1")
 
         self.assertEqual(result, ("captcha-token", None))
@@ -83,7 +83,7 @@ class CaptchaConfigTestCase(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(task["type"], "RecaptchaV3TaskProxyless")
 
         failed_session = _FakeSession([{"errorId": 1, "errorDescription": "unsupported"}])
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=failed_session):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=failed_session):
             failed = await client._get_api_captcha_token("capmonster", "project-1")
         self.assertIsNone(failed)
         self.assertEqual(len(failed_session.calls), 1)
@@ -110,7 +110,7 @@ class CaptchaConfigTestCase(unittest.IsolatedAsyncioTestCase):
         )
         client = FlowClient(proxy_manager=None, db=None)
 
-        with patch("flow2api.services.flow_client.AsyncSession", return_value=session):
+        with patch("sub2gen.services.flow_client.AsyncSession", return_value=session):
             await client._get_api_captcha_token("yescaptcha", "project-2")
 
         task = session.calls[0][1]["json"]["task"]
@@ -133,7 +133,7 @@ class CaptchaConfigTestCase(unittest.IsolatedAsyncioTestCase):
                 },
             ]
         )
-        with patch("flow2api.api.admin.AsyncSession", return_value=session):
+        with patch("sub2gen.api.admin.AsyncSession", return_value=session):
             token = await admin._solve_recaptcha_with_api_service(
                 "capmonster",
                 "https://labs.google/fx/tools/flow/project/project-3",
@@ -152,7 +152,7 @@ class CaptchaConfigTestCase(unittest.IsolatedAsyncioTestCase):
 
     async def test_capmonster_minimum_score_persists_in_database(self):
         with tempfile.TemporaryDirectory() as tempdir:
-            database = Database(str(Path(tempdir) / "flow.db"))
+            database = Database(str(Path(tempdir) / "sub2gen.db"))
             await database.init_db()
             await database.check_and_migrate_db({})
             await database.update_captcha_config(capmonster_min_score=0.7)

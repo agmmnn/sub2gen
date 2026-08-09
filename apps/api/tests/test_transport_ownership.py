@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from flow2api.api import admin, routes
-from flow2api.transport import adobe, auth, cache, extensions, gemini, models, openai, projects, runway, websocket
-from flow2api.transport.admin import api_keys, auth as admin_auth, cache as admin_cache, logs
-from flow2api.transport.admin import geminigen as admin_geminigen
-from flow2api.transport.admin import projects as admin_projects
-from flow2api.transport.admin import runway as admin_runway
-from flow2api.transport.admin import settings, system, tokens, workers
+from sub2gen.api import admin, routes
+from sub2gen.transport import adobe, auth, cache, extensions, gemini, models, openai, projects, runway, websocket
+from sub2gen.transport.admin import api_keys, auth as admin_auth, cache as admin_cache, logs
+from sub2gen.transport.admin import geminigen as admin_geminigen
+from sub2gen.transport.admin import projects as admin_projects
+from sub2gen.transport.admin import runway as admin_runway
+from sub2gen.transport.admin import settings, system, tokens, workers
 
 
 PUBLIC_ROUTERS = (

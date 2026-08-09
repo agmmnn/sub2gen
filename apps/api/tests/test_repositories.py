@@ -4,9 +4,9 @@ import uuid
 
 import pytest
 
-from flow2api.core.database import Database
-from flow2api.core.models import Project, RequestLog, Token
-from flow2api.persistence.repositories import Repositories
+from sub2gen.core.database import Database
+from sub2gen.core.models import Project, RequestLog, Token
+from sub2gen.persistence.repositories import Repositories
 
 
 @pytest.mark.asyncio

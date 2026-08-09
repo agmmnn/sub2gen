@@ -2,8 +2,8 @@ import asyncio
 import sqlite3
 from pathlib import Path
 
-from flow2api.core.storage_errors import sqlite_operational_error_handler
-from flow2api.services import browser_metrics_cleanup as cleanup_module
+from sub2gen.core.storage_errors import sqlite_operational_error_handler
+from sub2gen.services import browser_metrics_cleanup as cleanup_module
 
 
 def test_cleanup_removes_only_inactive_browser_metrics(tmp_path, monkeypatch):
@@ -43,11 +43,11 @@ def test_cleanup_rejects_profile_outside_root(tmp_path):
 
 
 def test_sqlite_io_error_is_sanitized_as_503():
-    error = sqlite3.OperationalError("disk I/O error at /secret/flow.db")
+    error = sqlite3.OperationalError("disk I/O error at /secret/sub2gen.db")
     response = asyncio.run(sqlite_operational_error_handler(None, error))
     assert response.status_code == 503
     assert b"storage_unavailable" in response.body
-    assert b"/secret/flow.db" not in response.body
+    assert b"/secret/sub2gen.db" not in response.body
 
 
 def test_sqlite_full_error_is_507():

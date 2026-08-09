@@ -1,15 +1,15 @@
 # PostgreSQL 16 migration runbook
 
-This runbook moves Flow2API from the SQLite bridge to a separate Railway PostgreSQL 16 service. Redis remains the hot-state and maintenance coordinator. Deploying the bridge code does not migrate data or change the production backend; final cutover is a separate operator action.
+This runbook moves sub2gen from the SQLite bridge to a separate Railway PostgreSQL 16 service. Redis remains the hot-state and maintenance coordinator. Deploying the bridge code does not migrate data or change the production backend; final cutover is a separate operator action.
 
 ## Safety invariants
 
-- Keep one SFO Flow2API replica throughout migration.
-- Keep `FLOW2API_DATABASE_BACKEND=sqlite` until final verified cutover.
-- Never delete or modify `flow.db` during backfill or cutover. Retain it unchanged for seven days afterward.
+- Keep one SFO sub2gen replica throughout migration.
+- Keep `SUB2GEN_DATABASE_BACKEND=sqlite` until final verified cutover.
+- Never delete or modify `sub2gen.db` during backfill or cutover. Retain it unchanged for seven days afterward.
 - Never run cutover without a verified encrypted Google Drive pre-change backup.
 - Keep every encryption key referenced by retained backups in Railway and an offline password manager.
-- Remove the PostgreSQL public TCP proxy after testing. Flow2API uses `${{Postgres.DATABASE_URL}}` over Railway private networking.
+- Remove the PostgreSQL public TCP proxy after testing. sub2gen uses `${{Postgres.DATABASE_URL}}` over Railway private networking.
 - Missing PostgreSQL schema/cutover markers or a missing Redis state marker keep readiness fail-closed.
 
 ## Railway service
@@ -23,30 +23,30 @@ Provision a service named `Postgres` in production:
 - `PGDATA=/var/lib/postgresql/data/pgdata`;
 - private `DATABASE_URL` assembled from the private domain and PostgreSQL credentials.
 
-Railway Hobby provides a 5 GB default volume but not scheduled volume backups. Flow2API therefore creates encrypted daily PostgreSQL backups in Google Drive and retains 14 automatic copies.
+Railway Hobby provides a 5 GB default volume but not scheduled volume backups. sub2gen therefore creates encrypted daily PostgreSQL backups in Google Drive and retains 14 automatic copies.
 
 ## Bridge variables
 
 ```text
-FLOW2API_DATABASE_BACKEND=sqlite
-FLOW2API_DATABASE_URL=${{Postgres.DATABASE_URL}}
-FLOW2API_DB_SCHEMA=flow2api
-FLOW2API_DB_POOL_MIN_SIZE=2
-FLOW2API_DB_POOL_MAX_SIZE=10
-FLOW2API_DB_POOL_TIMEOUT_SECONDS=5
-FLOW2API_DB_STATEMENT_TIMEOUT_SECONDS=30
-FLOW2API_REQUIRE_CUTOVER_MARKER=true
-FLOW2API_TMP_DIR=/tmp/flow2api
+SUB2GEN_DATABASE_BACKEND=sqlite
+SUB2GEN_DATABASE_URL=${{Postgres.DATABASE_URL}}
+SUB2GEN_DB_SCHEMA=sub2gen
+SUB2GEN_DB_POOL_MIN_SIZE=2
+SUB2GEN_DB_POOL_MAX_SIZE=10
+SUB2GEN_DB_POOL_TIMEOUT_SECONDS=5
+SUB2GEN_DB_STATEMENT_TIMEOUT_SECONDS=30
+SUB2GEN_REQUIRE_CUTOVER_MARKER=true
+SUB2GEN_TMP_DIR=/tmp/sub2gen
 ```
 
-`FLOW2API_TMP_DIR` must point to ephemeral container storage with enough free space for the SQLite snapshot, plaintext archive, encrypted archive, and restore extraction. Do not stage these multi-gigabyte files on the 5 GB persistent application volume.
+`SUB2GEN_TMP_DIR` must point to ephemeral container storage with enough free space for the SQLite snapshot, plaintext archive, encrypted archive, and restore extraction. Do not stage these multi-gigabyte files on the 5 GB persistent application volume.
 
 Create a 32-byte encryption key offline, then store:
 
 ```text
-FLOW2API_BACKUP_ACTIVE_KEY_ID=2026-08
-FLOW2API_BACKUP_KEYS_JSON={"2026-08":"BASE64_ENCODED_32_BYTE_KEY"}
-FLOW2API_AUTO_RESTART_AFTER_RESTORE=true
+SUB2GEN_BACKUP_ACTIVE_KEY_ID=2026-08
+SUB2GEN_BACKUP_KEYS_JSON={"2026-08":"BASE64_ENCODED_32_BYTE_KEY"}
+SUB2GEN_AUTO_RESTART_AFTER_RESTORE=true
 ```
 
 Key rotation adds a key and changes the active ID. Do not remove an old key while a retained backup references it.
@@ -54,14 +54,14 @@ Key rotation adds a key and changes the active ID. Do not remove an old key whil
 ## Migration CLI
 
 ```text
-uv run python -m flow2api.scripts.migrate_sqlite_to_postgres preflight
-uv run python -m flow2api.scripts.migrate_sqlite_to_postgres backfill
-uv run python -m flow2api.scripts.migrate_sqlite_to_postgres cutover --confirm CUTOVER
-uv run python -m flow2api.scripts.migrate_sqlite_to_postgres verify
-uv run python -m flow2api.scripts.migrate_sqlite_to_postgres abort --confirm ABORT
+uv run python -m sub2gen.scripts.migrate_sqlite_to_postgres preflight
+uv run python -m sub2gen.scripts.migrate_sqlite_to_postgres backfill
+uv run python -m sub2gen.scripts.migrate_sqlite_to_postgres cutover --confirm CUTOVER
+uv run python -m sub2gen.scripts.migrate_sqlite_to_postgres verify
+uv run python -m sub2gen.scripts.migrate_sqlite_to_postgres abort --confirm ABORT
 ```
 
-Shared options include `--sqlite`, `--database-url`, `--schema`, `--retention-days`, `--volume-capacity-gb`, and `--state-dir`. Defaults are `.runtime/data/flow.db`, `FLOW2API_DATABASE_URL`, `flow2api`, seven days, 5 GB, and `.runtime/data/migration/postgres-bridge`.
+Shared options include `--sqlite`, `--database-url`, `--schema`, `--retention-days`, `--volume-capacity-gb`, and `--state-dir`. Defaults are `.runtime/data/sub2gen.db`, `SUB2GEN_DATABASE_URL`, `sub2gen`, seven days, 5 GB, and `.runtime/data/migration/postgres-bridge`.
 
 ### Preflight and backfill
 
@@ -86,10 +86,10 @@ Download and validate a backup in staging before authorizing production cutover.
 1. Confirm the bridge is in SQLite mode and Redis required mode is healthy.
 2. Confirm the encrypted pre-change backup is verified.
 3. Run `cutover --confirm CUTOVER` inside the bridge container so private PostgreSQL and Redis URLs resolve.
-4. The CLI sets `flow2api:maintenance`, blocks submissions/admin mutations, and waits up to five minutes for Redis in-flight counters.
+4. The CLI sets `sub2gen:maintenance`, blocks submissions/admin mutations, and waits up to five minutes for Redis in-flight counters.
 5. It takes the final snapshot and performs staging, reverse-order stale deletion, forward-order upsert, identity reset, verification, and cutover-marker write transactionally.
 6. Final reconciliation has a 12-minute deadline, leaving three minutes for deployment rollback.
-7. Deploy with `FLOW2API_DATABASE_BACKEND=postgres`.
+7. Deploy with `SUB2GEN_DATABASE_BACKEND=postgres`.
 8. Startup requires PostgreSQL, Redis, schema revision, cutover marker, cache warmup, and active-task recovery before clearing maintenance.
 9. Verify `/health`, `/metrics`, admin reads, task polling, one protected request, WebSocket replay, cache delivery, and browser/captcha behavior.
 
@@ -101,7 +101,7 @@ Before a committed cutover, `abort --confirm ABORT` removes staging tables and c
 
 If deployment or verification fails, redeploy the unchanged SQLite bridge, leave PostgreSQL untouched, verify SQLite health, and reopen only after the bridge is healthy. Keep the final snapshot and target for investigation.
 
-After seven stable days, remove `flow.db`, `aiosqlite`, SQLite upload/download UI, and the runtime selector. Keep the offline importer and retained encrypted artifacts.
+After seven stable days, remove `sub2gen.db`, `aiosqlite`, SQLite upload/download UI, and the runtime selector. Keep the offline importer and retained encrypted artifacts.
 
 ## One-click restore
 

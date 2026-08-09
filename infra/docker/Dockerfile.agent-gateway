@@ -10,7 +10,7 @@ ENV UV_COMPILE_BYTECODE=1 \
 COPY pyproject.toml uv.lock README.md LICENSE ./
 RUN uv sync --frozen --only-group agent-gateway --no-install-project
 
-COPY apps/agent-gateway/src/flow2api_gateway/ /app/apps/agent-gateway/src/flow2api_gateway/
+COPY apps/agent-gateway/src/sub2gen_gateway/ /app/apps/agent-gateway/src/sub2gen_gateway/
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONPATH=/app/apps/agent-gateway/src \
@@ -18,4 +18,4 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 9080
 
-CMD ["uvicorn", "flow2api_gateway.main:app", "--host", "0.0.0.0", "--port", "9080"]
+CMD ["uvicorn", "sub2gen_gateway.main:app", "--host", "0.0.0.0", "--port", "9080"]

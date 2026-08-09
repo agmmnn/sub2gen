@@ -5,7 +5,7 @@ from typing import Any, cast
 import pytest
 from fastapi import WebSocket
 
-from flow2api.workers.extension.jobs import ExtensionJobBroker
+from sub2gen.workers.extension.jobs import ExtensionJobBroker
 
 
 def websocket() -> WebSocket:

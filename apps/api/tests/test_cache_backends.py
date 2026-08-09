@@ -6,12 +6,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
-from flow2api.services.cache_backends.digitalocean import (
+from sub2gen.services.cache_backends.digitalocean import (
     DigitalOceanSpacesBackend,
     DigitalOceanSpacesSettings,
 )
-from flow2api.services.cache_backends.local import LocalCacheBackend
-from flow2api.services.file_cache import FileCache
+from sub2gen.services.cache_backends.local import LocalCacheBackend
+from sub2gen.services.file_cache import FileCache
 
 
 class LocalCacheBackendTests(unittest.IsolatedAsyncioTestCase):
@@ -88,7 +88,7 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
             secret_access_key="secret",
             region="nyc3",
             bucket="bucket",
-            prefix="flow2api/cache",
+            prefix="sub2gen/cache",
             delivery_mode="cdn",
             cdn_base_url="https://cdn.example.com",
             api_token="token",
@@ -97,11 +97,11 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(sys.modules, self._modules(client)):
             backend = DigitalOceanSpacesBackend(settings)
             stored = await backend.store_bytes("image.png", b"png", "image/png")
-        self.assertEqual(stored.key, "flow2api/cache/image.png")
+        self.assertEqual(stored.key, "sub2gen/cache/image.png")
         self.assertEqual(client.put_calls[0]["ACL"], "public-read")
         self.assertEqual(
             backend.public_url("image.png"),
-            "https://cdn.example.com/flow2api/cache/image.png",
+            "https://cdn.example.com/sub2gen/cache/image.png",
         )
 
     async def test_cdn_file_listing_includes_direct_public_url(self):
@@ -111,7 +111,7 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
             secret_access_key="secret",
             region="nyc3",
             bucket="bucket",
-            prefix="flow2api/cache",
+            prefix="sub2gen/cache",
             delivery_mode="cdn",
             cdn_base_url="https://cdn.example.com",
             api_token="token",
@@ -133,7 +133,7 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(files[0]["delivery_mode"], "cdn")
         self.assertEqual(
             files[0]["public_url"],
-            "https://cdn.example.com/flow2api/cache/image%20%231.png",
+            "https://cdn.example.com/sub2gen/cache/image%20%231.png",
         )
 
     async def test_local_file_listing_has_no_public_url(self):
@@ -152,7 +152,7 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
             secret_access_key="secret",
             region="nyc3",
             bucket="bucket",
-            prefix="flow2api/cache",
+            prefix="sub2gen/cache",
             delivery_mode="proxy",
         )
         with tempfile.TemporaryDirectory() as tmp, patch.dict(sys.modules, self._modules(client)):
@@ -176,8 +176,8 @@ class DigitalOceanSpacesBackendTests(unittest.IsolatedAsyncioTestCase):
             delivery_mode="cdn",
             cdn_base_url="https://cdn.example.com",
         )
-        self.assertIn("FLOW2API_DO_API_TOKEN", settings.missing())
-        self.assertIn("FLOW2API_DO_CDN_ENDPOINT_ID", settings.missing())
+        self.assertIn("SUB2GEN_DO_API_TOKEN", settings.missing())
+        self.assertIn("SUB2GEN_DO_CDN_ENDPOINT_ID", settings.missing())
 
     async def test_spaces_promotion_failure_does_not_leave_local_fallback(self):
         class FailingBackend:

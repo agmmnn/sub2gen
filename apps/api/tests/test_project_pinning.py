@@ -6,8 +6,8 @@ from unittest.mock import ANY, AsyncMock, patch
 import pytest
 from fastapi import HTTPException
 
-from flow2api.api import routes
-from flow2api.core.api_key_manager import AuthContext
+from sub2gen.api import routes
+from sub2gen.core.api_key_manager import AuthContext
 
 
 def make_auth(*, accounts=(7,), scopes=("generate:chat", "projects:read")) -> AuthContext:

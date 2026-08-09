@@ -1,12 +1,14 @@
-# Architecture Migration Safety Checkpoint
+# Historical Architecture Migration Safety Checkpoint
 
 Checkpoint date: 2026-08-08
 
-This document records the recovery point created before the Flow2API architecture migration. It does not authorize the Git history rewrite; that operation remains behind a separate explicit-confirmation gate.
+This document records the recovery point created before the modular-monolith migration.
+Phase 1.5 later replaced the repository identity with the standalone `agmmnn/sub2gen`
+repository; current remote information belongs in Git rather than this historical file.
 
 ## Repository recovery point
 
-- Repository: `agmmnn/flow2api`
+- Repository: `agmmnn/sub2gen`
 - Branch: `main`
 - Commit: `5b140e1d99b5dbed9f23efd642841be71ee54712`
 - Commit subject: `docs: add architecture migration plan`
@@ -14,23 +16,17 @@ This document records the recovery point created before the Flow2API architectur
 - Tags: none
 - Open pull requests: none
 - GitHub collaborators with push access: only `agmmnn`
-- GitHub repository type: fork of `cipher-x-sudo/flow2api`
+- Current GitHub repository type: standalone
 
 The following old local branches were fully contained by `main` and had no unique commits:
 
 - `codex/base-ui-migration`
 - `codex/project-pinning`
 
-## Remotes at checkpoint
+## Current remote
 
-| Remote | URL | Purpose |
-| --- | --- | --- |
-| `origin` | `https://github.com/agmmnn/flow2api.git` | The only rewrite/push target |
-| `upstream` | `https://github.com/cipher-x-sudo/flow2api.git` | Read-only reference |
-| `original` | `https://github.com/TheSmallHanCat/flow2api.git` | Read-only reference |
-
-No rewritten refs may be pushed to `upstream` or `original`.
-Their local push URLs were set to `DISABLED` after the checkpoint inventory; fetch access remains unchanged.
+The completed identity cutover keeps only `origin`, pointing to
+`https://github.com/agmmnn/sub2gen.git`.
 
 ## Git storage before cleanup
 
@@ -43,7 +39,7 @@ Their local push URLs were set to `DISABLED` after the checkpoint inventory; fet
 
 ## External asset backup
 
-- Archive: `/Users/agm/Documents/Github/flow2api-niches-backup-2026-08-08.tar.gz`
+- Archive: external to the repository
 - Archive size: approximately 270 MiB compressed
 - SHA-256: `2d66581cc55103e3984c626c5a7cb022d324183529a2bdb458b8fe45aa1f8a2d`
 - Verification: archive extraction succeeded and all 34 tracked files matched their source SHA-256 checksums
@@ -52,14 +48,14 @@ Their local push URLs were set to `DISABLED` after the checkpoint inventory; fet
 Verify the archive before recovery:
 
 ```bash
-shasum -a 256 /Users/agm/Documents/Github/flow2api-niches-backup-2026-08-08.tar.gz
-tar -tzf /Users/agm/Documents/Github/flow2api-niches-backup-2026-08-08.tar.gz
+shasum -a 256 /Users/agm/Documents/Github/sub2gen-niches-backup-2026-08-08.tar.gz
+tar -tzf /Users/agm/Documents/Github/sub2gen-niches-backup-2026-08-08.tar.gz
 ```
 
 Restore the content into a chosen directory:
 
 ```bash
-tar -xzf /Users/agm/Documents/Github/flow2api-niches-backup-2026-08-08.tar.gz -C /path/to/restore
+tar -xzf /Users/agm/Documents/Github/sub2gen-niches-backup-2026-08-08.tar.gz -C /path/to/restore
 ```
 
 ## History-rewrite gate

@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from flow2api.contract_baseline import build_model_catalog_snapshot
-from flow2api.main import app
+from sub2gen.contract_baseline import build_model_catalog_snapshot
+from sub2gen.main import app
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]

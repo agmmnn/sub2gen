@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 
-from flow2api.api import routes
-from flow2api.core.api_key_manager import AuthContext
-from flow2api.main import _path_allowed_on_api_only_host
+from sub2gen.api import routes
+from sub2gen.core.api_key_manager import AuthContext
+from sub2gen.main import _path_allowed_on_api_only_host
 
 
 def make_auth(*, key_id=42, scopes=("tokens:import",), legacy=False):

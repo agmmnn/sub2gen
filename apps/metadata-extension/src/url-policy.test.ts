@@ -3,7 +3,7 @@ import { ensureOriginPermission, isPrivateDevelopmentHost, normalizeBaseUrl, per
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Flow2 Base URL policy", () => {
+describe("sub2gen Base URL policy", () => {
   it("normalizes HTTPS servers", () => {
     expect(normalizeBaseUrl(" https://flow-api.example.com/ ")).toBe("https://flow-api.example.com");
     expect(permissionOrigin("https://flow-api.example.com/base")).toBe("https://flow-api.example.com/*");

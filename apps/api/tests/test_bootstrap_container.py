@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from flow2api import main
-from flow2api.bootstrap.container import AppContainer
-from flow2api.bootstrap.dependencies import get_container, get_websocket_container
-from flow2api.bootstrap.lifecycle import build_lifespan
-from flow2api.bootstrap.tasks import TaskRegistry
+from sub2gen import main
+from sub2gen.bootstrap.container import AppContainer
+from sub2gen.bootstrap.dependencies import get_container, get_websocket_container
+from sub2gen.bootstrap.lifecycle import build_lifespan
+from sub2gen.bootstrap.tasks import TaskRegistry
 
 
 def test_container_dependencies_are_scoped_to_the_application() -> None:

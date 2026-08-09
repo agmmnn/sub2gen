@@ -120,7 +120,7 @@ function setContextView(status: WorkspaceStatus) {
   if (eyebrow) eyebrow.textContent = status === "checking" ? "Checking workspace" : "Workspace unavailable";
   if (status === "checking") {
     title.textContent = "Checking Adobe workspace";
-    message.textContent = "One moment while Flow2 verifies the active tab.";
+    message.textContent = "One moment while sub2gen verifies the active tab.";
     openButton.hidden = true;
   } else if (status === "owner-tab-lost") {
     title.textContent = "Adobe run tab was lost";
@@ -425,7 +425,7 @@ async function connect() {
   button.textContent = "Validating…";
   try {
     const baseUrl = normalizeBaseUrl(baseUrlInput.value);
-    if (!(await ensureOriginPermission(baseUrl))) throw new Error("Host permission is required to connect to this Flow2 API server.");
+    if (!(await ensureOriginPermission(baseUrl))) throw new Error("Host permission is required to connect to this sub2gen server.");
     const response = await chrome.runtime.sendMessage({ type: "VALIDATE_CONNECTION", baseUrl, apiKey: apiKeyInput.value });
     if (!response?.success) throw new Error(response?.error || "Connection validation failed.");
     apiKeyInput.value = "";

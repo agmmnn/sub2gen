@@ -1,4 +1,4 @@
-import { requestJson, webSocketUrlToHttpBase } from "@flow2api/extension-core"
+import { requestJson, webSocketUrlToHttpBase } from "@sub2gen/extension-core"
 
 export interface AccountImportRequest {
   serverUrl: string

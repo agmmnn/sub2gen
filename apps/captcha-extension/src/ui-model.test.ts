@@ -7,7 +7,7 @@ describe("extension UI presentation", () => {
     expect(connectionPresentation({ wsStatus: "open", lastRegisterStatus: "ok" })).toEqual({
       tone: "positive",
       label: "Connected",
-      detail: "Ready for Flow2API jobs",
+      detail: "Ready for sub2gen jobs",
     })
     expect(
       connectionPresentation({

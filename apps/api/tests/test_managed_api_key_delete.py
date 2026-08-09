@@ -8,10 +8,10 @@ import aiosqlite
 import pytest
 from fastapi import HTTPException
 
-from flow2api.api import admin, routes
-from flow2api.core.database import Database
-from flow2api.core.models import GeminiGenTask, RequestLog, RunwayTask
-from flow2api.services.browser_captcha_extension import ExtensionCaptchaService
+from sub2gen.api import admin, routes
+from sub2gen.core.database import Database
+from sub2gen.core.models import GeminiGenTask, RequestLog, RunwayTask
+from sub2gen.services.browser_captcha_extension import ExtensionCaptchaService
 
 
 def test_database_delete_managed_api_key_detaches_history_and_removes_owned_rows():

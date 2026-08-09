@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from flow2api.workers.extension.uploads import GenerationUploadStore
+from sub2gen.workers.extension.uploads import GenerationUploadStore
 
 
 @pytest.mark.asyncio

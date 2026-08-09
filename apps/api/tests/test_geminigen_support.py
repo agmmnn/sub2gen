@@ -12,31 +12,31 @@ from unittest.mock import AsyncMock
 
 from fastapi import HTTPException
 
-from flow2api.core.database import Database
-from flow2api.core.config import config
-from flow2api.core.api_key_manager import AuthContext
-from flow2api.services.cloning_metadata_service import (
+from sub2gen.core.database import Database
+from sub2gen.core.config import config
+from sub2gen.core.api_key_manager import AuthContext
+from sub2gen.services.cloning_metadata_service import (
     _cloning_remaining_timeout,
     _ensure_meaningful_image_prompt,
     _normalize_image_prompt,
 )
-from flow2api.services.geminigen_service import (
+from sub2gen.services.geminigen_service import (
     GEMINIGEN_CAPACITY_ERROR_CODE,
     GEMINIGEN_DAILY_LIMIT_ERROR_CODE,
     GeminiGenService,
     GeminiGenUpstreamError,
 )
-from flow2api.services.llm_provider_chain import LlmProviderChain, extract_non_empty_json_object
-from flow2api.services.runway_service import RunwayService
-from flow2api.api import routes
-from flow2api.core.geminigen_manifest import GEMINIGEN_MODEL_BY_ID, GEMINIGEN_MODEL_MANIFEST
-from flow2api.core.models import GeminiGenAccount, GeminiGenTask, RequestLog, RunwayAccount, RunwayModel, RunwayTask, Token
-from flow2api.core.storage_errors import (
+from sub2gen.services.llm_provider_chain import LlmProviderChain, extract_non_empty_json_object
+from sub2gen.services.runway_service import RunwayService
+from sub2gen.api import routes
+from sub2gen.core.geminigen_manifest import GEMINIGEN_MODEL_BY_ID, GEMINIGEN_MODEL_MANIFEST
+from sub2gen.core.models import GeminiGenAccount, GeminiGenTask, RequestLog, RunwayAccount, RunwayModel, RunwayTask, Token
+from sub2gen.core.storage_errors import (
     is_sqlite_recoverable_storage_error,
     is_sqlite_storage_full_error,
     sqlite_operational_error_handler,
 )
-from flow2api.core.studio_model_catalog import geminigen_studio_metadata, native_studio_metadata
+from sub2gen.core.studio_model_catalog import geminigen_studio_metadata, native_studio_metadata
 
 
 def test_blank_cloning_prompt_is_rejected():
@@ -777,7 +777,7 @@ def test_geminigen_account_delete_preserves_task_history_without_foreign_key_err
 
 def test_geminigen_admin_delete_cancels_assigned_jobs_before_removing_account():
     async def run():
-        from flow2api.api import admin as admin_routes
+        from sub2gen.api import admin as admin_routes
 
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         tmp.close()
@@ -1084,7 +1084,7 @@ def test_geminigen_daily_limit_columns_are_added_to_existing_tables():
 
 
 def test_geminigen_admin_account_payload_includes_profile_fields():
-    from flow2api.api.admin import _geminigen_account_payload
+    from sub2gen.api.admin import _geminigen_account_payload
 
     account = GeminiGenAccount(
         id=1,
@@ -1130,7 +1130,7 @@ def test_geminigen_admin_account_payload_includes_profile_fields():
 
 
 def test_geminigen_admin_account_payload_includes_generation_stats():
-    from flow2api.api.admin import _geminigen_account_payload
+    from sub2gen.api.admin import _geminigen_account_payload
 
     account = GeminiGenAccount(id=1, label="primary", bearer_token="secret-token")
     payload = _geminigen_account_payload(
@@ -1150,7 +1150,7 @@ def test_geminigen_admin_account_payload_includes_generation_stats():
 
 
 def test_geminigen_admin_account_payload_uses_remaining_only_for_unknown_caps():
-    from flow2api.api.admin import _geminigen_account_payload
+    from sub2gen.api.admin import _geminigen_account_payload
 
     account = GeminiGenAccount(
         id=1,
@@ -1604,7 +1604,7 @@ def test_request_logs_include_and_search_geminigen_job_id():
 
 
 def test_request_log_job_id_extractor_reads_nested_payloads():
-    from flow2api.api.admin import _extract_log_job_id
+    from sub2gen.api.admin import _extract_log_job_id
 
     assert _extract_log_job_id(json.dumps({"content": {"job_id": "job-native-123"}})) == "job-native-123"
     assert _extract_log_job_id({"response": {"task_id": "task-456"}}) == "task-456"

@@ -1,0 +1,36 @@
+-- Hard-cut managed API keys to the sub2gen namespace.
+-- Existing keys cannot be rewritten because clients were shown the secret only once.
+-- Operators create a new s2g_live_ key and reconnect local extensions/clients.
+
+ALTER TABLE generation_config RENAME COLUMN flow2api_gemini_api_keys TO sub2gen_gemini_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_openai_api_keys TO sub2gen_openai_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_third_party_gemini_api_keys TO sub2gen_third_party_gemini_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_third_party_gemini_base_url TO sub2gen_third_party_gemini_base_url;
+ALTER TABLE generation_config RENAME COLUMN flow2api_csvgen_cookie TO sub2gen_csvgen_cookie;
+ALTER TABLE generation_config RENAME COLUMN flow2api_csvgen_api_keys TO sub2gen_csvgen_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_model TO sub2gen_cloning_model;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_backend TO sub2gen_metadata_backend;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_provider_order TO sub2gen_metadata_provider_order;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_enabled_providers TO sub2gen_metadata_enabled_providers;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_provider_retry_count TO sub2gen_metadata_provider_retry_count;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_model TO sub2gen_metadata_model;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_enabled_models TO sub2gen_metadata_enabled_models;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_primary_model TO sub2gen_metadata_primary_model;
+ALTER TABLE generation_config RENAME COLUMN flow2api_metadata_fallback_models TO sub2gen_metadata_fallback_models;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_backend TO sub2gen_cloning_backend;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_provider_order TO sub2gen_cloning_provider_order;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_enabled_providers TO sub2gen_cloning_enabled_providers;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_provider_retry_count TO sub2gen_cloning_provider_retry_count;
+ALTER TABLE generation_config RENAME COLUMN flow2api_openrouter_api_keys TO sub2gen_openrouter_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_gemini_api_keys TO sub2gen_cloning_gemini_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_openai_api_keys TO sub2gen_cloning_openai_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_openrouter_api_keys TO sub2gen_cloning_openrouter_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_third_party_gemini_api_keys TO sub2gen_cloning_third_party_gemini_api_keys;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_third_party_gemini_base_url TO sub2gen_cloning_third_party_gemini_base_url;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_cloudflare_account_id TO sub2gen_cloning_cloudflare_account_id;
+ALTER TABLE generation_config RENAME COLUMN flow2api_cloning_cloudflare_api_token TO sub2gen_cloning_cloudflare_api_token;
+
+UPDATE api_keys
+SET is_active = 0,
+    updated_at = CURRENT_TIMESTAMP
+WHERE key_prefix NOT LIKE 's2g_live_%';

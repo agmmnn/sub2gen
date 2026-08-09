@@ -37,7 +37,7 @@ export function expandCustomPrompt(text: string, preferences: Preferences, asset
   const languageNames: Record<LanguageCode, string> = {
     en: "English", fr: "French", de: "German", es: "Spanish", it: "Italian", pt: "Portuguese", ja: "Japanese", pl: "Polish", ko: "Korean",
   };
-  const categoryInstruction = "Return categoryId as one integer from the Flow2 Adobe Stock taxonomy (1-21).";
+  const categoryInstruction = "Return categoryId as one integer from the sub2gen Adobe Stock taxonomy (1-21).";
   return text
     .replaceAll("{language}", languageNames[preferences.language])
     .replaceAll("{fileType}", assetType || "photo")

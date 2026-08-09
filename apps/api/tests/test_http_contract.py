@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from flow2api.main import app
+from sub2gen.main import app
 
 
 CONTRACT_ROOT = Path(__file__).resolve().parent / "contracts"

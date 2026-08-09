@@ -627,7 +627,7 @@ export interface paths {
         };
         /**
          * Download Sqlite Database
-         * @description Download a consistent snapshot of the current flow.db SQLite database.
+         * @description Download a consistent snapshot of the current sub2gen.db SQLite database.
          */
         get: operations["download_sqlite_database_api_admin_database_download_get"];
         put?: never;
@@ -649,7 +649,7 @@ export interface paths {
         put?: never;
         /**
          * Restore Sqlite Database
-         * @description Restore flow.db from an uploaded SQLite file.
+         * @description Restore sub2gen.db from an uploaded SQLite file.
          */
         post: operations["restore_sqlite_database_api_admin_database_restore_post"];
         delete?: never;
@@ -1733,7 +1733,7 @@ export interface paths {
         };
         /**
          * Extension Metadata Session
-         * @description Validate that a managed key may activate the Flow2 Metadata extension.
+         * @description Validate that a managed key may activate the sub2gen Metadata extension.
          */
         get: operations["extension_metadata_session_api_extension_metadata_session_get"];
         put?: never;
@@ -2546,7 +2546,7 @@ export interface paths {
         };
         /**
          * Metrics
-         * @description Prometheus metrics endpoint for the main Flow2API service.
+         * @description Prometheus metrics endpoint for the main sub2gen service.
          */
         get: operations["metrics_metrics_get"];
         put?: never;
@@ -3987,66 +3987,66 @@ export interface components {
             extension_generation_enabled?: boolean | null;
             /** Extension Generation Fallback Mode */
             extension_generation_fallback_mode?: string | null;
-            /** Flow2Api Cloning Backend */
-            flow2api_cloning_backend?: string | null;
-            /** Flow2Api Cloning Cloudflare Account Id */
-            flow2api_cloning_cloudflare_account_id?: string | null;
-            /** Flow2Api Cloning Cloudflare Api Token */
-            flow2api_cloning_cloudflare_api_token?: string | null;
-            /** Flow2Api Cloning Enabled Providers */
-            flow2api_cloning_enabled_providers?: string | null;
-            /** Flow2Api Cloning Gemini Api Keys */
-            flow2api_cloning_gemini_api_keys?: string | null;
-            /** Flow2Api Cloning Model */
-            flow2api_cloning_model?: string | null;
-            /** Flow2Api Cloning Openai Api Keys */
-            flow2api_cloning_openai_api_keys?: string | null;
-            /** Flow2Api Cloning Openrouter Api Keys */
-            flow2api_cloning_openrouter_api_keys?: string | null;
-            /** Flow2Api Cloning Provider Order */
-            flow2api_cloning_provider_order?: string | null;
-            /** Flow2Api Cloning Provider Retry Count */
-            flow2api_cloning_provider_retry_count?: number | null;
-            /** Flow2Api Cloning Third Party Gemini Api Keys */
-            flow2api_cloning_third_party_gemini_api_keys?: string | null;
-            /** Flow2Api Cloning Third Party Gemini Base Url */
-            flow2api_cloning_third_party_gemini_base_url?: string | null;
-            /** Flow2Api Csvgen Api Keys */
-            flow2api_csvgen_api_keys?: string | null;
-            /** Flow2Api Csvgen Cookie */
-            flow2api_csvgen_cookie?: string | null;
-            /** Flow2Api Gemini Api Keys */
-            flow2api_gemini_api_keys?: string | null;
-            /** Flow2Api Metadata Backend */
-            flow2api_metadata_backend?: string | null;
-            /** Flow2Api Metadata Enabled Models */
-            flow2api_metadata_enabled_models?: string | null;
-            /** Flow2Api Metadata Enabled Providers */
-            flow2api_metadata_enabled_providers?: string | null;
-            /** Flow2Api Metadata Fallback Models */
-            flow2api_metadata_fallback_models?: string | null;
-            /** Flow2Api Metadata Model */
-            flow2api_metadata_model?: string | null;
-            /** Flow2Api Metadata Primary Model */
-            flow2api_metadata_primary_model?: string | null;
-            /** Flow2Api Metadata Provider Order */
-            flow2api_metadata_provider_order?: string | null;
-            /** Flow2Api Metadata Provider Retry Count */
-            flow2api_metadata_provider_retry_count?: number | null;
-            /** Flow2Api Openai Api Keys */
-            flow2api_openai_api_keys?: string | null;
-            /** Flow2Api Openrouter Api Keys */
-            flow2api_openrouter_api_keys?: string | null;
-            /** Flow2Api Third Party Gemini Api Keys */
-            flow2api_third_party_gemini_api_keys?: string | null;
-            /** Flow2Api Third Party Gemini Base Url */
-            flow2api_third_party_gemini_base_url?: string | null;
             /** Image Timeout */
             image_timeout?: number | null;
             /** Max Retries */
             max_retries?: number | null;
             /** Metadata System Prompt */
             metadata_system_prompt?: string | null;
+            /** Sub2Gen Cloning Backend */
+            sub2gen_cloning_backend?: string | null;
+            /** Sub2Gen Cloning Cloudflare Account Id */
+            sub2gen_cloning_cloudflare_account_id?: string | null;
+            /** Sub2Gen Cloning Cloudflare Api Token */
+            sub2gen_cloning_cloudflare_api_token?: string | null;
+            /** Sub2Gen Cloning Enabled Providers */
+            sub2gen_cloning_enabled_providers?: string | null;
+            /** Sub2Gen Cloning Gemini Api Keys */
+            sub2gen_cloning_gemini_api_keys?: string | null;
+            /** Sub2Gen Cloning Model */
+            sub2gen_cloning_model?: string | null;
+            /** Sub2Gen Cloning Openai Api Keys */
+            sub2gen_cloning_openai_api_keys?: string | null;
+            /** Sub2Gen Cloning Openrouter Api Keys */
+            sub2gen_cloning_openrouter_api_keys?: string | null;
+            /** Sub2Gen Cloning Provider Order */
+            sub2gen_cloning_provider_order?: string | null;
+            /** Sub2Gen Cloning Provider Retry Count */
+            sub2gen_cloning_provider_retry_count?: number | null;
+            /** Sub2Gen Cloning Third Party Gemini Api Keys */
+            sub2gen_cloning_third_party_gemini_api_keys?: string | null;
+            /** Sub2Gen Cloning Third Party Gemini Base Url */
+            sub2gen_cloning_third_party_gemini_base_url?: string | null;
+            /** Sub2Gen Csvgen Api Keys */
+            sub2gen_csvgen_api_keys?: string | null;
+            /** Sub2Gen Csvgen Cookie */
+            sub2gen_csvgen_cookie?: string | null;
+            /** Sub2Gen Gemini Api Keys */
+            sub2gen_gemini_api_keys?: string | null;
+            /** Sub2Gen Metadata Backend */
+            sub2gen_metadata_backend?: string | null;
+            /** Sub2Gen Metadata Enabled Models */
+            sub2gen_metadata_enabled_models?: string | null;
+            /** Sub2Gen Metadata Enabled Providers */
+            sub2gen_metadata_enabled_providers?: string | null;
+            /** Sub2Gen Metadata Fallback Models */
+            sub2gen_metadata_fallback_models?: string | null;
+            /** Sub2Gen Metadata Model */
+            sub2gen_metadata_model?: string | null;
+            /** Sub2Gen Metadata Primary Model */
+            sub2gen_metadata_primary_model?: string | null;
+            /** Sub2Gen Metadata Provider Order */
+            sub2gen_metadata_provider_order?: string | null;
+            /** Sub2Gen Metadata Provider Retry Count */
+            sub2gen_metadata_provider_retry_count?: number | null;
+            /** Sub2Gen Openai Api Keys */
+            sub2gen_openai_api_keys?: string | null;
+            /** Sub2Gen Openrouter Api Keys */
+            sub2gen_openrouter_api_keys?: string | null;
+            /** Sub2Gen Third Party Gemini Api Keys */
+            sub2gen_third_party_gemini_api_keys?: string | null;
+            /** Sub2Gen Third Party Gemini Base Url */
+            sub2gen_third_party_gemini_base_url?: string | null;
             /** Task Tracker Cookies */
             task_tracker_cookies?: string | null;
             /** Task Tracker Device Id */

@@ -13,9 +13,9 @@ interface ContentMessage {
 
 declare global {
   interface Window {
-    __flow2MetadataContentLoaded?: boolean;
-    __flow2MetadataLastHref?: string;
-    __flow2MetadataLocationTimer?: number;
+    __sub2genMetadataContentLoaded?: boolean;
+    __sub2genMetadataLastHref?: string;
+    __sub2genMetadataLocationTimer?: number;
   }
 }
 
@@ -33,19 +33,19 @@ function sendPageContext(): void {
 
 function watchLocationChanges(): void {
   const check = () => {
-    if (window.__flow2MetadataLastHref === location.href) return;
-    window.__flow2MetadataLastHref = location.href;
+    if (window.__sub2genMetadataLastHref === location.href) return;
+    window.__sub2genMetadataLastHref = location.href;
     sendPageContext();
     if (supportedNow()) void recoverAfterNavigation();
   };
   window.addEventListener("popstate", check);
   window.addEventListener("hashchange", check);
-  window.__flow2MetadataLocationTimer = window.setInterval(check, 700);
+  window.__sub2genMetadataLocationTimer = window.setInterval(check, 700);
   check();
 }
 
-if (!window.__flow2MetadataContentLoaded) {
-  window.__flow2MetadataContentLoaded = true;
+if (!window.__sub2genMetadataContentLoaded) {
+  window.__sub2genMetadataContentLoaded = true;
   chrome.runtime.onMessage.addListener((message: ContentMessage, _sender, sendResponse) => {
   if (message.action === "ping") {
     sendResponse({ success: true, status: "alive", supported: supportedNow() });

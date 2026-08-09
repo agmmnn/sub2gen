@@ -293,7 +293,7 @@ export function AgentGateway() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Flow2API → gateway (HTTP)</CardTitle>
+          <CardTitle>sub2gen → gateway (HTTP)</CardTitle>
           <CardDescription>
             Uses the same captcha config values as <strong>System settings</strong>. Inside Docker this is usually{" "}
             <code className="text-xs">http://agent-gateway:9080</code>.
@@ -382,7 +382,7 @@ export function AgentGateway() {
           ) : null}
           {gatewayReachable === false ? (
             <div className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-md px-3 py-2 space-y-1">
-              <p>Gateway is unreachable from Flow2API.</p>
+              <p>Gateway is unreachable from sub2gen.</p>
               <p>
                 Check <code className="text-xs">remote_browser_base_url</code>, Docker service name, and tunnel/hostname routing.
               </p>
@@ -499,7 +499,7 @@ export function AgentGateway() {
         <CardHeader>
           <CardTitle>Register message (first frame after connect)</CardTitle>
           <CardDescription>
-            <code className="text-xs">token_ids</code> are Flow2API token row IDs to serve.
+            <code className="text-xs">token_ids</code> are sub2gen token row IDs to serve.
           </CardDescription>
         </CardHeader>
         <CardContent>

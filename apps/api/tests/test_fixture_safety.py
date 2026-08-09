@@ -11,7 +11,7 @@ FIXTURE_ROOTS = (
 )
 TEXT_SUFFIXES = {".csv", ".html", ".json", ".md", ".txt", ".xml", ".yaml", ".yml"}
 FORBIDDEN_PATTERNS = {
-    "Flow2API managed API key": re.compile(r"f2a_live_[A-Za-z0-9_-]{12,}"),
+    "sub2gen managed API key": re.compile(r"s2g_live_[A-Za-z0-9_-]{12,}"),
     "JWT-like token": re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"),
     "Google session cookie": re.compile(r"__Secure-next-auth\.session-token\s*[=:]\s*[^<\s]{12,}"),
     "signed media URL": re.compile(r"https?://[^\s]+[?&](?:Signature|KeyName)=[A-Za-z0-9_%+./=-]{12,}"),

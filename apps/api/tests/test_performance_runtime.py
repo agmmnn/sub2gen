@@ -11,12 +11,12 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from flow2api.api import admin
-from flow2api.core.api_key_manager import ApiKeyManager
-from flow2api.core.database import Database
-from flow2api.core.models import GeminiGenTask, RequestLog
-from flow2api.services.failed_payload_store import FailedPayloadManager
-from flow2api.services.redis_runtime import (
+from sub2gen.api import admin
+from sub2gen.core.api_key_manager import ApiKeyManager
+from sub2gen.core.database import Database
+from sub2gen.core.models import GeminiGenTask, RequestLog
+from sub2gen.services.failed_payload_store import FailedPayloadManager
+from sub2gen.services.redis_runtime import (
     RedisEvent,
     RedisRuntime,
     RedisUnavailableError,
@@ -148,7 +148,7 @@ class _SpacesClient:
 class TestLogStorageAndRetention(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.tempdir = tempfile.TemporaryDirectory()
-        self.db = Database(str(Path(self.tempdir.name) / "flow.db"))
+        self.db = Database(str(Path(self.tempdir.name) / "sub2gen.db"))
         await self.db.init_db()
         await self.db.cache_schema_capabilities()
 

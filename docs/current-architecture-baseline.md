@@ -30,7 +30,7 @@ uv run python scripts/update_contract_snapshots.py
 
 ## Runtime composition
 
-`apps/api/src/flow2api/main.py` creates the FastAPI application. Its lifespan in
+`apps/api/src/sub2gen/main.py` creates the FastAPI application. Its lifespan in
 `bootstrap/lifecycle.py` owns startup, recovery, scheduled work, and shutdown.
 `bootstrap/container.py` constructs one `AppContainer` containing:
 
@@ -215,7 +215,7 @@ The exact current frames, including error and upload cases, are in
 `apps/api/tests/contracts/legacy-workers/`. Absence of a field in those fixtures is
 part of the characterized legacy contract. Every WebSocket frame also round-trips
 through the executable compatibility codecs in
-`workers/extension/legacy_codec.py` and `flow2api_gateway/legacy_codec.py`; the existing
+`workers/extension/legacy_codec.py` and `sub2gen_gateway/legacy_codec.py`; the existing
 runtime handlers remain unchanged in Phase 0.
 
 ## Phase 0 conclusions

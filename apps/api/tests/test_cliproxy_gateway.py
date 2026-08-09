@@ -6,9 +6,9 @@ from unittest.mock import patch
 import httpx
 from fastapi import HTTPException
 
-from flow2api.api.cliproxy_admin import router as cliproxy_router
-from flow2api.core.cliproxy_models import CLIProxyAlias, CLIProxyApiKeyImport
-from flow2api.services.cliproxy_client import (
+from sub2gen.api.cliproxy_admin import router as cliproxy_router
+from sub2gen.core.cliproxy_models import CLIProxyAlias, CLIProxyApiKeyImport
+from sub2gen.services.cliproxy_client import (
     CLIProxyInferenceClient,
     CLIProxyManagementClient,
     CLIProxyUpstreamError,
@@ -18,7 +18,7 @@ from flow2api.services.cliproxy_client import (
     redact_text,
     split_gateway_model,
 )
-from flow2api.services.llm_provider_chain import LlmProviderChain
+from sub2gen.services.llm_provider_chain import LlmProviderChain
 
 
 class _NoopManagement:
@@ -77,7 +77,7 @@ class CLIProxyInferenceTests(unittest.IsolatedAsyncioTestCase):
         client = CLIProxyInferenceClient(
             base_url="http://gateway", api_key="client-secret", management=management
         )
-        with patch("flow2api.services.cliproxy_client.httpx.AsyncClient", _FakeAsyncClient):
+        with patch("sub2gen.services.cliproxy_client.httpx.AsyncClient", _FakeAsyncClient):
             result = await client.chat_json(
                 model="codex/gpt-5.6",
                 prompt_text="return metadata",
@@ -106,7 +106,7 @@ class CLIProxyInferenceTests(unittest.IsolatedAsyncioTestCase):
         client = CLIProxyInferenceClient(
             base_url="http://gateway", api_key="client-secret", management=_NoopManagement()
         )
-        with patch("flow2api.services.cliproxy_client.httpx.AsyncClient", _FakeAsyncClient):
+        with patch("sub2gen.services.cliproxy_client.httpx.AsyncClient", _FakeAsyncClient):
             with self.assertRaises(HTTPException) as raised:
                 await client.chat_json(model="codex/gpt", prompt_text="x")
         self.assertNotIn("upstream-secret", raised.exception.detail)

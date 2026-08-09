@@ -1,4 +1,4 @@
-import type { paths } from "@flow2api/api-contract"
+import type { paths } from "@sub2gen/api-contract"
 
 /**
  * Authenticated fetch for admin API routes.

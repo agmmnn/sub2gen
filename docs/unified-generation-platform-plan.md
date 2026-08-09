@@ -1,22 +1,22 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 and 1 complete; Phase 1.5 (`sub2gen` identity cutover) is next.
+Status: Phases 0, 1, and 1.5 complete; Phase 2 (provider SDK and package workspace) is next.
 
-This plan evolves Flow2API from a Google Flow-focused compatibility service into a
+This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
 
 > Unified image generation API for consumer AI subscriptions — bridge ChatGPT,
 > Flow, Gemini, and other UI-backed generation services into one local API.
 
 The change extends the completed modular-monolith migration. It is not a rewrite and
-does not require microservices. Phase 1.5 deliberately replaces the old command:
+does not require microservices. Phase 1.5 establishes the only supported local command:
 
 ```bash
 uv run setup
 uv run sub2gen
 ```
 
-`uv run flow2api` is not retained as an alias after the identity cutover.
+No former command alias is retained after the identity cutover.
 
 ## Goals
 
@@ -40,7 +40,7 @@ uv run sub2gen
 - Silently falling back from ChatGPT Web usage to metered Codex usage.
 - Enabling third-party online style galleries by default.
 - Combining every browser capability into one Chrome extension.
-- Maintaining `flow2api` identity aliases after the Phase 1.5 hard cutover.
+- Maintaining former project-identity aliases after the Phase 1.5 hard cutover.
 
 ## Architectural decisions
 
@@ -459,32 +459,32 @@ created. It does not keep compatibility aliases for the former project identity.
 Provider behavior, OpenAI-compatible HTTP shapes, databases, and existing generation
 features remain in scope and are verified independently from the identity cutover.
 
-- [ ] Move the Git history to the standalone `agmmnn/sub2gen` repository and make it the
+- [x] Move the Git history to the standalone `agmmnn/sub2gen` repository and make it the
   only `origin`; the new repository must not remain in the former GitHub fork network.
-- [ ] Rename the Python distribution and import root from `flow2api` to `sub2gen`, move
-  all source/tests, and update setuptools discovery and package data.
-- [ ] Replace the primary executable with `uv run sub2gen`; remove the `flow2api`
-  console script rather than leaving a shim.
-- [ ] Rename `FLOW2API_*` environment variables to `SUB2GEN_*` and update configuration,
+- [x] Rename the Python distribution and import root to `sub2gen`, move all source/tests,
+  and update setuptools discovery and package data without a namespace shim.
+- [x] Make `uv run sub2gen` the sole primary executable and remove the former console
+  script rather than leaving an alias.
+- [x] Standardize environment variables on `SUB2GEN_*` and update configuration,
   scripts, Compose files, Dockerfiles, CI, and documentation without old-name fallback.
-- [ ] Rename JavaScript package scopes from `@flow2api/*` to `@sub2gen/*` and update Bun
-  workspace references and lockfiles.
-- [ ] Rename application titles, extension identities and copy, generated API metadata,
+- [x] Standardize JavaScript package scopes on `@sub2gen/*` and update Bun workspace
+  references and lockfiles.
+- [x] Rename application titles, extension identities and copy, generated API metadata,
   container/service/image names, logs, and repository documentation to `sub2gen`.
-- [ ] Replace newly issued managed-key branding/prefixes with `s2g_live_` and define an
+- [x] Replace newly issued managed-key branding/prefixes with `s2g_live_` and define an
   explicit operator migration for existing local keys instead of accepting two branded
   key formats indefinitely.
-- [ ] Audit runtime paths and persisted identifiers. Keep neutral paths/schema fields;
+- [x] Audit runtime paths and persisted identifiers. Keep neutral paths/schema fields;
   rename branded ones with a one-time migration, not a runtime compatibility branch.
-- [ ] Remove obsolete `flow2api` source names and assert that no old import, executable,
+- [x] Remove obsolete source names and assert that no old import, executable,
   environment prefix, npm scope, UI title, or container identity remains.
-- [ ] Update the architecture, setup, deployment, and extension documentation around
+- [x] Update the architecture, setup, deployment, and extension documentation around
   `uv run setup` and `uv run sub2gen`.
 
 Exit criteria:
 
 - `uv run setup` and `uv run sub2gen` are the only documented local startup path.
-- `import sub2gen` succeeds; `import flow2api` and `uv run flow2api` do not.
+- `import sub2gen` succeeds; the former import and executable do not.
 - Fresh SQLite/PostgreSQL installs and a one-time migration of the current personal
   runtime pass without maintaining old-name branches in application code.
 - Python, Bun, Docker/Compose, extension, OpenAPI, and live health checks use `sub2gen`.
@@ -516,10 +516,10 @@ Exit criteria:
 - [ ] Add durable generation job and attempt models for idempotency, dispatch state,
   retries, and terminal execution audit before any local provider can receive work.
 - [ ] Add focused repositories rather than waiting for complete database extraction.
-- [ ] Add paired, checksum-safe `0002` migrations for SQLite and PostgreSQL; never edit
+- [ ] Add paired, checksum-safe `0003` migrations for SQLite and PostgreSQL; never edit
   the applied `0001` files.
-- [ ] Update the legacy SQLite adoption path to create/stamp `0001` and then apply
-  `0002`; update PostgreSQL identity and boolean-column metadata for the new tables.
+- [ ] Update the legacy SQLite adoption path to create/stamp existing revisions and then
+  apply `0003`; update PostgreSQL identity and boolean-column metadata for the new tables.
 - [ ] Validate fresh databases, existing-schema adoption, upgrade, backup, and rollback.
 - [ ] Add adapters that describe existing Flow, Runway, and GeminiGen accounts without
   destructive data movement or copied credentials.
@@ -752,8 +752,8 @@ Implementation proceeds one phase at a time. At each phase boundary:
 1. Update this plan with completed checklist items and any approved deviations.
 2. Run the phase-specific and repository-wide verification suites.
 3. Review security, credential locality, billing-pool behavior, and compatibility.
-4. Before Phase 1.5, confirm `uv run flow2api`; from Phase 1.5 onward, confirm
-   `uv run setup` and `uv run sub2gen` with no old command fallback.
+4. From Phase 1.5 onward, confirm `uv run setup` and `uv run sub2gen` with no former
+   command fallback.
 5. Commit and push the completed phase to `main` only after verification.
 
 The ChatGPT spike may be discarded. No later phase may depend on spike code that has not

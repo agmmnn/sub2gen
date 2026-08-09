@@ -6,15 +6,15 @@
 
 ## What was implemented
 
-The spike lives in `flow2api.spikes.chatgpt_web` and is available as:
+The spike lives in `sub2gen.spikes.chatgpt_web` and is available as:
 
 ```bash
-uv run flow2api-chatgpt-spike doctor
+uv run sub2gen-chatgpt-spike doctor
 
-uv run flow2api-chatgpt-spike generate \
+uv run sub2gen-chatgpt-spike generate \
   "A product photo of a ceramic mug" \
   --out /tmp/mug.png \
-  --project Flow2API \
+  --project sub2gen \
   --profile relay
 ```
 
@@ -32,13 +32,13 @@ The harness:
 - terminates the subprocess group, closes the browser session best-effort, and removes
   temporary files on timeout or caller cancellation.
 
-`FLOW2API_CHATGPT_IMAGEGEN_CLI` and `FLOW2API_CHROME_USE_CLI` may override executable
+`SUB2GEN_CHATGPT_IMAGEGEN_CLI` and `SUB2GEN_CHROME_USE_CLI` may override executable
 discovery. The CLI also accepts `--cli` and `--chrome-use` explicitly.
 
 ## Live measurements
 
 The local extension relay and `chrome-use 1.5.87` were connected. Both live runs used
-the pinned `chatgpt-imagegen 0.21.2` checkout and the `Flow2API` project.
+the pinned `chatgpt-imagegen 0.21.2` checkout and the `sub2gen` project.
 
 | Path | Result | Latency | Output | Project selected | Conversation deleted |
 | --- | --- | ---: | --- | --- | --- |

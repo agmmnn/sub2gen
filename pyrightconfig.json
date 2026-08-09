@@ -1,9 +1,9 @@
 {
   "include": [
-    "apps/api/src/flow2api/core/account_tiers.py",
-    "apps/api/src/flow2api/core/route_log_sanitize.py",
-    "apps/api/src/flow2api/core/storage_errors.py",
-    "apps/api/src/flow2api/services/st_refresh_reasons.py"
+    "apps/api/src/sub2gen/core/account_tiers.py",
+    "apps/api/src/sub2gen/core/route_log_sanitize.py",
+    "apps/api/src/sub2gen/core/storage_errors.py",
+    "apps/api/src/sub2gen/services/st_refresh_reasons.py"
   ],
   "exclude": [
     "**/__pycache__",

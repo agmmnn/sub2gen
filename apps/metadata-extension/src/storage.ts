@@ -2,9 +2,9 @@ import type { Connection, Preferences, RuntimeState } from "./types";
 import { DEFAULT_PREFERENCES, migratePreferences } from "./preferences";
 export { DEFAULT_PREFERENCES } from "./preferences";
 
-const CONNECTION_KEY = "flow2MetadataConnection";
-const PREFERENCES_KEY = "flow2MetadataPreferences";
-const RUNTIME_KEY = "flow2MetadataRuntime";
+const CONNECTION_KEY = "sub2genMetadataConnection";
+const PREFERENCES_KEY = "sub2genMetadataPreferences";
+const RUNTIME_KEY = "sub2genMetadataRuntime";
 
 export const DEFAULT_BASE_URL = "https://flow-api.prismacreative.online";
 

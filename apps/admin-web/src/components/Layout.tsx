@@ -15,12 +15,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex h-14 max-w-7xl items-center px-6">
           <div className="mr-4 flex items-baseline gap-3">
             <Link to="/manage" className="font-bold text-xl hover:text-primary transition-colors">
-              Flow2API
+              sub2gen
             </Link>
           </div>
           <div className="flex flex-1 items-center justify-end gap-2">
             
-            <a href="https://github.com/TheSmallHanCat/flow2api" target="_blank" rel="noreferrer">
+            <a href="https://github.com/agmmnn/sub2gen" target="_blank" rel="noreferrer">
               <Button variant="ghost" size="icon" className="h-8 w-8" title="GitHub Repository">
                 <span className="font-bold">GH</span>
               </Button>

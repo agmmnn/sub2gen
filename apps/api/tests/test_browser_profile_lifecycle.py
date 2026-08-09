@@ -7,22 +7,22 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from flow2api import main as app_main
-from flow2api.api import admin
-from flow2api.core.logger import (
+from sub2gen import main as app_main
+from sub2gen.api import admin
+from sub2gen.core.logger import (
     SensitiveAccessLogFilter,
     redact_text_for_log,
     redact_url_for_log,
     sanitize_data_for_log,
     sanitize_headers_for_log,
 )
-from flow2api.core.models import Token
-from flow2api.services.browser_profile_service import (
+from sub2gen.core.models import Token
+from sub2gen.services.browser_profile_service import (
     BrowserProfileResourceExhaustedError,
     BrowserProfileService,
     ProfileRuntime,
 )
-from flow2api.services.token_manager import TokenManager
+from sub2gen.services.token_manager import TokenManager
 
 
 class FakePage:
@@ -312,7 +312,7 @@ class BrowserProfileRuntimeTests(unittest.IsolatedAsyncioTestCase):
         chromium = self.configure_contexts(FakeContext(FakePage()))
 
         with (
-            patch("flow2api.services.browser_profile_service.SUPPORTS_PROC_PROFILE_INSPECTION", True),
+            patch("sub2gen.services.browser_profile_service.SUPPORTS_PROC_PROFILE_INSPECTION", True),
             patch.object(BrowserProfileService, "_profile_process_ids", return_value=[]),
         ):
             await self.service._get_runtime(24)
@@ -332,7 +332,7 @@ class BrowserProfileRuntimeTests(unittest.IsolatedAsyncioTestCase):
         chromium = self.configure_contexts(lock_error)
 
         with (
-            patch("flow2api.services.browser_profile_service.SUPPORTS_PROC_PROFILE_INSPECTION", True),
+            patch("sub2gen.services.browser_profile_service.SUPPORTS_PROC_PROFILE_INSPECTION", True),
             patch.object(BrowserProfileService, "_profile_process_ids", return_value=[4321]),
         ):
             with self.assertRaisesRegex(RuntimeError, "already in use"):
@@ -575,7 +575,7 @@ class ProductionHealthTests(unittest.IsolatedAsyncioTestCase):
 
 class ProductionLogRedactionTests(unittest.TestCase):
     def test_uvicorn_log_config_redacts_access_and_websocket_handlers(self):
-        from flow2api.cli import build_uvicorn_log_config
+        from sub2gen.cli import build_uvicorn_log_config
 
         log_config = build_uvicorn_log_config()
 

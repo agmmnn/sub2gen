@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  flow2api:
-    image: thesmallhancat/flow2api:latest
-    container_name: flow2api
+  sub2gen:
+    image: ghcr.io/agmmnn/sub2gen:latest
+    container_name: sub2gen
     ports:
       - "38000:8000"
     volumes:
@@ -40,10 +40,10 @@ services:
     build:
       context: ../..
       dockerfile: apps/admin-web/Dockerfile
-    image: flow2api-frontend:local
-    container_name: flow2api-frontend
+    image: sub2gen-frontend:local
+    container_name: sub2gen-frontend
     ports:
       - "38080:80"
     depends_on:
-      - flow2api
+      - sub2gen
     restart: unless-stopped

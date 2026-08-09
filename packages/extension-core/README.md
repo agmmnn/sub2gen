@@ -1,6 +1,6 @@
 # Extension core package
 
-Typed, browser-independent primitives shared by Flow2API extensions:
+Typed, browser-independent primitives shared by sub2gen extensions:
 
 - callback-based extension storage adapters;
 - JSON HTTP request handling;

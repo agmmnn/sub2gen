@@ -1,6 +1,6 @@
 # Asynchronous generation and polling
 
-Flow2API offers an asynchronous form of the OpenAI-compatible generation route
+sub2gen offers an asynchronous form of the OpenAI-compatible generation route
 for callers that cannot keep a streaming request open.
 
 Submit the same JSON body accepted by `/v1/chat/completions`:

@@ -12,12 +12,12 @@ from typing import Any
 import pytest
 from starlette.websockets import WebSocketDisconnect
 
-from flow2api.workers.extension.legacy_codec import (
+from sub2gen.workers.extension.legacy_codec import (
     LegacyExtensionCodecError,
     decode_legacy_extension_message,
     encode_legacy_extension_message,
 )
-from flow2api_gateway.legacy_codec import (
+from sub2gen_gateway.legacy_codec import (
     LegacyAgentGatewayCodecError,
     decode_legacy_agent_gateway_message,
     encode_legacy_agent_gateway_message,
@@ -256,14 +256,14 @@ def test_legacy_codecs_fail_closed_for_unknown_or_ambiguous_frames() -> None:
 
 
 def test_agent_gateway_ping_rejection_matches_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
-    auth_stub = ModuleType("flow2api_gateway.auth_keygen")
+    auth_stub = ModuleType("sub2gen_gateway.auth_keygen")
 
     async def verify_agent_token(*args: Any, **kwargs: Any) -> None:
         raise AssertionError("legacy fixture must not call Keygen authentication")
 
     auth_stub.verify_agent_token = verify_agent_token  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "flow2api_gateway.auth_keygen", auth_stub)
-    gateway_module = importlib.import_module("flow2api_gateway.ws_agents")
+    monkeypatch.setitem(sys.modules, "sub2gen_gateway.auth_keygen", auth_stub)
+    gateway_module = importlib.import_module("sub2gen_gateway.ws_agents")
 
     fixture = next(
         item for item in load_fixtures() if item["dialect"] == "agent_gateway.legacy-unversioned"
@@ -307,7 +307,7 @@ def test_required_placeholders_are_declared_and_used(fixture: dict[str, Any]) ->
 def test_legacy_worker_fixtures_contain_no_credentials_or_browser_data(fixture: dict[str, Any]) -> None:
     serialized = json.dumps(fixture, sort_keys=True)
     forbidden_fragments = (
-        "f2a_live_",
+        "s2g_live_",
         "__Secure-",
         "SAPISID",
         "SID=",

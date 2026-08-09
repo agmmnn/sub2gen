@@ -5,17 +5,17 @@ volume at `/data`. The image is pinned to CLIProxyAPI `v7.2.120`.
 
 Required variables on the CLIProxy service:
 
-- `CLIPROXY_CLIENT_API_KEY`: a URL-safe key used only by Flow2API inference.
+- `CLIPROXY_CLIENT_API_KEY`: a URL-safe key used only by sub2gen inference.
 - `MANAGEMENT_PASSWORD`: a separate strong management key. CLIProxy reads it
   from the environment and never writes it to the volume.
 
-Required variables on the Flow2API service:
+Required variables on the sub2gen service:
 
-- `FLOW2API_CLIPROXY_BASE_URL=http://cliproxy.railway.internal:8317`
-- `FLOW2API_CLIPROXY_PUBLIC_URL=https://<cliproxy-public-domain>`
-- `FLOW2API_CLIPROXY_API_KEY=<same client key>`
-- `FLOW2API_CLIPROXY_MANAGEMENT_KEY=<same management key>`
-- `FLOW2API_CLIPROXY_VERSION=v7.2.120` (optional display override)
+- `SUB2GEN_CLIPROXY_BASE_URL=http://cliproxy.railway.internal:8317`
+- `SUB2GEN_CLIPROXY_PUBLIC_URL=https://<cliproxy-public-domain>`
+- `SUB2GEN_CLIPROXY_API_KEY=<same client key>`
+- `SUB2GEN_CLIPROXY_MANAGEMENT_KEY=<same management key>`
+- `SUB2GEN_CLIPROXY_VERSION=v7.2.120` (optional display override)
 
 The bootstrap creates `/data/config.yaml` only once. Later management changes,
 OAuth credentials, account status, aliases, and exclusions remain on the
@@ -30,15 +30,15 @@ requests remain available for prompt cloning and metadata analysis.
 
 Cockpit Tools v1.3.15 can export the selected Codex accounts as one portable
 JSON array. In Cockpit, select all required accounts, click Export, keep the
-`Cockpit Tools` format, and save the JSON file. Then open Flow2API **Manage →
+`Cockpit Tools` format, and save the JSON file. Then open sub2gen **Manage →
 AI Gateway → Add account → Credential file**, select **Codex**, choose that one
-file, and click **Import account(s)**. Flow2API converts both portable Cockpit
+file, and click **Import account(s)**. sub2gen converts both portable Cockpit
 records and older nested `tokens` records, strips unrelated sensitive note
 fields, and imports up to 100 accounts in one action.
 
 The same workflow applies on Cockpit's Antigravity account page: select the
 accounts, export the single JSON file, choose **Gemini / Antigravity** in
-Flow2API, and import it once. Cockpit's Antigravity export contains each
+sub2gen, and import it once. Cockpit's Antigravity export contains each
 account's refresh token; CLIProxy refreshes the access token and discovers the
 Google Cloud project on the first request.
 

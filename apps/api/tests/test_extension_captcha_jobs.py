@@ -6,10 +6,10 @@ from typing import Any, cast
 import pytest
 from fastapi import WebSocket
 
-from flow2api.workers.extension.captcha import ExtensionCaptchaJobs
-from flow2api.workers.extension.jobs import ExtensionJobBroker
-from flow2api.workers.extension.models import ExtensionConnection
-from flow2api.workers.extension.routing import ExtensionWorkerRouting
+from sub2gen.workers.extension.captcha import ExtensionCaptchaJobs
+from sub2gen.workers.extension.jobs import ExtensionJobBroker
+from sub2gen.workers.extension.models import ExtensionConnection
+from sub2gen.workers.extension.routing import ExtensionWorkerRouting
 
 
 class CaptchaWebSocket:

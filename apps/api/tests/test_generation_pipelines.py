@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from flow2api.generation import (
+from sub2gen.generation import (
     ImageGenerationPipeline,
     VideoGenerationPipeline,
     create_generation_result,

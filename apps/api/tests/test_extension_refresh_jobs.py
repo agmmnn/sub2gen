@@ -6,9 +6,9 @@ from typing import Any, cast
 import pytest
 from fastapi import WebSocket
 
-from flow2api.workers.extension.jobs import ExtensionJobBroker
-from flow2api.workers.extension.models import ExtensionConnection
-from flow2api.workers.extension.refresh import ExtensionRefreshJobs
+from sub2gen.workers.extension.jobs import ExtensionJobBroker
+from sub2gen.workers.extension.models import ExtensionConnection
+from sub2gen.workers.extension.refresh import ExtensionRefreshJobs
 
 
 class RefreshWebSocket:

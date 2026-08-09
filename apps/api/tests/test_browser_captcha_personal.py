@@ -4,7 +4,7 @@ import types
 import unittest
 from unittest.mock import AsyncMock, patch
 
-from flow2api.services.browser_captcha_personal import (
+from sub2gen.services.browser_captcha_personal import (
     BrowserCaptchaService,
     PERSONAL_POOL_MAX_TOTAL_RESIDENT_TABS,
     _PersonalBrowserPoolService,
@@ -29,7 +29,7 @@ class _FakeWorker:
         self.db = None
         self._initialized = initialized
         self.browser = (
-            types.SimpleNamespace(stopped=False, _flow2api_runtime_disconnected=False)
+            types.SimpleNamespace(stopped=False, _sub2gen_runtime_disconnected=False)
             if live
             else None
         )
@@ -131,7 +131,7 @@ class NodriverConnectionCompatibilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"ok": True})
         self.assertEqual(connection.connect_count, 1)
         self.assertEqual(connection.register_count, 1)
-        self.assertTrue(getattr(connection, "_flow2api_send_patched", False))
+        self.assertTrue(getattr(connection, "_sub2gen_send_patched", False))
 
     async def test_missing_websocket_after_connect_cleans_mapper(self):
         connection = _ConnectionWithoutWebSocket()
@@ -161,7 +161,7 @@ class NodriverConnectionCompatibilityTests(unittest.IsolatedAsyncioTestCase):
 
         _patch_nodriver_connection_instance(connection)
 
-        self.assertFalse(getattr(connection, "_flow2api_send_patched", False))
+        self.assertFalse(getattr(connection, "_sub2gen_send_patched", False))
 
     def test_compatibility_errors_are_runtime_disconnects(self):
         self.assertTrue(
