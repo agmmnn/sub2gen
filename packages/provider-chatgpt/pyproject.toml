@@ -1,0 +1,14 @@
+[project]
+name = "sub2gen-provider-chatgpt"
+version = "0.1.0"
+description = "Local ChatGPT generation provider adapters for sub2gen"
+requires-python = ">=3.11"
+dependencies = ["sub2gen-provider-sdk"]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sub2gen_provider_chatgpt*"]

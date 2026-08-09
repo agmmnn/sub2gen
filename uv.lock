@@ -2,6 +2,14 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
+[manifest]
+members = [
+    "sub2gen",
+    "sub2gen-provider-chatgpt",
+    "sub2gen-provider-google-flow",
+    "sub2gen-provider-sdk",
+]
+
 [[package]]
 name = "aiosqlite"
 version = "0.20.0"
@@ -1184,6 +1192,8 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "python-multipart" },
     { name = "redis", extra = ["hiredis"] },
+    { name = "sub2gen-provider-google-flow" },
+    { name = "sub2gen-provider-sdk" },
     { name = "tomli" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1202,6 +1212,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "sub2gen-provider-chatgpt" },
 ]
 
 [package.metadata]
@@ -1222,6 +1233,8 @@ requires-dist = [
     { name = "python-dateutil", specifier = "==2.8.2" },
     { name = "python-multipart", specifier = "==0.0.20" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2,<7.0" },
+    { name = "sub2gen-provider-google-flow", editable = "packages/provider-google-flow" },
+    { name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" },
     { name = "tomli", specifier = "==2.2.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.32.1" },
 ]
@@ -1240,7 +1253,35 @@ dev = [
     { name = "pytest", specifier = ">=8,<10" },
     { name = "pytest-asyncio", specifier = ">=0.24,<2" },
     { name = "ruff", specifier = ">=0.12,<1" },
+    { name = "sub2gen-provider-chatgpt", editable = "packages/provider-chatgpt" },
 ]
+
+[[package]]
+name = "sub2gen-provider-chatgpt"
+version = "0.1.0"
+source = { editable = "packages/provider-chatgpt" }
+dependencies = [
+    { name = "sub2gen-provider-sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" }]
+
+[[package]]
+name = "sub2gen-provider-google-flow"
+version = "0.1.0"
+source = { editable = "packages/provider-google-flow" }
+dependencies = [
+    { name = "sub2gen-provider-sdk" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" }]
+
+[[package]]
+name = "sub2gen-provider-sdk"
+version = "0.1.0"
+source = { editable = "packages/provider-sdk-python" }
 
 [[package]]
 name = "tomli"

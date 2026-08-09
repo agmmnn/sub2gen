@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0, 1, and 1.5 complete; Phase 2 (provider SDK and package workspace) is next.
+Status: Phases 0, 1, 1.5, and 2 complete; Phase 3 (generic persistence) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -492,16 +492,16 @@ Exit criteria:
 
 ### Phase 2: Provider SDK and package workspace
 
-- [ ] Add `packages/provider-sdk-python` to the uv workspace.
-- [ ] Update root setuptools discovery, uv workspace/source mappings, and Docker build
+- [x] Add `packages/provider-sdk-python` to the uv workspace.
+- [x] Update root setuptools discovery, uv workspace/source mappings, and Docker build
   contexts so workspace provider packages are actually installable and editable.
-- [ ] Define provider requests, events, results, artifacts, health, errors, and execution
+- [x] Define provider requests, events, results, artifacts, health, errors, and execution
   context from Flow plus the materially different ChatGPT Web spike behavior.
-- [ ] Add a reusable provider conformance test suite.
-- [ ] Implement thin adapters for Google Flow and ChatGPT Web.
-- [ ] Prove streaming, non-streaming, cancellation, reference images, and artifact
+- [x] Add a reusable provider conformance test suite.
+- [x] Implement thin adapters for Google Flow and ChatGPT Web.
+- [x] Prove streaming, non-streaming, cancellation, reference images, and artifact
   handling through fakes.
-- [ ] Keep current `FlowClient` and `GenerationHandler` public behavior unchanged.
+- [x] Keep current `FlowClient` and `GenerationHandler` public behavior unchanged.
 
 Exit criteria:
 

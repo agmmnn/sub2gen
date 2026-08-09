@@ -55,7 +55,10 @@ RUN apt-get update \
 
 # Install locked Python dependencies before copying the application for better caching.
 COPY pyproject.toml uv.lock README.md LICENSE ./
-RUN uv sync --frozen --no-dev --no-install-project
+COPY packages/provider-sdk-python/pyproject.toml packages/provider-sdk-python/pyproject.toml
+COPY packages/provider-google-flow/pyproject.toml packages/provider-google-flow/pyproject.toml
+COPY packages/provider-chatgpt/pyproject.toml packages/provider-chatgpt/pyproject.toml
+RUN uv sync --frozen --no-dev --no-install-project --no-install-workspace
 
 COPY . .
 RUN uv sync --frozen --no-dev \

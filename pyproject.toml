@@ -25,6 +25,8 @@ dependencies = [
   "redis[hiredis]>=5.2,<7.0",
   "tomli==2.2.1",
   "uvicorn[standard]==0.32.1",
+  "sub2gen-provider-google-flow",
+  "sub2gen-provider-sdk",
 ]
 
 [project.scripts]
@@ -38,6 +40,7 @@ dev = [
   "pytest>=8,<10",
   "pytest-asyncio>=0.24,<2",
   "ruff>=0.12,<1",
+  "sub2gen-provider-chatgpt",
 ]
 agent-gateway = [
   "fastapi==0.119.0",
@@ -59,9 +62,26 @@ include = ["sub2gen*", "sub2gen_gateway*"]
 [tool.setuptools.package-data]
 sub2gen = ["migrations/**/*.sql", "services/*.csv"]
 
+[tool.uv.workspace]
+members = [
+  "packages/provider-sdk-python",
+  "packages/provider-google-flow",
+  "packages/provider-chatgpt",
+]
+
+[tool.uv.sources]
+sub2gen-provider-sdk = { workspace = true }
+sub2gen-provider-google-flow = { workspace = true }
+sub2gen-provider-chatgpt = { workspace = true }
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["apps/api/tests"]
+testpaths = [
+  "apps/api/tests",
+  "packages/provider-sdk-python/tests",
+  "packages/provider-google-flow/tests",
+  "packages/provider-chatgpt/tests",
+]
 
 [tool.ruff]
 target-version = "py311"

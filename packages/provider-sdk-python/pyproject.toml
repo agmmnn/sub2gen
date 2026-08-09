@@ -1,0 +1,13 @@
+[project]
+name = "sub2gen-provider-sdk"
+version = "0.1.0"
+description = "Provider-neutral generation contracts for sub2gen"
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sub2gen_provider_sdk*"]
