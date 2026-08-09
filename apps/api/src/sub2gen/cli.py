@@ -1,5 +1,6 @@
 """sub2gen command-line entry point."""
 import copy
+import sys
 
 import uvicorn
 
@@ -27,6 +28,12 @@ def build_uvicorn_log_config():
 
 def main() -> None:
     """Start the sub2gen Uvicorn server."""
+    if len(sys.argv) > 1 and sys.argv[1] == "doctor":
+        from sub2gen.diagnostics import run_doctor
+
+        raise SystemExit(run_doctor(json_output="--json" in sys.argv[2:]))
+    if len(sys.argv) > 1:
+        raise SystemExit("Usage: sub2gen [doctor [--json]]")
     from sub2gen.core.config import config
 
     uvicorn.run(

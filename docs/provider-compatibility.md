@@ -35,3 +35,13 @@ Remote ZIP packages are never fetched or activated automatically. The style regi
 requires an expected SHA-256 digest, validates archive paths/types/sizes, stages the
 package outside the active registry, and requires an explicit local review action. Even
 reviewed packages remain disabled unless `SUB2GEN_ENABLE_REMOTE_STYLES=true` is set.
+
+## Worker compatibility
+
+| Worker | Protocol | Required capabilities | Execution location |
+| --- | --- | --- | --- |
+| CAPTCHA extension | v1 `/worker_ws` | `captcha.solve:google-flow`, `session.refresh:google-flow`, `http.relay:google-flow` | Logged-in Chrome profile |
+| Image worker | v1 `/worker_ws` | `image.generate:chatgpt-web` and/or `image.generate:chatgpt-codex` | Local computer with the corresponding browser/OAuth state |
+
+Workers must advertise protocol version `1`, prove their paired device identity, and
+advertise every capability they accept. Unversioned worker clients are rejected.

@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 11 complete; Phase 12 (release hardening) is next.
+Status: Complete. Phases 0 through 12 are implemented and verified.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -683,13 +683,13 @@ Exit criteria:
 
 ### Phase 12: Release hardening and rollback
 
-- [ ] Confirm the Phase 1.5 `sub2gen` identity remains consistent across every shipped
+- [x] Confirm the Phase 1.5 `sub2gen` identity remains consistent across every shipped
   application, package, extension, container, artifact, and document.
-- [ ] Remove temporary spike code that was not promoted behind the provider SDK.
-- [ ] Add final migration and diagnostic tooling for the unified provider architecture.
-- [ ] Run fresh-install, existing-SQLite, PostgreSQL, local-worker, extension, image,
+- [x] Remove temporary spike code that was not promoted behind the provider SDK.
+- [x] Add final migration and diagnostic tooling for the unified provider architecture.
+- [x] Run fresh-install, existing-SQLite, PostgreSQL, local-worker, extension, image,
   video, cache, and rollback suites.
-- [ ] Publish a provider/worker compatibility matrix and pre-upgrade backup procedure.
+- [x] Publish a provider/worker compatibility matrix and pre-upgrade backup procedure.
 
 Exit criteria:
 

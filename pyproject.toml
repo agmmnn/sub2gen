@@ -34,7 +34,6 @@ dependencies = [
 [project.scripts]
 setup = "sub2gen.local_runner:setup"
 sub2gen = "sub2gen.cli:main"
-sub2gen-chatgpt-spike = "sub2gen.spikes.chatgpt_web:main"
 
 [dependency-groups]
 dev = [
@@ -43,6 +42,7 @@ dev = [
   "pytest-asyncio>=0.24,<2",
   "ruff>=0.12,<1",
   "sub2gen-provider-chatgpt",
+  "sub2gen-image-worker",
 ]
 [build-system]
 requires = ["setuptools>=80"]
@@ -70,6 +70,7 @@ sub2gen-provider-sdk = { workspace = true }
 sub2gen-provider-google-flow = { workspace = true }
 sub2gen-provider-google-gemini = { workspace = true }
 sub2gen-provider-chatgpt = { workspace = true }
+sub2gen-image-worker = { workspace = true }
 sub2gen-worker-protocol = { workspace = true }
 
 [tool.pytest.ini_options]

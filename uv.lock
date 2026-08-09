@@ -1195,6 +1195,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "sub2gen-image-worker" },
     { name = "sub2gen-provider-chatgpt" },
 ]
 
@@ -1230,6 +1231,7 @@ dev = [
     { name = "pytest", specifier = ">=8,<10" },
     { name = "pytest-asyncio", specifier = ">=0.24,<2" },
     { name = "ruff", specifier = ">=0.12,<1" },
+    { name = "sub2gen-image-worker", editable = "apps/image-worker" },
     { name = "sub2gen-provider-chatgpt", editable = "packages/provider-chatgpt" },
 ]
 

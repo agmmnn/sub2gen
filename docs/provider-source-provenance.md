@@ -11,7 +11,7 @@ documented here so upgrades can be reviewed and reproduced.
 
 | Component | Upstream | Inspected commit | Version | License | Relationship |
 | --- | --- | --- | --- | --- | --- |
-| `chatgpt-imagegen` | [`leeguooooo/chatgpt-imagegen`](https://github.com/leeguooooo/chatgpt-imagegen) | `5b1ccb6ded09997317d35717b4b0183c268c0e9b` | `0.21.2` | MIT, copyright 2026 leeguooooo | Source candidate for `packages/provider-chatgpt`; Phase 1 invokes the pinned checkout as an external CLI |
+| `chatgpt-imagegen` | [`leeguooooo/chatgpt-imagegen`](https://github.com/leeguooooo/chatgpt-imagegen) | `5b1ccb6ded09997317d35717b4b0183c268c0e9b` | `0.21.2` | MIT, copyright 2026 leeguooooo | Pinned external CLI used by `packages/provider-chatgpt` |
 | `chrome-use` | [`leeguooooo/chrome-use`](https://github.com/leeguooooo/chrome-use) | `a107f7e74ee014db68bdce8d0dd8c570f858afd0` | `1.5.87` | Apache-2.0 | Version-pinned external browser runtime; it is not vendored into sub2gen |
 
 ## `chatgpt-imagegen` behavior used by sub2gen
@@ -24,13 +24,13 @@ documented here so upgrades can be reviewed and reproduced.
 - Web generation is cross-process serialized through the upstream file-lock mechanism.
   sub2gen also adds an in-process async lock and forces
   `CHATGPT_IMAGEGEN_WEB_CONCURRENCY=1`.
-- The upstream project/style gallery and update-check features are unrelated to the
-  spike. The harness passes `--no-style` and uses no online style input.
+- The provider passes `--no-style`; sub2gen styles are resolved locally before provider
+  execution and use no automatic online gallery input.
 - The CLI emits the saved file path on stdout and diagnostics on stderr. Phase 1 treats
-  those strings as temporary observation seams, not a stable provider interface.
+  those strings as an adapter seam behind the provider SDK.
 
-If the source is imported in a later phase, preserve the upstream MIT license,
-copyright notice, pinned commit, and a record of local modifications.
+The vendored source preserves the upstream MIT license, copyright notice, pinned
+commit, and a record of local modifications.
 
 ## `chrome-use` runtime boundary
 
@@ -38,8 +38,8 @@ copyright notice, pinned commit, and a record of local modifications.
   per-session local daemon/socket.
 - sub2gen invokes only the commands needed by the upstream image CLI plus a best-effort
   `close --session <id>` after wrapper timeout or cancellation.
-- The Phase 1 harness does not expose arbitrary browser commands through HTTP or
-  WebSocket routes.
+- The provider does not expose arbitrary browser commands through HTTP or WebSocket
+  routes.
 - `chrome-use` remains independently installed and upgradeable. Before changing the
   pinned tested version, rerun doctor, text-to-image, image-to-image, timeout, and
   cancellation checks.

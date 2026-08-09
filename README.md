@@ -70,7 +70,7 @@ mv data .runtime/data
 mv tmp .runtime/tmp
 ```
 
-Skip a move when its legacy directory does not exist. Do not overwrite an
+Skip a move when its previous directory does not exist. Do not overwrite an
 existing `.runtime/data`; back up both directories and reconcile them first.
 
 Flow now requires an additional CAPTCHA. You can solve it through a browser or a third-party service.
@@ -184,12 +184,22 @@ uv run setup
 uv run sub2gen
 ```
 
+Check a local installation without starting the server:
+
+```bash
+uv run sub2gen doctor
+```
+
 `uv run setup` installs Python 3.11 if needed, creates `.venv`, installs the exact versions from `uv.lock`, installs the locked workspace dependencies with Bun, and builds the admin UI into `apps/api/static/`. Run it after cloning or when frontend dependencies change.
 
 `uv run sub2gen` starts the backend without rebuilding the frontend. For development, update Python dependencies with `uv add`/`uv remove`, then commit both `pyproject.toml` and `uv.lock`.
 
 For upgrades, database adoption, compatibility guarantees, verification evidence,
 and rollback boundaries, see [`docs/architecture-migration-release.md`](./docs/architecture-migration-release.md).
+The release backup procedure is in
+[`docs/upgrade-and-rollback.md`](./docs/upgrade-and-rollback.md), and provider/worker
+requirements are listed in
+[`docs/provider-compatibility.md`](./docs/provider-compatibility.md).
 
 The proposed roadmap for evolving sub2gen into a unified, local-first generation
 gateway is documented in
@@ -198,8 +208,8 @@ Its Phase 0 baselines are the
 [`current architecture inventory`](./docs/current-architecture-baseline.md),
 [`provider source provenance`](./docs/provider-source-provenance.md),
 and [`worker threat model`](./docs/worker-threat-model.md).
-The completed private ChatGPT browser spike and measured behavior are recorded in
-[`docs/phase1-chatgpt-web-spike.md`](./docs/phase1-chatgpt-web-spike.md).
+ChatGPT browser execution is implemented by `packages/provider-chatgpt` and the paired
+local image worker.
 
 ### First visit
 
