@@ -2087,6 +2087,7 @@ from ..transport.worker_protocol import (
     create_worker_pairing_code,
     pair_worker,
     revoke_worker,
+    upload_worker_artifact,
     router as worker_protocol_router,
     worker_websocket_endpoint,
 )

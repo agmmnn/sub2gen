@@ -12597,6 +12597,61 @@
         "summary": "Fetch Task Tracker Keyword Search"
       }
     },
+    "/api/workers/artifacts/{grant_id}": {
+      "put": {
+        "operationId": "upload_worker_artifact_api_workers_artifacts__grant_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "grant_id",
+            "required": true,
+            "schema": {
+              "title": "Grant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "worker_id",
+            "required": true,
+            "schema": {
+              "title": "Worker Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload Worker Artifact"
+      }
+    },
     "/api/workers/pair": {
       "post": {
         "operationId": "pair_worker_api_workers_pair_post",

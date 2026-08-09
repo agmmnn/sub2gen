@@ -3,7 +3,7 @@ name = "sub2gen-provider-chatgpt"
 version = "0.1.0"
 description = "Local ChatGPT generation provider adapters for sub2gen"
 requires-python = ">=3.11"
-dependencies = ["sub2gen-provider-sdk"]
+dependencies = ["pillow==12.2.0", "sub2gen-provider-sdk"]
 
 [build-system]
 requires = ["setuptools>=80"]

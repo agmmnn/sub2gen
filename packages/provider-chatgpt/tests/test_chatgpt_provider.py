@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import sys
+from pathlib import Path
 
 import pytest
 
-from sub2gen_provider_chatgpt import ChatGPTWebProvider
+from sub2gen_provider_chatgpt import ChatGPTImagegenProcessBackend, ChatGPTWebProvider
+from sub2gen_provider_chatgpt.browser import ProcessHealth
 from sub2gen_provider_sdk import (
     Artifact,
     CancellationToken,
@@ -111,6 +115,63 @@ async def test_chatgpt_adapter_propagates_cancellation_to_running_work() -> None
     context = _context()
     task = asyncio.create_task(provider.generate(_request(), context))
     await asyncio.sleep(0)
+    context.cancellation.cancel()
+
+    with pytest.raises(ProviderError) as caught:
+        await task
+    assert caught.value.code is ProviderErrorCode.CANCELLED
+
+
+class _HealthyChrome:
+    async def health(self) -> ProcessHealth:
+        return ProcessHealth(True, "chrome-use", "1.5.87", "ready")
+
+
+def _fake_imagegen(tmp_path: Path, *, sleep: bool = False) -> Path:
+    executable = tmp_path / "chatgpt-imagegen"
+    delay = "import time; time.sleep(30)" if sleep else ""
+    executable.write_text(
+        f"""#!{sys.executable}
+import base64, os, pathlib, sys
+{delay}
+args = sys.argv[1:]
+pathlib.Path(os.environ['FAKE_IMAGEGEN_LOG']).write_text('\\n'.join(args))
+out = pathlib.Path(args[args.index('--out') + 1])
+out.write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='))
+print(out)
+""",
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    return executable
+
+
+@pytest.mark.asyncio
+async def test_process_backend_forces_web_and_returns_validated_image(tmp_path, monkeypatch) -> None:
+    log = tmp_path / "args.txt"
+    monkeypatch.setenv("FAKE_IMAGEGEN_LOG", str(log))
+    backend = ChatGPTImagegenProcessBackend(_fake_imagegen(tmp_path), chrome_use=_HealthyChrome())
+    provider = ChatGPTWebProvider(backend)
+
+    result = await provider.generate(_request(), _context())
+
+    assert result.artifacts[0].media_type == "image/png"
+    args = log.read_text().splitlines()
+    assert args[args.index("--backend") + 1] == "web"
+    assert "--ref" in args
+    assert "--no-style" in args
+
+
+@pytest.mark.asyncio
+async def test_process_backend_cancellation_terminates_subprocess(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("FAKE_IMAGEGEN_LOG", str(tmp_path / "args.txt"))
+    backend = ChatGPTImagegenProcessBackend(
+        _fake_imagegen(tmp_path, sleep=True), chrome_use=_HealthyChrome()
+    )
+    provider = ChatGPTWebProvider(backend)
+    context = _context()
+    task = asyncio.create_task(provider.generate(_request("cancel-process"), context))
+    await asyncio.sleep(0.05)
     context.cancellation.cancel()
 
     with pytest.raises(ProviderError) as caught:

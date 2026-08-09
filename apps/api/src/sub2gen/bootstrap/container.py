@@ -9,6 +9,7 @@ from sub2gen_worker_protocol import ArtifactGrantStore, WorkerCoordinator
 
 from ..core.api_key_manager import ApiKeyManager
 from ..core.config import config
+from ..core.config import get_runtime_data_dir
 from ..core.database import Database, create_database
 from ..persistence.repositories import Repositories
 from ..services.concurrency_manager import ConcurrencyManager
@@ -23,6 +24,8 @@ from ..services.redis_runtime import RedisRuntime, redis_runtime
 from ..services.runway_service import RunwayService
 from ..services.token_manager import TokenManager
 from ..services.worker_protocol import PersistentDevicePairing
+from ..services.worker_artifacts import WorkerArtifactInbox
+from ..services.worker_runtime import WorkerRuntime
 from .tasks import TaskRegistry
 
 
@@ -52,6 +55,8 @@ class AppContainer:
     worker_pairing: PersistentDevicePairing
     worker_coordinator: WorkerCoordinator
     worker_artifact_grants: ArtifactGrantStore
+    worker_artifact_inbox: WorkerArtifactInbox
+    worker_runtime: WorkerRuntime
     tasks: TaskRegistry = field(default_factory=TaskRegistry)
     database_restore_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -91,6 +96,8 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         repository=repositories.api_keys,
     )
     worker_pairing = PersistentDevicePairing(repositories.workers.devices)
+    worker_artifact_grants = ArtifactGrantStore()
+    worker_coordinator = WorkerCoordinator()
     return AppContainer(
         db=db,
         repositories=repositories,
@@ -107,6 +114,11 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         redis_runtime=redis_runtime,
         failed_payload_manager=failed_payload_manager,
         worker_pairing=worker_pairing,
-        worker_coordinator=WorkerCoordinator(),
-        worker_artifact_grants=ArtifactGrantStore(),
+        worker_coordinator=worker_coordinator,
+        worker_artifact_grants=worker_artifact_grants,
+        worker_artifact_inbox=WorkerArtifactInbox(
+            worker_artifact_grants,
+            get_runtime_data_dir() / "worker-artifacts",
+        ),
+        worker_runtime=WorkerRuntime(worker_coordinator, worker_artifact_grants),
     )

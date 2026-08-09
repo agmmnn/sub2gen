@@ -66,6 +66,7 @@ sub2gen = ["migrations/**/*.sql", "services/*.csv"]
 
 [tool.uv.workspace]
 members = [
+  "apps/image-worker",
   "packages/provider-sdk-python",
   "packages/provider-google-flow",
   "packages/provider-chatgpt",
@@ -86,6 +87,7 @@ testpaths = [
   "packages/provider-google-flow/tests",
   "packages/provider-chatgpt/tests",
   "packages/worker-protocol/tests",
+  "apps/image-worker/tests",
 ]
 
 [tool.ruff]

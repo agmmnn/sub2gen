@@ -8,7 +8,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.websockets import WebSocketDisconnect
-from sub2gen_worker_protocol import WorkerCoordinator
+from sub2gen_worker_protocol import ArtifactGrantStore, WorkerCoordinator
 from sub2gen_worker_protocol.codec import decode_envelope, encode_envelope, make_envelope
 from sub2gen_worker_protocol.generated import (
     MessageType,
@@ -20,6 +20,7 @@ from sub2gen_worker_protocol.generated import (
 from sub2gen.core.database import Database
 from sub2gen.persistence import Repositories
 from sub2gen.services.worker_protocol import PersistentDevicePairing
+from sub2gen.services.worker_runtime import WorkerRuntime
 from sub2gen.transport.worker_protocol import worker_websocket_endpoint
 
 
@@ -109,9 +110,11 @@ async def test_v1_websocket_negotiates_authenticates_and_heartbeats(tmp_path) ->
         public_key_base64=base64.b64encode(public_key).decode(),
         approved_capabilities=("image.generate:chatgpt-web",),
     )
+    coordinator = WorkerCoordinator()
     container = SimpleNamespace(
         worker_pairing=pairing,
-        worker_coordinator=WorkerCoordinator(),
+        worker_coordinator=coordinator,
+        worker_runtime=WorkerRuntime(coordinator, ArtifactGrantStore()),
         repositories=repositories,
     )
     socket = HandshakeSocket(container, pairing, private_key)

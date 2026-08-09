@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from sub2gen_worker_protocol import ArtifactGrantError
 from pydantic import BaseModel, Field
 from sub2gen_worker_protocol.codec import ProtocolCodecError, decode_envelope, encode_envelope, make_envelope
 from sub2gen_worker_protocol.generated import (
@@ -104,6 +105,33 @@ async def revoke_worker(
     return {"revoked": True, "worker_id": body.worker_id}
 
 
+@router.put("/api/workers/artifacts/{grant_id}", status_code=201)
+async def upload_worker_artifact(
+    grant_id: str,
+    request: Request,
+    worker_id: str = Query(...),
+    job_id: str = Query(...),
+    container: AppContainer = Depends(get_container),
+):
+    body = await request.body()
+    media_type = request.headers.get("content-type", "application/octet-stream").split(";", 1)[0].strip()
+    try:
+        artifact = container.worker_artifact_inbox.ingest(
+            grant_id,
+            worker_id=worker_id,
+            job_id=job_id,
+            media_type=media_type,
+            body=body,
+        )
+    except ArtifactGrantError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    return {
+        "grant_id": grant_id,
+        "media_type": artifact.media_type,
+        "size_bytes": artifact.path.stat().st_size,
+    }
+
+
 @router.websocket("/worker_ws")
 async def worker_websocket_endpoint(websocket: WebSocket):
     container = get_websocket_container(websocket)
@@ -166,12 +194,13 @@ async def worker_websocket_endpoint(websocket: WebSocket):
             ),
         )
         await websocket.send_text(encode_envelope(registered))
+        container.worker_runtime.connect(worker_id, websocket.send_text)
 
         while True:
             envelope, payload = decode_envelope(await websocket.receive_text())
             if envelope.worker_id != worker_id:
                 raise ProtocolCodecError("worker identity changed during a session")
-            _handle_worker_message(container, envelope, payload)
+            await container.worker_runtime.handle(envelope, payload)
             if envelope.message_type is MessageType.WORKER_HEARTBEAT:
                 await container.repositories.workers.touch_device_heartbeat(worker_id)
     except WebSocketDisconnect:
@@ -180,22 +209,4 @@ async def worker_websocket_endpoint(websocket: WebSocket):
         await websocket.close(code=1008, reason=str(exc)[:120])
     finally:
         if worker_id:
-            container.worker_coordinator.disconnect(worker_id)
-
-
-def _handle_worker_message(container: AppContainer, envelope: Any, payload: Any) -> None:
-    coordinator = container.worker_coordinator
-    if envelope.message_type is MessageType.WORKER_HEARTBEAT and isinstance(payload, WorkerHeartbeatPayload):
-        coordinator.heartbeat(envelope.worker_id, payload)
-    elif envelope.message_type is MessageType.JOB_ACCEPT and isinstance(payload, JobDecisionPayload):
-        coordinator.accept(payload.lease_id, worker_id=envelope.worker_id)
-    elif envelope.message_type is MessageType.JOB_REJECT and isinstance(payload, JobDecisionPayload):
-        coordinator.leases.reject(payload.lease_id, worker_id=envelope.worker_id)
-    elif envelope.message_type is MessageType.JOB_PROGRESS and isinstance(payload, JobProgressPayload):
-        coordinator.progress(worker_id=envelope.worker_id, job_id=envelope.job_id or "", payload=payload)
-    elif envelope.message_type is MessageType.JOB_RESULT and isinstance(payload, JobResultPayload):
-        coordinator.result(worker_id=envelope.worker_id, job_id=envelope.job_id or "", payload=payload)
-    elif envelope.message_type is MessageType.JOB_ERROR and isinstance(payload, JobErrorPayload):
-        coordinator.error(worker_id=envelope.worker_id, job_id=envelope.job_id or "", payload=payload)
-    else:
-        raise ProtocolCodecError("message type is not valid in the registered worker state")
+            container.worker_runtime.disconnect(worker_id)

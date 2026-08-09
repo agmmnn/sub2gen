@@ -1,0 +1,24 @@
+[project]
+name = "sub2gen-image-worker"
+version = "0.1.0"
+description = "Local browser-backed generation worker for sub2gen"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=44,<47",
+  "httpx>=0.27,<1",
+  "sub2gen-provider-chatgpt",
+  "sub2gen-provider-sdk",
+  "sub2gen-worker-protocol",
+  "websockets==14.1",
+]
+
+[project.scripts]
+sub2gen-image-worker = "sub2gen_image_worker.cli:main"
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sub2gen_image_worker*"]

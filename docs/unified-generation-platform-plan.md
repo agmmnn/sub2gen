@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 4 complete; Phase 5 (local image worker) is next.
+Status: Phases 0 through 5 complete; Phase 6 (Google Flow orchestration cleanup) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -561,18 +561,18 @@ Exit criteria:
 
 ### Phase 5: Local image worker and ChatGPT provider import
 
-- [ ] Add `apps/image-worker` with a small CLI, configuration file, health command, and
+- [x] Add `apps/image-worker` with a small CLI, configuration file, health command, and
   WebSocket client.
-- [ ] Pair the worker to the API and advertise only locally enabled capabilities.
-- [ ] Import `chatgpt-imagegen` at the recorded commit with MIT attribution and history.
-- [ ] Split web browser, Codex OAuth, prompt/reference, project/conversation, output, and
+- [x] Pair the worker to the API and advertise only locally enabled capabilities.
+- [x] Import `chatgpt-imagegen` at the recorded commit with MIT attribution and history.
+- [x] Split web browser, Codex OAuth, prompt/reference, project/conversation, output, and
   style concerns into `packages/provider-chatgpt` modules.
-- [ ] Preserve and port the upstream test suite before changing behavior.
-- [ ] Wrap `chrome-use` behind a typed process adapter with a pinned minimum version and
+- [x] Preserve and port the upstream test suite before changing behavior.
+- [x] Wrap `chrome-use` behind a typed process adapter with a pinned minimum version and
   actionable health diagnostics.
-- [ ] Keep raw Chrome and Codex credentials local; expose only opaque account/profile
+- [x] Keep raw Chrome and Codex credentials local; expose only opaque account/profile
   references.
-- [ ] Return image bytes through the authenticated artifact-upload path.
+- [x] Return image bytes through the authenticated artifact-upload path.
 
 Exit criteria:
 
