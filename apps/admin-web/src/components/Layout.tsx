@@ -52,12 +52,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <footer className="mt-12 pt-6 pb-6 border-t border-border text-center text-xs text-muted-foreground">
         <p>
           © 2026{" "}
-          <a href="https://linux.do/u/thesmallhancat/summary" target="_blank" rel="noreferrer" className="hover:underline text-foreground">
-            TheSmallHanCat
-          </a>{" "}
-          and{" "}
-          <a href="https://linux.do/u/tibbar/summary" target="_blank" rel="noreferrer" className="hover:underline text-foreground">
-            Tibbar
+          <a href="https://github.com/agmmnn/sub2gen" target="_blank" rel="noreferrer" className="hover:underline text-foreground">
+            sub2gen
           </a>
           . All rights reserved.
         </p>
