@@ -11,6 +11,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..core.models import Project, RequestLog, Token
+from .domain import WorkerDeviceRecord
+from .unified_repositories import (
+    CredentialBindingRepository,
+    GenerationAttemptRepository,
+    GenerationJobRepository,
+    ProviderAccountRepository,
+    WorkerDeviceRepository,
+)
 
 
 @dataclass(slots=True)
@@ -182,6 +190,31 @@ class RequestLogRepository:
 class WorkerRepository:
     database: Any
 
+    @property
+    def devices(self) -> WorkerDeviceRepository:
+        return WorkerDeviceRepository(self.database)
+
+    async def register_device(self, worker: WorkerDeviceRecord) -> WorkerDeviceRecord:
+        return await self.devices.register(worker)
+
+    async def get_device_for_auth(self, worker_id: str):
+        return await self.devices.get_for_auth(worker_id)
+
+    async def get_device_by_auth_hash(self, auth_key_hash: str):
+        return await self.devices.get_by_auth_hash(auth_key_hash)
+
+    async def list_devices(self):
+        return await self.devices.list_metadata()
+
+    async def touch_device_heartbeat(self, worker_id: str) -> bool:
+        return await self.devices.heartbeat(worker_id)
+
+    async def set_device_enabled(self, worker_id: str, enabled: bool) -> bool:
+        return await self.devices.set_enabled(worker_id, enabled)
+
+    async def set_device_capabilities(self, worker_id: str, capabilities: tuple[str, ...]) -> bool:
+        return await self.devices.set_capabilities(worker_id, capabilities)
+
     async def get_extension_worker_binding_for_route_key(self, route_key: str):
         return await self.database.get_extension_worker_binding_for_route_key(route_key)
 
@@ -221,6 +254,10 @@ class Repositories:
     cache: CacheRepository
     request_logs: RequestLogRepository
     workers: WorkerRepository
+    provider_accounts: ProviderAccountRepository
+    credential_bindings: CredentialBindingRepository
+    generation_jobs: GenerationJobRepository
+    generation_attempts: GenerationAttemptRepository
 
     @classmethod
     def from_database(cls, database: Any) -> "Repositories":
@@ -231,4 +268,8 @@ class Repositories:
             cache=CacheRepository(database),
             request_logs=RequestLogRepository(database),
             workers=WorkerRepository(database),
+            provider_accounts=ProviderAccountRepository(database),
+            credential_bindings=CredentialBindingRepository(database),
+            generation_jobs=GenerationJobRepository(database),
+            generation_attempts=GenerationAttemptRepository(database),
         )

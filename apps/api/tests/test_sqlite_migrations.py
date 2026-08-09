@@ -120,3 +120,55 @@ async def test_identity_migration_disables_old_managed_key_prefixes(tmp_path) ->
         )
 
     assert rows == [("current", 1), ("old", 0)]
+
+
+@pytest.mark.asyncio
+async def test_tracked_0002_database_upgrades_to_unified_provider_schema(tmp_path) -> None:
+    path = tmp_path / "upgrade-0002.db"
+    migrations = discover_sqlite_migrations()
+    assert [migration.revision for migration in migrations] == ["0001", "0002", "0003"]
+
+    async with aiosqlite.connect(path) as connection:
+        await connection.executescript(migrations[0].sql_text)
+        await connection.executescript(migrations[1].sql_text)
+        await connection.execute(
+            """
+            CREATE TABLE schema_migrations (
+                revision TEXT PRIMARY KEY,
+                checksum TEXT NOT NULL,
+                applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        await connection.executemany(
+            "INSERT INTO schema_migrations (revision, checksum) VALUES (?, ?)",
+            [(migration.revision, migration.checksum) for migration in migrations[:2]],
+        )
+        await connection.execute("INSERT INTO api_clients (name) VALUES ('Preserved client')")
+        await connection.commit()
+
+        assert await prepare_sqlite_migrations(connection) == "current"
+        tracker = await connection.execute_fetchall(
+            "SELECT revision, checksum FROM schema_migrations ORDER BY revision"
+        )
+        client = await connection.execute_fetchall("SELECT name FROM api_clients")
+        provider_tables = await connection.execute_fetchall(
+            """
+            SELECT name FROM sqlite_master
+            WHERE type = 'table' AND name IN (
+                'provider_accounts', 'credential_bindings', 'worker_devices',
+                'generation_jobs', 'generation_attempts'
+            )
+            ORDER BY name
+            """
+        )
+
+    assert tracker == [(migration.revision, migration.checksum) for migration in migrations]
+    assert client == [("Preserved client",)]
+    assert [row[0] for row in provider_tables] == [
+        "credential_bindings",
+        "generation_attempts",
+        "generation_jobs",
+        "provider_accounts",
+        "worker_devices",
+    ]

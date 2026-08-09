@@ -11,6 +11,16 @@ from sub2gen.core.database_runtime import DatabaseSettings
 from sub2gen.core.models import GeminiGenTask, Project, RequestLog, RunwayTask, Task, Token
 from sub2gen.core.postgres_database import PostgresDatabase
 from sub2gen.persistence.repositories import Repositories
+from sub2gen.persistence import (
+    CredentialBindingRecord,
+    CredentialStorageKind,
+    GenerationAttemptRecord,
+    GenerationAttemptStatus,
+    GenerationJobRecord,
+    GenerationJobStatus,
+    ProviderAccountRecord,
+    WorkerDeviceRecord,
+)
 from sub2gen.services.postgres_backup import (
     create_postgres_archive,
     database_row_counts,
@@ -29,6 +39,89 @@ pytestmark = pytest.mark.skipif(
     not POSTGRES_URL,
     reason="SUB2GEN_TEST_POSTGRES_URL is not configured",
 )
+
+
+@pytest.mark.asyncio
+async def test_postgres_unified_provider_repository_parity(monkeypatch):
+    schema = f"sub2gen_unified_{uuid.uuid4().hex[:10]}"
+    monkeypatch.setenv("SUB2GEN_DB_SCHEMA", schema)
+    monkeypatch.setenv("SUB2GEN_REQUIRE_CUTOVER_MARKER", "false")
+    settings = DatabaseSettings.from_env(backend="postgres", url=POSTGRES_URL)
+    database = PostgresDatabase(settings=settings)
+    await database.init_db()
+    repositories = Repositories.from_database(database)
+    try:
+        worker = await repositories.workers.register_device(
+            WorkerDeviceRecord(
+                kind="image-worker",
+                label="Postgres worker",
+                approved_capabilities=("image.generate:chatgpt-web",),
+                auth_key_hash=uuid.uuid4().hex,
+            )
+        )
+        account = await repositories.provider_accounts.create(
+            ProviderAccountRecord(provider_key="chatgpt-web", label="Postgres account")
+        )
+        binding = await repositories.credential_bindings.create(
+            CredentialBindingRecord(
+                provider_account_id=account.id,
+                worker_id=worker.id,
+                binding_key="browser",
+                credential_type="browser-profile",
+                storage_kind=CredentialStorageKind.BROWSER_SESSION,
+                secret_ref="browser-session://profile/postgres",
+            )
+        )
+        job = await repositories.generation_jobs.create(
+            GenerationJobRecord(
+                request_id=uuid.uuid4().hex,
+                idempotency_key=uuid.uuid4().hex,
+                job_kind="image.generate",
+                requested_model="chatgpt/gpt-image-web",
+            )
+        )
+        resolved = {
+            "provider_id": "chatgpt-web",
+            "provider_account_id": account.id,
+            "worker_id": worker.id,
+            "billing_pool": "chatgpt-subscription",
+        }
+        assert await repositories.generation_jobs.transition(
+            job.id,
+            expected=(GenerationJobStatus.QUEUED,),
+            status=GenerationJobStatus.RUNNING,
+            provider_account_id=account.id,
+            worker_id=worker.id,
+            resolved_execution=resolved,
+        )
+        attempt = await repositories.generation_attempts.create(
+            GenerationAttemptRecord(
+                job_id=job.id,
+                attempt=1,
+                status=GenerationAttemptStatus.RUNNING,
+                lease_id=uuid.uuid4().hex,
+                resolved_execution=resolved,
+            )
+        )
+        assert await repositories.generation_attempts.finish(
+            attempt.id,
+            expected_lease_id=attempt.lease_id or "",
+            status=GenerationAttemptStatus.SUCCEEDED,
+        )
+        assert (await repositories.provider_accounts.get(account.id)).provider_key == "chatgpt-web"
+        assert (await repositories.credential_bindings.list_metadata(account.id))[0].id == binding.id
+        assert not hasattr((await repositories.credential_bindings.list_metadata(account.id))[0], "secret_ref")
+        assert (await repositories.generation_attempts.list_for_job(job.id))[0].status is GenerationAttemptStatus.SUCCEEDED
+    finally:
+        await database.close_runtime_connections()
+        from psycopg import AsyncConnection, sql
+
+        cleanup = await AsyncConnection.connect(POSTGRES_URL)
+        try:
+            await cleanup.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(schema)))
+            await cleanup.commit()
+        finally:
+            await cleanup.close()
 
 
 @pytest.mark.asyncio
@@ -286,7 +379,7 @@ async def test_postgres_storage_contract_roundtrip(monkeypatch):
         health = await database.health_snapshot()
         assert health["database_backend"] == "postgres"
         assert health["database_ready"] is True
-        assert health["database_revision"] == "0002"
+        assert health["database_revision"] == "0003"
         row_counts = await database_row_counts(database)
         assert row_counts["tokens"] == 1
         assert row_counts["runway_tasks"] == 1

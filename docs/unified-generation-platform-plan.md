@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0, 1, 1.5, and 2 complete; Phase 3 (generic persistence) is next.
+Status: Phases 0 through 3 complete; Phase 4 (worker protocol v1) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -511,21 +511,21 @@ Exit criteria:
 
 ### Phase 3: Generic accounts, credential bindings, and workers
 
-- [ ] Add domain models for provider accounts, credential bindings, worker devices, and
+- [x] Add domain models for provider accounts, credential bindings, worker devices, and
   worker capabilities.
-- [ ] Add durable generation job and attempt models for idempotency, dispatch state,
+- [x] Add durable generation job and attempt models for idempotency, dispatch state,
   retries, and terminal execution audit before any local provider can receive work.
-- [ ] Add focused repositories rather than waiting for complete database extraction.
-- [ ] Add paired, checksum-safe `0003` migrations for SQLite and PostgreSQL; never edit
+- [x] Add focused repositories rather than waiting for complete database extraction.
+- [x] Add paired, checksum-safe `0003` migrations for SQLite and PostgreSQL; never edit
   the applied `0001` files.
-- [ ] Update the legacy SQLite adoption path to create/stamp existing revisions and then
+- [x] Update the legacy SQLite adoption path to create/stamp existing revisions and then
   apply `0003`; update PostgreSQL identity and boolean-column metadata for the new tables.
-- [ ] Validate fresh databases, existing-schema adoption, upgrade, backup, and rollback.
-- [ ] Add adapters that describe existing Flow, Runway, and GeminiGen accounts without
+- [x] Validate fresh databases, existing-schema adoption, upgrade, backup, and rollback.
+- [x] Add adapters that describe existing Flow, Runway, and GeminiGen accounts without
   destructive data movement or copied credentials.
-- [ ] Add a `CredentialResolver`; keep provider-specific claim/release and quota logic
+- [x] Add a `CredentialResolver`; keep provider-specific claim/release and quota logic
   until its transactional behavior has characterization coverage.
-- [ ] Redact credential locators from logs and public/admin API responses by default.
+- [x] Redact credential locators from logs and public/admin API responses by default.
 
 Exit criteria:
 

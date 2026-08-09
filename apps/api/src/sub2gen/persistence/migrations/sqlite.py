@@ -199,12 +199,11 @@ async def prepare_sqlite_migrations(connection: Any) -> Literal["current", "fres
 
 
 async def stamp_compatible_sqlite_database(connection: Any) -> str:
-    """Stamp the baseline, then execute later migrations for an adopted database."""
+    """Stamp the newest compatible prefix, then execute later migrations."""
 
     migrations = discover_sqlite_migrations()
-    baseline = migrations[0]
     final_tables, final_indexes = _expected_schema(migrations)
-    schema_is_current = True
+    compatible_count = len(migrations)
     try:
         await _validate_schema(
             connection,
@@ -213,33 +212,37 @@ async def stamp_compatible_sqlite_database(connection: Any) -> str:
             label="existing",
         )
     except SQLiteMigrationError:
-        schema_is_current = False
-        baseline_tables, baseline_indexes = _expected_schema([baseline])
-        await _validate_schema(
-            connection,
-            baseline_tables,
-            required_indexes=baseline_indexes,
-            label="existing",
-        )
+        compatible_count = 0
+        last_error: SQLiteMigrationError | None = None
+        for count in range(len(migrations) - 1, 0, -1):
+            prefix_tables, prefix_indexes = _expected_schema(migrations[:count])
+            try:
+                await _validate_schema(
+                    connection,
+                    prefix_tables,
+                    required_indexes=prefix_indexes,
+                    label="existing",
+                )
+            except SQLiteMigrationError as exc:
+                last_error = exc
+                continue
+            compatible_count = count
+            break
+        if compatible_count == 0:
+            assert last_error is not None
+            raise last_error
+
     await _ensure_tracker(connection)
     applied = await _read_applied(connection)
     _validate_history(applied, migrations)
-    if schema_is_current:
-        for migration in migrations:
-            if migration.revision not in applied:
-                await connection.execute(
-                    "INSERT INTO schema_migrations (revision, checksum) VALUES (?, ?)",
-                    (migration.revision, migration.checksum),
-                )
-        await connection.commit()
-        return migrations[-1].revision
-    if baseline.revision not in applied:
-        await connection.execute(
-            "INSERT INTO schema_migrations (revision, checksum) VALUES (?, ?)",
-            (baseline.revision, baseline.checksum),
-        )
-        await connection.commit()
-        applied[baseline.revision] = baseline.checksum
+    for migration in migrations[:compatible_count]:
+        if migration.revision not in applied:
+            await connection.execute(
+                "INSERT INTO schema_migrations (revision, checksum) VALUES (?, ?)",
+                (migration.revision, migration.checksum),
+            )
+            applied[migration.revision] = migration.checksum
+    await connection.commit()
     revision = await _apply_pending(connection, migrations, applied)
     await _validate_schema(
         connection,

@@ -75,6 +75,12 @@ The importer preserves all configuration, credentials, clients, API keys, assign
 
 Only seven days of terminal task, request-summary, API-key audit, and Redis-persistence history are imported. Historical full request/response bodies are never imported. Summaries are re-redacted and capped at 1 KB. Terminal provider payloads are removed; active recovery payloads remain intact. Unknown schema elements, foreign-key violations, and uniqueness violations abort migration.
 
+The target schema includes the additive `0003` provider-account, credential-binding,
+worker-device, generation-job, and generation-attempt tables. Backfill preserves rows
+already present in those tables and keeps legacy provider credentials in their original
+tables; it never materializes an opaque credential locator as secret content. The five
+tables use text public IDs, so the identity-reset step intentionally skips them.
+
 ## Encrypted pre-change backup
 
 Before maintenance, create a manual pre-change backup from the admin Google Drive controls and wait for completion. PostgreSQL backups contain a PostgreSQL 16 custom-format dump, browser profiles, schema/cutover metadata, row counts, and checksums. The dump and manifest row counts use the same exported repeatable-read snapshot, so restore verification remains exact even when normal traffic is writing concurrently. The complete archive is streamed through AES-256-GCM before upload. Keys are never stored in the archive or database.
