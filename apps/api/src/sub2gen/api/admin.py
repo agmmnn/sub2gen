@@ -4637,7 +4637,7 @@ async def get_generation_timeout(
     container: AppContainer = Depends(get_container),
 ):
     """Get generation timeout configuration"""
-    return await get_generation_config(token)
+    return await get_generation_config(token, container)
 
 
 @router.post("/api/generation/timeout")
