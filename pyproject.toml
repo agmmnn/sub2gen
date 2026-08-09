@@ -27,6 +27,7 @@ dependencies = [
   "uvicorn[standard]==0.32.1",
   "sub2gen-provider-google-flow",
   "sub2gen-provider-sdk",
+  "sub2gen-worker-protocol",
 ]
 
 [project.scripts]
@@ -49,6 +50,7 @@ agent-gateway = [
   "pydantic==2.10.4",
   "uvicorn[standard]==0.32.1",
   "websockets==14.1",
+  "sub2gen-worker-protocol",
 ]
 
 [build-system]
@@ -67,12 +69,14 @@ members = [
   "packages/provider-sdk-python",
   "packages/provider-google-flow",
   "packages/provider-chatgpt",
+  "packages/worker-protocol",
 ]
 
 [tool.uv.sources]
 sub2gen-provider-sdk = { workspace = true }
 sub2gen-provider-google-flow = { workspace = true }
 sub2gen-provider-chatgpt = { workspace = true }
+sub2gen-worker-protocol = { workspace = true }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -81,6 +85,7 @@ testpaths = [
   "packages/provider-sdk-python/tests",
   "packages/provider-google-flow/tests",
   "packages/provider-chatgpt/tests",
+  "packages/worker-protocol/tests",
 ]
 
 [tool.ruff]

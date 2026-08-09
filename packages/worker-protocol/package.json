@@ -1,0 +1,21 @@
+{
+  "name": "@sub2gen/worker-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun run check",
+    "check": "bun run generate:check && bun run typecheck && bun run test",
+    "generate": "uv run python scripts/generate.py",
+    "generate:check": "uv run python scripts/generate.py --check",
+    "typecheck": "tsc --noEmit --pretty false",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.0"
+  }
+}

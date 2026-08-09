@@ -157,7 +157,7 @@ def _path_allowed_on_api_only_host(path: str) -> bool:
     - Extension workers and authenticated account import: /captcha_ws, /api/extension/...
     - Discovery/liveness: /openapi.json, /health, /metrics
     """
-    if path in ("/openapi.json", "/health", "/metrics", "/captcha_ws"):
+    if path in ("/openapi.json", "/health", "/metrics", "/captcha_ws", "/worker_ws"):
         return True
     if path.startswith(("/v1/", "/v1beta/")) or path in ("/v1", "/v1beta"):
         return True
@@ -166,6 +166,8 @@ def _path_allowed_on_api_only_host(path: str) -> bool:
     if path.startswith("/api/cache/"):
         return True
     if path.startswith("/api/extension/"):
+        return True
+    if path.startswith("/api/workers/"):
         return True
     if path.startswith("/api/tracker/"):
         return True

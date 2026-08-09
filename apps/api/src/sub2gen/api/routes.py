@@ -2081,3 +2081,15 @@ from ..transport.websocket import (
 
 
 router.include_router(websocket_router)
+
+
+from ..transport.worker_protocol import (
+    create_worker_pairing_code,
+    pair_worker,
+    revoke_worker,
+    router as worker_protocol_router,
+    worker_websocket_endpoint,
+)
+
+
+router.include_router(worker_protocol_router)

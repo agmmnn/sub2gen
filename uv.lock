@@ -8,6 +8,7 @@ members = [
     "sub2gen-provider-chatgpt",
     "sub2gen-provider-google-flow",
     "sub2gen-provider-sdk",
+    "sub2gen-worker-protocol",
 ]
 
 [[package]]
@@ -1194,6 +1195,7 @@ dependencies = [
     { name = "redis", extra = ["hiredis"] },
     { name = "sub2gen-provider-google-flow" },
     { name = "sub2gen-provider-sdk" },
+    { name = "sub2gen-worker-protocol" },
     { name = "tomli" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -1204,6 +1206,7 @@ agent-gateway = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "pyjwt", extra = ["crypto"] },
+    { name = "sub2gen-worker-protocol" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "websockets" },
 ]
@@ -1235,6 +1238,7 @@ requires-dist = [
     { name = "redis", extras = ["hiredis"], specifier = ">=5.2,<7.0" },
     { name = "sub2gen-provider-google-flow", editable = "packages/provider-google-flow" },
     { name = "sub2gen-provider-sdk", editable = "packages/provider-sdk-python" },
+    { name = "sub2gen-worker-protocol", editable = "packages/worker-protocol" },
     { name = "tomli", specifier = "==2.2.1" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.32.1" },
 ]
@@ -1245,6 +1249,7 @@ agent-gateway = [
     { name = "httpx", specifier = "==0.28.1" },
     { name = "pydantic", specifier = "==2.10.4" },
     { name = "pyjwt", extras = ["crypto"], specifier = "==2.10.1" },
+    { name = "sub2gen-worker-protocol", editable = "packages/worker-protocol" },
     { name = "uvicorn", extras = ["standard"], specifier = "==0.32.1" },
     { name = "websockets", specifier = "==14.1" },
 ]
@@ -1282,6 +1287,21 @@ requires-dist = [{ name = "sub2gen-provider-sdk", editable = "packages/provider-
 name = "sub2gen-provider-sdk"
 version = "0.1.0"
 source = { editable = "packages/provider-sdk-python" }
+
+[[package]]
+name = "sub2gen-worker-protocol"
+version = "0.1.0"
+source = { editable = "packages/worker-protocol" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography", specifier = ">=44,<47" },
+    { name = "pydantic", specifier = "==2.10.4" },
+]
 
 [[package]]
 name = "tomli"

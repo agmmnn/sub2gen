@@ -1,7 +1,19 @@
 from __future__ import annotations
 
 from sub2gen.api import admin, routes
-from sub2gen.transport import adobe, auth, cache, extensions, gemini, models, openai, projects, runway, websocket
+from sub2gen.transport import (
+    adobe,
+    auth,
+    cache,
+    extensions,
+    gemini,
+    models,
+    openai,
+    projects,
+    runway,
+    websocket,
+    worker_protocol,
+)
 from sub2gen.transport.admin import api_keys, auth as admin_auth, cache as admin_cache, logs
 from sub2gen.transport.admin import geminigen as admin_geminigen
 from sub2gen.transport.admin import projects as admin_projects
@@ -20,6 +32,7 @@ PUBLIC_ROUTERS = (
     projects.router,
     runway.router,
     websocket.router,
+    worker_protocol.router,
 )
 
 ADMIN_ROUTERS = (

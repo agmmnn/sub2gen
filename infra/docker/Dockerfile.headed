@@ -58,6 +58,7 @@ COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY packages/provider-sdk-python/pyproject.toml packages/provider-sdk-python/pyproject.toml
 COPY packages/provider-google-flow/pyproject.toml packages/provider-google-flow/pyproject.toml
 COPY packages/provider-chatgpt/pyproject.toml packages/provider-chatgpt/pyproject.toml
+COPY packages/worker-protocol/pyproject.toml packages/worker-protocol/pyproject.toml
 RUN uv sync --frozen --no-dev --no-install-project --no-install-workspace
 
 COPY . .

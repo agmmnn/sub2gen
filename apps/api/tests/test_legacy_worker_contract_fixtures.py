@@ -16,12 +16,15 @@ from sub2gen.workers.extension.legacy_codec import (
     LegacyExtensionCodecError,
     decode_legacy_extension_message,
     encode_legacy_extension_message,
+    translate_legacy_extension_job,
 )
 from sub2gen_gateway.legacy_codec import (
     LegacyAgentGatewayCodecError,
     decode_legacy_agent_gateway_message,
     encode_legacy_agent_gateway_message,
+    translate_legacy_gateway_job,
 )
+from sub2gen_worker_protocol.generated import MessageType
 
 
 FIXTURE_ROOT = Path(__file__).parent / "contracts" / "legacy-workers"
@@ -347,3 +350,19 @@ def test_legacy_correlation_and_lifecycle_defects_remain_explicit() -> None:
         "type": "error",
         "detail": "unknown type 'ping'",
     }
+
+
+def test_both_legacy_server_jobs_translate_to_v1_without_changing_wire_frames() -> None:
+    extension = translate_legacy_extension_job(
+        {"type": "get_token", "req_id": "legacy-request", "action": "IMAGE_GENERATION"},
+        worker_id="extension-worker",
+    )
+    gateway = translate_legacy_gateway_job(
+        {"type": "solve_job", "job_id": "legacy-job", "url": "https://example.test"},
+        worker_id="gateway-worker",
+    )
+
+    assert extension.message_type is MessageType.JOB_OFFER
+    assert extension.job_id == "legacy-request"
+    assert gateway.message_type is MessageType.JOB_OFFER
+    assert gateway.job_id == "legacy-job"

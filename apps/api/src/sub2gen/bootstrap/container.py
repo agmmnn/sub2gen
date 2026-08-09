@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
+from sub2gen_worker_protocol import ArtifactGrantStore, WorkerCoordinator
+
 from ..core.api_key_manager import ApiKeyManager
 from ..core.config import config
 from ..core.database import Database, create_database
@@ -20,6 +22,7 @@ from ..services.proxy_manager import ProxyManager
 from ..services.redis_runtime import RedisRuntime, redis_runtime
 from ..services.runway_service import RunwayService
 from ..services.token_manager import TokenManager
+from ..services.worker_protocol import PersistentDevicePairing
 from .tasks import TaskRegistry
 
 
@@ -46,6 +49,9 @@ class AppContainer:
     api_key_manager: ApiKeyManager
     redis_runtime: RedisRuntime
     failed_payload_manager: FailedPayloadManager
+    worker_pairing: PersistentDevicePairing
+    worker_coordinator: WorkerCoordinator
+    worker_artifact_grants: ArtifactGrantStore
     tasks: TaskRegistry = field(default_factory=TaskRegistry)
     database_restore_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
@@ -84,6 +90,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         redis_runtime=redis_runtime,
         repository=repositories.api_keys,
     )
+    worker_pairing = PersistentDevicePairing(repositories.workers.devices)
     return AppContainer(
         db=db,
         repositories=repositories,
@@ -99,4 +106,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
         api_key_manager=api_key_manager,
         redis_runtime=redis_runtime,
         failed_payload_manager=failed_payload_manager,
+        worker_pairing=worker_pairing,
+        worker_coordinator=WorkerCoordinator(),
+        worker_artifact_grants=ArtifactGrantStore(),
     )

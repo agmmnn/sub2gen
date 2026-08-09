@@ -8,6 +8,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
 COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY packages/worker-protocol/ /app/packages/worker-protocol/
 RUN uv sync --frozen --only-group agent-gateway --no-install-project
 
 COPY apps/agent-gateway/src/sub2gen_gateway/ /app/apps/agent-gateway/src/sub2gen_gateway/

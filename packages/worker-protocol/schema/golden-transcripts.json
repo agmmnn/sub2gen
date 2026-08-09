@@ -1,0 +1,51 @@
+{
+  "hello": {
+    "protocol_version": "1.0",
+    "message_id": "msg-hello",
+    "message_type": "worker.hello",
+    "correlation_id": null,
+    "job_id": null,
+    "job_kind": null,
+    "worker_id": "worker-test",
+    "sent_at": "2026-08-09T12:00:00Z",
+    "payload": {
+      "supported_versions": ["1.0"],
+      "worker_kind": "image-worker",
+      "instance_id": "instance-test"
+    }
+  },
+  "offer": {
+    "protocol_version": "1.0",
+    "message_id": "msg-offer",
+    "message_type": "job.offer",
+    "correlation_id": "msg-hello",
+    "job_id": "job-test",
+    "job_kind": "image.generate",
+    "worker_id": "worker-test",
+    "sent_at": "2026-08-09T12:00:01Z",
+    "payload": {
+      "attempt": 1,
+      "lease_id": "lease-test",
+      "capability": "image.generate:chatgpt-web",
+      "deadline": "2026-08-09T12:05:00Z",
+      "input": { "model": "chatgpt/gpt-image-web", "prompt": "test" },
+      "artifact_upload_grants": [],
+      "api_key_identity": "local-key"
+    }
+  },
+  "result": {
+    "protocol_version": "1.0",
+    "message_id": "msg-result",
+    "message_type": "job.result",
+    "correlation_id": "msg-offer",
+    "job_id": "job-test",
+    "job_kind": "image.generate",
+    "worker_id": "worker-test",
+    "sent_at": "2026-08-09T12:00:20Z",
+    "payload": {
+      "attempt": 1,
+      "lease_id": "lease-test",
+      "output": { "artifacts": [{ "grant_id": "upload-test" }] }
+    }
+  }
+}

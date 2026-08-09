@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import sqlite3
+import base64
 from types import SimpleNamespace
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from sub2gen.core.database import Database
 from sub2gen.core.postgres_migrations import baseline_schema_signature, discover_migrations as discover_postgres
@@ -22,6 +25,7 @@ from sub2gen.persistence import (
     WorkerDeviceRecord,
 )
 from sub2gen.persistence.migrations.sqlite import discover_sqlite_migrations
+from sub2gen.services.worker_protocol import PersistentDevicePairing
 
 
 @pytest.mark.asyncio
@@ -265,3 +269,38 @@ def test_sqlite_and_postgres_0003_define_the_same_provider_tables() -> None:
     assert set(postgres_tables) == expected
     for table in expected:
         assert postgres_tables[table] == sqlite_tables[table]
+
+
+@pytest.mark.asyncio
+async def test_paired_device_auth_survives_service_restart_and_can_be_revoked(tmp_path) -> None:
+    database = Database(str(tmp_path / "paired-worker.db"))
+    await database.init_db()
+    repositories = Repositories.from_database(database)
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+
+    pairing = PersistentDevicePairing(repositories.workers.devices)
+    code = pairing.create_pairing_code()
+    await pairing.pair(
+        code=code,
+        worker_id="durable-worker",
+        kind="image-worker",
+        label="Durable worker",
+        public_key_base64=base64.b64encode(public_key).decode(),
+        approved_capabilities=("image.generate:chatgpt-web",),
+    )
+
+    restarted = PersistentDevicePairing(repositories.workers.devices)
+    challenge_id, _nonce, _expires = await restarted.issue_challenge("durable-worker")
+    signature = base64.b64encode(private_key.sign(restarted.challenge_bytes(challenge_id))).decode()
+    await restarted.authenticate(
+        worker_id="durable-worker",
+        challenge_id=challenge_id,
+        signature=signature,
+    )
+    assert await restarted.revoke("durable-worker")
+    with pytest.raises(PermissionError, match="unavailable"):
+        await restarted.issue_challenge("durable-worker")

@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sub2gen.local/schemas/worker-protocol-v1.schema.json",
+  "title": "sub2gen worker protocol v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "message_id",
+    "message_type",
+    "correlation_id",
+    "job_id",
+    "job_kind",
+    "worker_id",
+    "sent_at",
+    "payload"
+  ],
+  "properties": {
+    "protocol_version": { "const": "1.0" },
+    "message_id": { "type": "string", "minLength": 1 },
+    "message_type": { "$ref": "#/$defs/messageType" },
+    "correlation_id": { "type": ["string", "null"] },
+    "job_id": { "type": ["string", "null"] },
+    "job_kind": { "type": ["string", "null"] },
+    "worker_id": { "type": "string", "minLength": 1 },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" }
+  },
+  "$defs": {
+    "messageType": {
+      "type": "string",
+      "enum": [
+        "worker.hello",
+        "worker.challenge",
+        "worker.register",
+        "worker.registered",
+        "worker.capabilities",
+        "worker.heartbeat",
+        "job.offer",
+        "job.accept",
+        "job.reject",
+        "job.progress",
+        "job.result",
+        "job.error",
+        "job.cancel",
+        "job.cancelled"
+      ]
+    },
+    "workerPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_servers",
+        "allowed_capabilities",
+        "allowed_models",
+        "allowed_accounts",
+        "max_concurrency",
+        "daily_job_limit",
+        "confirm_new_servers"
+      ],
+      "properties": {
+        "allowed_servers": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "allowed_capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "allowed_models": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "allowed_accounts": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "max_concurrency": { "type": "integer", "minimum": 1 },
+        "daily_job_limit": { "type": ["integer", "null"], "minimum": 1 },
+        "confirm_new_servers": { "type": "boolean" }
+      }
+    },
+    "jobOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attempt", "lease_id", "capability", "deadline", "input", "artifact_upload_grants"],
+      "properties": {
+        "attempt": { "type": "integer", "minimum": 1 },
+        "lease_id": { "type": "string", "minLength": 1 },
+        "capability": { "type": "string", "minLength": 1 },
+        "deadline": { "type": "string", "format": "date-time" },
+        "input": { "type": "object" },
+        "artifact_upload_grants": { "type": "array", "items": { "type": "object" } },
+        "api_key_identity": { "type": ["string", "null"] }
+      }
+    },
+    "structuredError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "detail": { "type": "object" }
+      }
+    },
+    "artifactUploadGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grant_id", "worker_id", "job_id", "expires_at", "max_bytes", "content_types", "single_use"],
+      "properties": {
+        "grant_id": { "type": "string" },
+        "worker_id": { "type": "string" },
+        "job_id": { "type": "string" },
+        "expires_at": { "type": "string", "format": "date-time" },
+        "max_bytes": { "type": "integer", "minimum": 1 },
+        "content_types": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "expected_sha256": { "type": ["string", "null"] },
+        "single_use": { "const": true }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 3 complete; Phase 4 (worker protocol v1) is next.
+Status: Phases 0 through 4 complete; Phase 5 (local image worker) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -535,22 +535,22 @@ Exit criteria:
 
 ### Phase 4: Worker protocol v1 and compatibility bridge
 
-- [ ] Add canonical JSON schemas and generated Python/TypeScript types.
-- [ ] Implement version negotiation, registration, capabilities, heartbeat, leases,
+- [x] Add canonical JSON schemas and generated Python/TypeScript types.
+- [x] Implement version negotiation, registration, capabilities, heartbeat, leases,
   progress, cancellation, results, and structured errors.
-- [ ] Add device pairing, challenge/response authentication, revocation, and expiry.
-- [ ] Add worker-side policy schemas and fail-closed capability validation.
-- [ ] Build a server-side compatibility adapter for current CAPTCHA-extension messages.
-- [ ] Build a compatibility adapter for the current agent-gateway message flow.
-- [ ] Deploy dual-reading servers before v1-writing clients; treat absent
+- [x] Add device pairing, challenge/response authentication, revocation, and expiry.
+- [x] Add worker-side policy schemas and fail-closed capability validation.
+- [x] Build a server-side compatibility adapter for current CAPTCHA-extension messages.
+- [x] Build a compatibility adapter for the current agent-gateway message flow.
+- [x] Deploy dual-reading servers before v1-writing clients; treat absent
   `supported_versions` as legacy and retain the existing endpoints and authentication.
-- [ ] Resolve generation capability, timeout, fingerprint/solve-session, gateway
+- [x] Resolve generation capability, timeout, fingerprint/solve-session, gateway
   response ownership, ping/pong, and upstream-feedback semantics before freezing v1.
-- [ ] Define job-scoped artifact upload grants with short expiry, worker/job ownership,
+- [x] Define job-scoped artifact upload grants with short expiry, worker/job ownership,
   content-type and size limits, digest verification, single-use semantics, and cleanup;
   a worker credential must not imply general API upload access.
-- [ ] Add golden transcript tests in both Python and TypeScript.
-- [ ] Update root Bun/uv workspaces and all relevant Docker build contexts for generated
+- [x] Add golden transcript tests in both Python and TypeScript.
+- [x] Update root Bun/uv workspaces and all relevant Docker build contexts for generated
   bindings, including the standalone agent gateway.
 
 Exit criteria:

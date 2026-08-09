@@ -3017,6 +3017,71 @@
         "title": "MetadataSettingsRequest",
         "type": "object"
       },
+      "PairWorkerRequest": {
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 64,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "kind": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "pairing_code": {
+            "minLength": 1,
+            "title": "Pairing Code",
+            "type": "string"
+          },
+          "public_key": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Public Key",
+            "type": "string"
+          },
+          "worker_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Worker Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pairing_code",
+          "worker_id",
+          "kind",
+          "label",
+          "public_key",
+          "capabilities"
+        ],
+        "title": "PairWorkerRequest",
+        "type": "object"
+      },
+      "PairingCodeRequest": {
+        "properties": {
+          "ttl_seconds": {
+            "default": 300,
+            "maximum": 1800.0,
+            "minimum": 30.0,
+            "title": "Ttl Seconds",
+            "type": "integer"
+          }
+        },
+        "title": "PairingCodeRequest",
+        "type": "object"
+      },
       "ProxyConfigRequest": {
         "properties": {
           "media_proxy_enabled": {
@@ -3098,6 +3163,21 @@
           "proxy_url"
         ],
         "title": "ProxyTestRequest",
+        "type": "object"
+      },
+      "RevokeWorkerRequest": {
+        "properties": {
+          "worker_id": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Worker Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "worker_id"
+        ],
+        "title": "RevokeWorkerRequest",
         "type": "object"
       },
       "RunwayAccountRequest": {
@@ -12515,6 +12595,192 @@
           }
         ],
         "summary": "Fetch Task Tracker Keyword Search"
+      }
+    },
+    "/api/workers/pair": {
+      "post": {
+        "operationId": "pair_worker_api_workers_pair_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairWorkerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pair Worker"
+      }
+    },
+    "/api/workers/pairing-code": {
+      "post": {
+        "operationId": "create_worker_pairing_code_api_workers_pairing_code_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-goog-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Goog-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairingCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Worker Pairing Code"
+      }
+    },
+    "/api/workers/revoke": {
+      "post": {
+        "operationId": "revoke_worker_api_workers_revoke_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-goog-api-key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Goog-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeWorkerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Worker"
       }
     },
     "/health": {

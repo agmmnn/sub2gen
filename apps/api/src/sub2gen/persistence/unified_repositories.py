@@ -340,6 +340,19 @@ class WorkerDeviceRepository:
             await connection.commit()
             return int(cursor.rowcount or 0) == 1
 
+    async def revoke(self, worker_id: str) -> bool:
+        async with self.database._connect(write=True) as connection:
+            cursor = await connection.execute(
+                """
+                UPDATE worker_devices
+                SET enabled = ?, revoked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND revoked_at IS NULL
+                """,
+                (False, worker_id),
+            )
+            await connection.commit()
+            return int(cursor.rowcount or 0) == 1
+
     async def set_capabilities(self, worker_id: str, capabilities: tuple[str, ...]) -> bool:
         normalized = tuple(sorted(set(capabilities)))
         async with self.database._connect(write=True) as connection:

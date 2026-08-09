@@ -6,6 +6,8 @@ import json
 from collections.abc import Mapping
 from typing import Any, Literal
 
+from sub2gen_worker_protocol.compat import legacy_gateway_server_frame_to_v1
+
 
 LegacyDirection = Literal["server_to_worker", "worker_to_server"]
 
@@ -52,3 +54,9 @@ def encode_legacy_agent_gateway_message(
     """Validate and deterministically encode one legacy JSON text frame."""
     validated = _validate_message(dict(message), direction)
     return json.dumps(validated, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def translate_legacy_gateway_job(message: Mapping[str, Any], *, worker_id: str):
+    """Translate a frozen solve job into the canonical internal envelope."""
+
+    return legacy_gateway_server_frame_to_v1(dict(message), worker_id=worker_id)

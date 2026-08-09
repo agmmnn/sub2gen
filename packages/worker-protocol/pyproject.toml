@@ -1,0 +1,20 @@
+[project]
+name = "sub2gen-worker-protocol"
+version = "0.1.0"
+description = "Versioned worker protocol shared by sub2gen servers, workers, and extensions"
+requires-python = ">=3.11"
+dependencies = [
+  "cryptography>=44,<47",
+  "pydantic==2.10.4",
+]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sub2gen_worker_protocol*"]
+
+[tool.setuptools.data-files]
+"share/sub2gen-worker-protocol" = ["schema/*.json"]

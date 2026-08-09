@@ -7,7 +7,8 @@
     "apps/captcha-extension",
     "apps/metadata-extension",
     "packages/api-contract",
-    "packages/extension-core"
+    "packages/extension-core",
+    "packages/worker-protocol"
   ],
   "scripts": {
     "build": "bun run --filter '@sub2gen/*' build",
