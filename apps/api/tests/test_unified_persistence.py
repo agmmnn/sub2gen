@@ -17,6 +17,7 @@ from sub2gen.persistence import (
     CredentialStorageKind,
     GenerationAttemptRecord,
     GenerationAttemptStatus,
+    GenerationArtifactRecord,
     GenerationJobRecord,
     GenerationJobStatus,
     LegacyAccountCatalog,
@@ -112,10 +113,24 @@ async def test_provider_accounts_credentials_workers_and_jobs_survive_reopen(tmp
         resolved_execution=resolved,
         terminal=True,
     )
+    await repositories.generation_artifacts.replace_for_job(
+        job.id,
+        (
+            GenerationArtifactRecord(
+                job_id=job.id,
+                position=0,
+                filename="result.png",
+                media_type="image/png",
+                size_bytes=42,
+                sha256="a" * 64,
+            ),
+        ),
+    )
 
     reopened = Repositories.from_database(Database(str(path)))
     restored_job = await reopened.generation_jobs.get_by_idempotency_key("idem-1")
     restored_attempts = await reopened.generation_attempts.list_for_job(job.id)
+    restored_artifacts = await reopened.generation_artifacts.list_for_job(job.id)
     binding_views = await reopened.credential_bindings.list_metadata(account.id)
     worker_views = await reopened.workers.list_devices()
 
@@ -123,6 +138,7 @@ async def test_provider_accounts_credentials_workers_and_jobs_survive_reopen(tmp
     assert restored_job.resolved_execution == resolved
     assert len(restored_attempts) == 1
     assert restored_attempts[0].provider_job_id == "upstream-job"
+    assert restored_artifacts[0].filename == "result.png"
     assert binding_views[0].id == browser_binding.id
     assert not hasattr(binding_views[0], "secret_ref")
     assert worker_views[0].id == worker.id

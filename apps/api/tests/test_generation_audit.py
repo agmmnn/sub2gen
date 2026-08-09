@@ -97,3 +97,18 @@ async def test_success_is_audited_without_a_worker_lease(tmp_path):
     assert stored.terminal_at is not None
     assert attempts[0].status is GenerationAttemptStatus.SUCCEEDED
     assert attempts[0].finished_at is not None
+
+
+async def test_startup_reconciliation_closes_non_resumable_chatgpt_jobs(tmp_path):
+    repositories, audit = await build_audit(tmp_path)
+    job = await audit.queue(
+        request_id="interrupted",
+        job_kind="image.generate",
+        requested_model="chatgpt/gpt-image-web",
+        api_key_id=None,
+    )
+
+    assert await audit.reconcile_non_resumable_jobs() == 1
+    stored = await repositories.generation_jobs.get(job.id)
+    assert stored is not None and stored.status is GenerationJobStatus.FAILED
+    assert stored.error_code == "process_restart"

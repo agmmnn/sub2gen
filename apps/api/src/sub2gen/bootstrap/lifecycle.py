@@ -78,6 +78,9 @@ def build_lifespan(
             is_first_startup=is_first_startup,
         )
         await db.cache_schema_capabilities()
+        reconciled_jobs = await container.generation_audit.reconcile_non_resumable_jobs()
+        if reconciled_jobs:
+            print(f"WARN Marked {reconciled_jobs} interrupted browser-backed generation job(s) as failed")
         db.set_event_runtime(redis_runtime)
         redis_warm = await redis_runtime.start(db)
 

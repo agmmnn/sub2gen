@@ -68,3 +68,41 @@ async def test_worker_runtime_dispatches_offer_and_correlates_terminal_result() 
 
     terminal = await dispatch
     assert terminal.output == result_payload.output
+
+
+@pytest.mark.asyncio
+async def test_cancelling_dispatch_notifies_worker_and_releases_waiter() -> None:
+    coordinator = WorkerCoordinator()
+    coordinator.register(
+        worker_id="worker-1",
+        worker_session_id="session-1",
+        capabilities=("image.generate:chatgpt-web",),
+        approved_capabilities={"image.generate:chatgpt-web"},
+        available_slots=1,
+    )
+    runtime = WorkerRuntime(coordinator, ArtifactGrantStore())
+    sent: asyncio.Queue[str] = asyncio.Queue()
+    runtime.connect("worker-1", sent.put)
+    dispatch = asyncio.create_task(
+        runtime.dispatch(
+            worker_id="worker-1",
+            job_id="job-cancel",
+            job_kind="image.generate",
+            attempt=1,
+            capability="image.generate:chatgpt-web",
+            input={"prompt": "draw", "model": "chatgpt/gpt-image-web"},
+            timeout_seconds=30,
+            artifact_content_types=("image/png",),
+            artifact_max_bytes=1024,
+            upload_base_url="http://127.0.0.1:8000",
+        )
+    )
+    await sent.get()
+
+    dispatch.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await dispatch
+
+    cancel, payload = decode_envelope(await sent.get())
+    assert cancel.message_type is MessageType.JOB_CANCEL
+    assert payload.reason == "cancelled"

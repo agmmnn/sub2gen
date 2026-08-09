@@ -145,7 +145,14 @@ class ImageWorkerClient:
                 prompt=str(offer.input["prompt"]),
                 model=str(offer.input["model"]),
                 references=references,
-                provider_options={"project": self.config.project},
+                provider_options={
+                    "project": (
+                        offer.input.get("provider_options", {}).get("project")
+                        if isinstance(offer.input.get("provider_options"), dict)
+                        else None
+                    )
+                    or self.config.project,
+                },
             )
             context = ProviderExecutionContext(
                 resolved=ResolvedExecution(
@@ -154,7 +161,7 @@ class ImageWorkerClient:
                     provider_id="chatgpt-web",
                     provider_account_id=self.config.account_ref,
                     worker_id=self.config.worker_id,
-                    billing_pool="chatgpt-subscription",
+                    billing_pool="chatgpt:web-subscription",
                 ),
                 cancellation=cancellation,
                 timeout_seconds=max(1, (offer.deadline - datetime.now(timezone.utc)).total_seconds()),

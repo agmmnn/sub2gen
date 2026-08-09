@@ -14,6 +14,7 @@ from .domain import (
     CredentialStorageKind,
     GenerationAttemptRecord,
     GenerationAttemptStatus,
+    GenerationArtifactRecord,
     GenerationJobRecord,
     GenerationJobStatus,
     ProviderAccountRecord,
@@ -462,6 +463,26 @@ class GenerationJobRepository:
     async def get_by_idempotency_key(self, idempotency_key: str) -> GenerationJobRecord | None:
         return await self._get("idempotency_key", idempotency_key)
 
+    async def list_active(self) -> tuple[GenerationJobRecord, ...]:
+        active = (
+            GenerationJobStatus.QUEUED,
+            GenerationJobStatus.OFFERED,
+            GenerationJobStatus.RUNNING,
+        )
+        placeholders = ",".join("?" for _ in active)
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                f"""
+                SELECT id, idempotency_key, api_key_id, request_id, job_kind, requested_model,
+                       status, provider_account_id, worker_id, resolved_execution_json,
+                       deadline_at, terminal_at, error_code, error_detail, created_at, updated_at
+                FROM generation_jobs WHERE status IN ({placeholders}) ORDER BY created_at, id
+                """,
+                tuple(status.value for status in active),
+            )
+            rows = await cursor.fetchall()
+        return tuple(self._record(row) for row in rows)
+
     async def _get(self, column: str, value: str) -> GenerationJobRecord | None:
         if column not in {"id", "idempotency_key"}:
             raise ValueError("unsupported job lookup column")
@@ -644,4 +665,57 @@ class GenerationAttemptRepository:
             finished_at=_timestamp(row[8]),
             error_code=str(row[9]) if row[9] is not None else None,
             error_detail=str(row[10]) if row[10] is not None else None,
+        )
+
+
+@dataclass(slots=True)
+class GenerationArtifactRepository:
+    database: Any
+
+    async def replace_for_job(self, job_id: str, artifacts: tuple[GenerationArtifactRecord, ...]) -> None:
+        async with self.database._connect(write=True) as connection:
+            await connection.execute("DELETE FROM generation_artifacts WHERE job_id = ?", (job_id,))
+            for artifact in artifacts:
+                if artifact.job_id != job_id:
+                    raise ValueError("artifact belongs to a different job")
+                await connection.execute(
+                    """
+                    INSERT INTO generation_artifacts (
+                        id, job_id, position, filename, media_type, size_bytes, sha256
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        artifact.id,
+                        job_id,
+                        artifact.position,
+                        artifact.filename,
+                        artifact.media_type,
+                        artifact.size_bytes,
+                        artifact.sha256,
+                    ),
+                )
+            await connection.commit()
+
+    async def list_for_job(self, job_id: str) -> tuple[GenerationArtifactRecord, ...]:
+        async with self.database._connect() as connection:
+            cursor = await connection.execute(
+                """
+                SELECT id, job_id, position, filename, media_type, size_bytes, sha256, created_at
+                FROM generation_artifacts WHERE job_id = ? ORDER BY position
+                """,
+                (job_id,),
+            )
+            rows = await cursor.fetchall()
+        return tuple(
+            GenerationArtifactRecord(
+                id=str(row[0]),
+                job_id=str(row[1]),
+                position=int(row[2]),
+                filename=str(row[3]),
+                media_type=str(row[4]),
+                size_bytes=int(row[5]),
+                sha256=str(row[6]),
+                created_at=_timestamp(row[7]),
+            )
+            for row in rows
         )

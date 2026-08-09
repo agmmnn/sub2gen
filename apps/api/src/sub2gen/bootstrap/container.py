@@ -28,6 +28,7 @@ from ..services.proxy_manager import ProxyManager
 from ..services.redis_runtime import RedisRuntime, redis_runtime
 from ..services.runway_service import RunwayService
 from ..services.token_manager import TokenManager
+from ..services.unified_images import UnifiedImageService
 from ..services.worker_protocol import PersistentDevicePairing
 from ..services.worker_artifacts import WorkerArtifactInbox
 from ..services.worker_runtime import WorkerRuntime
@@ -67,8 +68,12 @@ class AppContainer:
     worker_artifact_grants: ArtifactGrantStore
     worker_artifact_inbox: WorkerArtifactInbox
     worker_runtime: WorkerRuntime
+    unified_images: UnifiedImageService = field(init=False)
     tasks: TaskRegistry = field(default_factory=TaskRegistry)
     database_restore_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+
+    def __post_init__(self) -> None:
+        self.unified_images = UnifiedImageService(self)
 
 
 def build_container(*, database: Database | None = None) -> AppContainer:
@@ -108,6 +113,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
     worker_pairing = PersistentDevicePairing(repositories.workers.devices)
     worker_artifact_grants = ArtifactGrantStore()
     worker_coordinator = WorkerCoordinator()
+    worker_runtime = WorkerRuntime(worker_coordinator, worker_artifact_grants)
     model_registry = ModelRegistry.for_platform(MODEL_CONFIG)
     generation_router = GenerationRouter(model_registry)
     routing_signals = RuntimeSignalRegistry()
@@ -132,6 +138,7 @@ def build_container(*, database: Database | None = None) -> AppContainer:
             generation_router,
             repositories,
             routing_signals,
+            worker_runtime,
         ),
         runway_service=runway_service,
         geminigen_service=geminigen_service,
@@ -146,5 +153,5 @@ def build_container(*, database: Database | None = None) -> AppContainer:
             worker_artifact_grants,
             get_runtime_data_dir() / "worker-artifacts",
         ),
-        worker_runtime=WorkerRuntime(worker_coordinator, worker_artifact_grants),
+        worker_runtime=worker_runtime,
     )

@@ -2785,6 +2785,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/images/edits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Image Edit */
+        post: operations["create_image_edit_v1_images_edits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/images/generations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Image Generation */
+        post: operations["create_image_generation_v1_images_generations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/jobs/{job_id}": {
         parameters: {
             query?: never;
@@ -2799,6 +2833,23 @@ export interface paths {
         get: operations["get_job_status_v1_jobs__job_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jobs/{job_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Job */
+        post: operations["cancel_job_v1_jobs__job_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3180,6 +3231,33 @@ export interface components {
             location: string;
             /** Platform */
             platform: string;
+        };
+        /** Body_create_image_edit_v1_images_edits_post */
+        Body_create_image_edit_v1_images_edits_post: {
+            /**
+             * Async Mode
+             * @default false
+             */
+            async_mode: boolean;
+            /** Image */
+            image: string[];
+            /** Model */
+            model: string;
+            /**
+             * N
+             * @default 1
+             */
+            n: number;
+            /** Project Id */
+            project_id?: string | null;
+            /** Prompt */
+            prompt: string;
+            /**
+             * Response Format
+             * @default url
+             * @enum {string}
+             */
+            response_format: "url" | "b64_json";
         };
         /** Body_restore_sqlite_database_api_admin_database_restore_post */
         Body_restore_sqlite_database_api_admin_database_restore_post: {
@@ -4172,6 +4250,41 @@ export interface components {
             aspectRatio?: string | null;
             /** Imagesize */
             imageSize?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ImageGenerationRequest */
+        ImageGenerationRequest: {
+            /**
+             * Async
+             * @default false
+             */
+            async: boolean;
+            /** Image */
+            image?: string | string[] | null;
+            /** Model */
+            model: string;
+            /**
+             * N
+             * @default 1
+             */
+            n: number;
+            /** Project Id */
+            project_id?: string | null;
+            /** Prompt */
+            prompt: string;
+            /** Reference Images */
+            reference_images?: string[];
+            /**
+             * Response Format
+             * @default url
+             * @enum {string}
+             */
+            response_format: "url" | "b64_json";
+            /** Size */
+            size?: string | null;
+            /** User */
+            user?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -10801,7 +10914,118 @@ export interface operations {
             };
         };
     };
+    create_image_edit_v1_images_edits_post: {
+        parameters: {
+            query?: {
+                key?: string | null;
+            };
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "x-goog-api-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_image_edit_v1_images_edits_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_image_generation_v1_images_generations_post: {
+        parameters: {
+            query?: {
+                key?: string | null;
+            };
+            header?: {
+                "Idempotency-Key"?: string | null;
+                "x-goog-api-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImageGenerationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_job_status_v1_jobs__job_id__get: {
+        parameters: {
+            query?: {
+                key?: string | null;
+            };
+            header?: {
+                "x-goog-api-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_job_v1_jobs__job_id__cancel_post: {
         parameters: {
             query?: {
                 key?: string | null;

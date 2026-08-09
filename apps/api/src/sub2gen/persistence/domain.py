@@ -187,5 +187,23 @@ class GenerationAttemptRecord:
             object.__setattr__(self, "resolved_execution", _frozen_metadata(self.resolved_execution))
 
 
+@dataclass(frozen=True, slots=True)
+class GenerationArtifactRecord:
+    job_id: str
+    position: int
+    filename: str
+    media_type: str
+    size_bytes: int
+    sha256: str
+    id: str = field(default_factory=lambda: new_public_id("artifact"))
+    created_at: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.position < 0:
+            raise ValueError("artifact position must not be negative")
+        if self.size_bytes < 1:
+            raise ValueError("artifact size must be positive")
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")

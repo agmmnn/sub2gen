@@ -44,6 +44,7 @@ class GenerationAuditService:
         api_key_id: int | None,
         idempotency_key: str | None = None,
         deadline_at: str | None = None,
+        request_fingerprint: str | None = None,
     ) -> GenerationJobRecord:
         return await self.jobs.create(
             GenerationJobRecord(
@@ -53,8 +54,42 @@ class GenerationAuditService:
                 api_key_id=api_key_id,
                 idempotency_key=idempotency_key,
                 deadline_at=deadline_at,
+                resolved_execution=(
+                    {"request_fingerprint": request_fingerprint}
+                    if request_fingerprint is not None
+                    else None
+                ),
             )
         )
+
+    async def reconcile_non_resumable_jobs(self) -> int:
+        """Close browser-backed work that cannot survive an API process restart."""
+        reconciled = 0
+        for job in await self.jobs.list_active():
+            execution = dict(job.resolved_execution or {})
+            provider_id = str(execution.get("provider_id") or "")
+            if provider_id not in {"chatgpt-web", "chatgpt-codex"} and not job.requested_model.startswith("chatgpt/"):
+                continue
+            attempts = await self.attempts.list_for_job(job.id)
+            for attempt in attempts:
+                if attempt.finished_at is None:
+                    await self.attempts.finish(
+                        attempt.id,
+                        expected_lease_id=attempt.lease_id,
+                        status=GenerationAttemptStatus.FAILED,
+                        error_code="process_restart",
+                        error_detail="browser-backed generation cannot resume after API restart",
+                    )
+            changed = await self.jobs.transition(
+                job.id,
+                expected=(GenerationJobStatus.QUEUED, GenerationJobStatus.OFFERED, GenerationJobStatus.RUNNING),
+                status=GenerationJobStatus.FAILED,
+                error_code="process_restart",
+                error_detail="browser-backed generation cannot resume after API restart",
+                terminal=True,
+            )
+            reconciled += int(changed)
+        return reconciled
 
     async def run(
         self,
@@ -66,6 +101,8 @@ class GenerationAuditService:
         lease_id: str | None = None,
     ) -> T:
         execution = resolved_execution_dict(resolved)
+        if job.resolved_execution and job.resolved_execution.get("request_fingerprint"):
+            execution["request_fingerprint"] = str(job.resolved_execution["request_fingerprint"])
         started = await self.jobs.transition(
             job.id,
             expected=(GenerationJobStatus.QUEUED, GenerationJobStatus.OFFERED),

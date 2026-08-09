@@ -1,6 +1,6 @@
 # Unified Generation Platform Plan
 
-Status: Phases 0 through 7 complete; Phase 8 (public image API and asynchronous jobs) is next.
+Status: Phases 0 through 8 complete; Phase 9 (provider administration) is next.
 
 This plan evolves sub2gen from a Google Flow-focused compatibility service into a
 local-first generation gateway with this product position:
@@ -620,13 +620,13 @@ Exit criteria:
 
 ### Phase 8: Public image API and asynchronous jobs
 
-- [ ] Route existing chat-completion image requests through the provider orchestrator.
-- [ ] Add or complete `/v1/images/generations` and `/v1/images/edits` contracts.
-- [ ] Map provider events onto existing streaming and async-job semantics.
-- [ ] Support repeated reference images and validated remote input URLs.
-- [ ] Store results through `FileCache` and existing delivery modes.
-- [ ] Add cancellation, timeout, retry classification, and idempotency tests.
-- [ ] Update the generated TypeScript API contract.
+- [x] Route existing chat-completion image requests through the provider orchestrator.
+- [x] Add or complete `/v1/images/generations` and `/v1/images/edits` contracts.
+- [x] Map provider events onto existing streaming and async-job semantics.
+- [x] Support repeated reference images and validated remote input URLs.
+- [x] Store results through `FileCache` and existing delivery modes.
+- [x] Add cancellation, timeout, retry classification, and idempotency tests.
+- [x] Update the generated TypeScript API contract.
 
 Exit criteria:
 

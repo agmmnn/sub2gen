@@ -53,6 +53,13 @@ candidate inventory, provider-isolated runtime health/quota signals, and a durab
 through `provider_account_api_keys`; adopted Flow accounts continue to inherit their
 existing token assignment isolation.
 
+The public image surface now includes `/v1/images/generations`, multipart
+`/v1/images/edits`, durable unified job polling/cancellation, repeated reference inputs,
+and public-URL validation. Browser-worker results enter the same `FileCache` delivery
+boundary as server results and persist artifact metadata for restart-safe completed-job
+polling. Browser-backed in-flight jobs are closed explicitly as non-resumable during
+startup reconciliation.
+
 The separate `apps/agent-gateway` application exposes its own solve HTTP/WebSocket
 surface and has an in-memory connected-agent registry. It does not share a protocol
 implementation with the API application's extension worker.

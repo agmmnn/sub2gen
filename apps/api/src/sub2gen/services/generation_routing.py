@@ -14,7 +14,7 @@ from ..generation.routing import (
     GenerationRouter,
     TrustedRoutingConfig,
 )
-from ..generation.signals import RuntimeSignalRegistry
+from ..generation.signals import RouteHealth, RouteSignal, RuntimeSignalRegistry
 
 
 def trusted_routing_config_from_app() -> TrustedRoutingConfig:
@@ -50,11 +50,19 @@ async def authenticated_caller_from_api_key(auth: AuthContext, repositories) -> 
 
 
 class PersistentGenerationRouter:
-    def __init__(self, registry: ModelRegistry, router: GenerationRouter, repositories, signals: RuntimeSignalRegistry):
+    def __init__(
+        self,
+        registry: ModelRegistry,
+        router: GenerationRouter,
+        repositories,
+        signals: RuntimeSignalRegistry,
+        worker_runtime=None,
+    ):
         self.registry = registry
         self.router = router
         self.repositories = repositories
         self.signals = signals
+        self.worker_runtime = worker_runtime
 
     async def resolve(
         self,
@@ -125,6 +133,13 @@ class PersistentGenerationRouter:
         capabilities: frozenset[str] | None = None,
         billing_pool: str | None = None,
     ) -> ExecutionCandidate:
+        signal = self.signals.get(descriptor.provider_id, account_id, worker_id)
+        if worker_id and self.worker_runtime is not None and not self.worker_runtime.is_connected(worker_id):
+            signal = RouteSignal(
+                health=RouteHealth.UNAVAILABLE,
+                quota_remaining=signal.quota_remaining,
+                available_slots=signal.available_slots,
+            )
         return ExecutionCandidate(
             provider_id=descriptor.provider_id,
             provider_account_id=account_id,
@@ -132,7 +147,7 @@ class PersistentGenerationRouter:
             credential_kind=credential_kind,
             billing_pool=billing_pool or descriptor.billing_pool,
             capabilities=capabilities or frozenset({capability}),
-            signal=self.signals.get(descriptor.provider_id, account_id, worker_id),
+            signal=signal,
         )
 
     @staticmethod

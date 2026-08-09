@@ -15,6 +15,7 @@ from .domain import WorkerDeviceRecord
 from .unified_repositories import (
     CredentialBindingRepository,
     GenerationAttemptRepository,
+    GenerationArtifactRepository,
     GenerationJobRepository,
     ProviderAccountRepository,
     WorkerDeviceRepository,
@@ -258,6 +259,7 @@ class Repositories:
     credential_bindings: CredentialBindingRepository
     generation_jobs: GenerationJobRepository
     generation_attempts: GenerationAttemptRepository
+    generation_artifacts: GenerationArtifactRepository
 
     @classmethod
     def from_database(cls, database: Any) -> "Repositories":
@@ -272,4 +274,5 @@ class Repositories:
             credential_bindings=CredentialBindingRepository(database),
             generation_jobs=GenerationJobRepository(database),
             generation_attempts=GenerationAttemptRepository(database),
+            generation_artifacts=GenerationArtifactRepository(database),
         )

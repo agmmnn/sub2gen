@@ -35,6 +35,9 @@ class WorkerRuntime:
         self._connections: dict[str, SendText] = {}
         self._terminal: dict[str, asyncio.Future[TerminalWorkerResult]] = {}
 
+    def is_connected(self, worker_id: str) -> bool:
+        return worker_id in self._connections
+
     def connect(self, worker_id: str, send_text: SendText) -> None:
         self._connections[worker_id] = send_text
 
@@ -109,19 +112,25 @@ class WorkerRuntime:
         try:
             return await asyncio.wait_for(future, timeout_seconds)
         except TimeoutError:
-            self.coordinator.cancel(lease.lease_id)
-            cancel = make_envelope(
-                message_type=MessageType.JOB_CANCEL,
-                worker_id=worker_id,
-                job_id=job_id,
-                job_kind=job_kind,
-                correlation_id=offer.message_id,
-                payload=JobCancelPayload(attempt=attempt, lease_id=lease.lease_id, reason="deadline"),
-            )
-            await sender(encode_envelope(cancel))
+            await self._cancel(sender, offer.message_id, worker_id, job_id, job_kind, attempt, lease.lease_id, "deadline")
             raise WorkerRuntimeError("worker job timed out")
+        except asyncio.CancelledError:
+            await self._cancel(sender, offer.message_id, worker_id, job_id, job_kind, attempt, lease.lease_id, "cancelled")
+            raise
         finally:
             self._terminal.pop(lease.lease_id, None)
+
+    async def _cancel(self, sender, correlation_id, worker_id, job_id, job_kind, attempt, lease_id, reason):
+        self.coordinator.cancel(lease_id)
+        cancel = make_envelope(
+            message_type=MessageType.JOB_CANCEL,
+            worker_id=worker_id,
+            job_id=job_id,
+            job_kind=job_kind,
+            correlation_id=correlation_id,
+            payload=JobCancelPayload(attempt=attempt, lease_id=lease_id, reason=reason),
+        )
+        await sender(encode_envelope(cancel))
 
     async def handle(self, envelope: Any, payload: Any) -> None:
         worker_id = envelope.worker_id
